@@ -16,6 +16,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "nanobind>=2.15.0",
+    "pydantic>=2.13.4",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
     "ruff>=0.16.3",
