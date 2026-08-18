@@ -27,6 +27,10 @@ class APIClient:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=5))
     async def get_movie_details(self, movie_id: int) -> Dict[str, Any]:
-        response: httpx.Response = await self.client.get(f"/films/{movie_id}")
+        response: httpx.Response = await self.client.get(
+            f"/films/{movie_id}"
+        )
+
         response.raise_for_status()
+        
         return response.json()
