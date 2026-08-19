@@ -14,5 +14,12 @@ class MovieScrapy(scrapy.Spider):
     ]
 
     def parse(self, response: Response):
-        print("STATUS:", response.status)
-        print("URL:", response.url)
+        links = response.css(
+            'a[data-test="collection_header"]::attr(href)'
+        ).getall()
+
+        for link in links:
+            yield response.follow(link, callback=self.parse_collections)
+
+    def parse_collections(self, response: Response):
+        ...
