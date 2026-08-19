@@ -41,7 +41,7 @@ class MovieScrapy(scrapy.Spider):
 
         while True:
             current_count = await page.locator(
-                "a::attr(href)"
+                "a"
             ).count()
 
             await page.mouse.wheel(0, 2000)
@@ -49,7 +49,7 @@ class MovieScrapy(scrapy.Spider):
             await page.wait_for_timeout(1000)
 
             new_count = await page.locator(
-                "a::attr(href)"
+                "a"
             ).count()
 
             if current_count == new_count:
@@ -65,7 +65,7 @@ class MovieScrapy(scrapy.Spider):
             if re.search(r"/watch/\d+$", link)
         ]
 
-        for link in movie_links:
+        for link in movie_links[:10]:
             print(link)
             yield response.follow(
                 link,
