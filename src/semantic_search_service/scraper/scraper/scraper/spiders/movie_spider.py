@@ -13,6 +13,17 @@ class MovieScrapy(scrapy.Spider):
         "https://www.ivi.ru/movies"
     ]
 
+    def start_requests(self):
+        for url in self.start_urls:
+            yield scrapy.Request(
+                url=url,
+                callback=self.parse,
+                meta={
+                    "playwright": True,
+                    "playwright_include_page": True,
+                },
+            )
+
     def parse(self, response: Response):
         links = response.css(
             'a[data-test="collection_header"]::attr(href)'
