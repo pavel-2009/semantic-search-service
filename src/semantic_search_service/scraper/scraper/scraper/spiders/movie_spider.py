@@ -19,6 +19,7 @@ class MovieScrapy(scrapy.Spider):
         ).getall()
 
         for link in links:
+            print(link)
             yield response.follow(link, callback=self.parse_collections)
 
     def parse_collections(self, response: Response):
