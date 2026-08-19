@@ -14,4 +14,5 @@ class MovieScrapy(scrapy.Spider):
     ]
 
     def parse(self, response: Response):
-        print(response.url)
+        print("STATUS:", response.status)
+        print("URL:", response.url)
