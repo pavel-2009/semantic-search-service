@@ -10,7 +10,7 @@ class MovieScrapy(scrapy.Spider):
     name = "movies"
 
     start_urls = [
-        "https://www.kinopoisk.ru/lists/categories/movies/"
+        "https://www.ivi.ru/movies"
     ]
 
     def parse(self, response: Response):
