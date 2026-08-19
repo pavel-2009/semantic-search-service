@@ -38,49 +38,53 @@ class MovieScrapy(scrapy.Spider):
             )
 
     async def parse_collections(self, response: Response):
-        page = response.meta["playwright_page"]
+        page: Page = response.meta["playwright_page"]
 
-        stable_count = 0
+        movie_links: set[str] = set()
+        no_new_movies = 0
 
-        while stable_count < 3:
-            movie_links = await self.get_movie_links(page)
+        while no_new_movies < 3:
+            links = await page.locator("a").evaluate_all(
+                "elements => elements.map(el => el.href)"
+            )
 
-            current_count = len(movie_links)
+            current_movies = {
+                link
+                for link in links
+                if re.search(r"/watch/\d+$", link)
+            }
 
-            print("Фильмов сейчас:", current_count)
+            old_count = len(movie_links)
+
+            movie_links.update(current_movies)
+
+            new_count = len(movie_links)
+
+            print(
+                f"Было: {old_count}, "
+                f"стало: {new_count}, "
+                f"новых: {new_count - old_count}"
+            )
+
+            if new_count == old_count:
+                no_new_movies += 1
+            else:
+                no_new_movies = 0
 
             await page.mouse.wheel(0, 2000)
 
             await page.wait_for_timeout(1500)
 
-            movie_links = await self.get_movie_links(page)
-
-            new_count = len(movie_links)
-
-            if new_count == current_count:
-                stable_count += 1
-            else:
-                stable_count = 0
-
-        links = await page.locator("a").evaluate_all(
-            "elements => elements.map(el => el.href)"
-        )
-
-        movie_links = [
-            link
-            for link in links
-            if re.search(r"/watch/\d+$", link)
-        ]
+        print("ИТОГО фильмов:", len(movie_links))
 
         for link in movie_links:
-            with open('links.txt', 'a') as f:
-                f.write(link + '\n')
-
-            yield response.follow(
+            yield scrapy.Request(
                 link,
-                callback=self.parse_film
+                callback=self.parse_film,
             )
 
+        await page.close()
+        
     def parse_film(self, response: Response):
         ...
 
