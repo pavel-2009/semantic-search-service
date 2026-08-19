@@ -813,9 +813,25 @@ wheels = [
 ]
 
 [[package]]
+name = "scrapy-playwright"
+version = "0.0.48"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "playwright" },
+    { name = "scrapy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/c3/7be8edff2a95ba57699b61242a5d217dce78e0523e0ea469a0441da8292e/scrapy_playwright-0.0.48.tar.gz", hash = "sha256:626779aa8bcacd61eebc3e21e362c62cbb5ae75f168a254885f1f7ca9b68d9d2", size = 51982, upload-time = "2026-07-10T15:34:26.454Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/37/d723dab705b95da21bb3f2d824c3e4244f51517207cf632de4acefa94538/scrapy_playwright-0.0.48-py3-none-any.whl", hash = "sha256:558d9ecfdf22cbd637060389e5953e532ee1c7ffcc25439e50bdfe8e678d568f", size = 30749, upload-time = "2026-07-10T15:34:25.237Z" },
+]
+
+[[package]]
 name = "semantic-search-service"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "scrapy-playwright" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -831,6 +847,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "scrapy-playwright", specifier = ">=0.0.48" }]
 
 [package.metadata.requires-dev]
 dev = [
