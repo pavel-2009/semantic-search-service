@@ -4,6 +4,7 @@
 
 import scrapy
 from scrapy.http import Response
+import re
 
 
 class MovieScrapy(scrapy.Spider):
@@ -18,10 +19,6 @@ class MovieScrapy(scrapy.Spider):
             yield scrapy.Request(
                 url=url,
                 callback=self.parse,
-                meta={
-                    "playwright": True,
-                    "playwright_include_page": True,
-                },
             )
 
     def parse(self, response: Response):
@@ -30,8 +27,50 @@ class MovieScrapy(scrapy.Spider):
         ).getall()
 
         for link in links:
-            print(link)
-            yield response.follow(link, callback=self.parse_collections)
+            yield response.follow(
+                link, 
+                callback=self.parse_collections,
+                meta={
+                    "playwright": True,
+                    "playwright_include_page": True,
+                },
+            )
 
-    def parse_collections(self, response: Response):
+    async def parse_collections(self, response: Response):
+        page = response.meta["playwright_page"]
+
+        while True:
+            current_count = await page.locator(
+                "a::attr(href)"
+            ).count()
+
+            await page.mouse.wheel(0, 2000)
+
+            await page.wait_for_timeout(1000)
+
+            new_count = await page.locator(
+                "a::attr(href)"
+            ).count()
+
+            if current_count == new_count:
+                break
+
+        links = await page.locator("a").evaluate_all(
+            "elements => elements.map(el => el.href)"
+        )
+
+        movie_links = [
+            link
+            for link in links
+            if re.search(r"/watch/\d+$", link)
+        ]
+
+        for link in movie_links:
+            print(link)
+            yield response.follow(
+                link,
+                callback=self.parse_film
+            )
+
+    def parse_film(self, response: Response):
         ...
