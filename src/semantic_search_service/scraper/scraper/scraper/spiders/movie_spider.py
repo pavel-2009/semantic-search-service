@@ -60,12 +60,6 @@ class MovieScrapy(scrapy.Spider):
 
             new_count = len(movie_links)
 
-            print(
-                f"Было: {old_count}, "
-                f"стало: {new_count}, "
-                f"новых: {new_count - old_count}"
-            )
-
             if new_count == old_count:
                 no_new_movies += 1
             else:
@@ -75,12 +69,8 @@ class MovieScrapy(scrapy.Spider):
 
             await page.wait_for_timeout(1500)
 
-        print("ИТОГО фильмов:", len(movie_links))
-
         for link in movie_links:
-            with open('links.txt', 'a') as f:
-                f.write(link + '\n')
-                
+
             yield scrapy.Request(
                 link,
                 callback=self.parse_film,
@@ -101,5 +91,3 @@ class MovieScrapy(scrapy.Spider):
             for link in links
             if re.search(r"/watch/\d+$", link)
         }
-
-
