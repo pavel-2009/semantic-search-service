@@ -5,6 +5,7 @@ from typing import Set, List
 import scrapy
 from scrapy.http import Response
 import re
+from playwright.async_api import Page
 
 
 class MovieScrapy(scrapy.Spider):
@@ -39,21 +40,27 @@ class MovieScrapy(scrapy.Spider):
     async def parse_collections(self, response: Response):
         page = response.meta["playwright_page"]
 
-        while True:
-            current_count = await page.locator(
-                "a"
-            ).count()
+        stable_count = 0
+
+        while stable_count < 3:
+            movie_links = await self.get_movie_links(page)
+
+            current_count = len(movie_links)
+
+            print("Фильмов сейчас:", current_count)
 
             await page.mouse.wheel(0, 2000)
 
-            await page.wait_for_timeout(1000)
+            await page.wait_for_timeout(1500)
 
-            new_count = await page.locator(
-                "a"
-            ).count()
+            movie_links = await self.get_movie_links(page)
 
-            if current_count == new_count:
-                break
+            new_count = len(movie_links)
+
+            if new_count == current_count:
+                stable_count += 1
+            else:
+                stable_count = 0
 
         links = await page.locator("a").evaluate_all(
             "elements => elements.map(el => el.href)"
@@ -77,14 +84,15 @@ class MovieScrapy(scrapy.Spider):
     def parse_film(self, response: Response):
         ...
 
+    async def get_movie_links(self, page: Page) -> Set[str]:
+        links: List[str] = await page.locator("a").evaluate_all(
+            "elements => elements.map(el => el.href)"
+        )
 
-async def get_movie_links(page) -> Set[str]:
-    links: List[str] = await page.locator("a").evaluate_all(
-        "elements => elements.map(el => el.href)"
-    )
+        return {
+            link
+            for link in links
+            if re.search(r"/watch/\d+$", link)
+        }
 
-    return {
-        link
-        for link in links
-        if re.search(r"/watch/\d+$", link)
-    }
+
