@@ -65,8 +65,10 @@ class MovieScrapy(scrapy.Spider):
             if re.search(r"/watch/\d+$", link)
         ]
 
-        for link in movie_links[:10]:
-            print(link)
+        for link in movie_links:
+            with open('links.txt', 'a') as f:
+                f.write(link + '\n')
+
             yield response.follow(
                 link,
                 callback=self.parse_film
