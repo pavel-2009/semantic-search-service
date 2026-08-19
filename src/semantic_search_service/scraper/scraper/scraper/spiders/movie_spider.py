@@ -78,6 +78,9 @@ class MovieScrapy(scrapy.Spider):
         print("ИТОГО фильмов:", len(movie_links))
 
         for link in movie_links:
+            with open('links.txt', 'a') as f:
+                f.write(link + '\n')
+                
             yield scrapy.Request(
                 link,
                 callback=self.parse_film,
