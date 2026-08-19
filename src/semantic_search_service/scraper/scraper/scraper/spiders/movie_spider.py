@@ -1,6 +1,6 @@
 """Spider for Kinopoisk search"""
 
-# from typing import Any, Generator
+from typing import Set, List
 
 import scrapy
 from scrapy.http import Response
@@ -76,3 +76,15 @@ class MovieScrapy(scrapy.Spider):
 
     def parse_film(self, response: Response):
         ...
+
+
+async def get_movie_links(page) -> Set[str]:
+    links: List[str] = await page.locator("a").evaluate_all(
+        "elements => elements.map(el => el.href)"
+    )
+
+    return {
+        link
+        for link in links
+        if re.search(r"/watch/\d+$", link)
+    }
