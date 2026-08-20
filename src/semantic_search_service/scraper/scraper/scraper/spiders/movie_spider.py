@@ -96,11 +96,10 @@ class MovieSpider(scrapy.Spider):
                 "> ul.paramsList__container > *"
             ).all_inner_texts()
 
-            rating = (
-                params_list2[0]
-                if len(params_list2) > 0
-                else None
-            )
+            rating: float | None = None
+
+            if params_list2:
+                rating = float(params_list2[0].replace(",", "."))
 
             year = (
                 params_list2[1]
@@ -137,7 +136,7 @@ class MovieSpider(scrapy.Spider):
                 description=description,
                 actors=actors,
                 tags=tags,
-                rating=rating,
+                rating=rating
             )
 
             yield movie
