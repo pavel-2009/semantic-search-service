@@ -5,9 +5,6 @@
 
 from scrapy import signals
 
-# useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
-
 
 class ScraperSpiderMiddleware:
     # Not all methods need to be defined. If a method is not defined,
@@ -17,9 +14,9 @@ class ScraperSpiderMiddleware:
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
-        s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
-        return s
+        middleware = cls()
+        crawler.signals.connect(middleware.spider_opened, signal=signals.spider_opened)
+        return middleware
 
     def process_spider_input(self, response, spider):
         # Called for each response that goes through the spider
@@ -33,15 +30,14 @@ class ScraperSpiderMiddleware:
         # it has processed the response.
 
         # Must return an iterable of Request, or item objects.
-        for i in result:
-            yield i
+        yield from result
 
     def process_spider_exception(self, response, exception, spider):
         # Called when a spider or process_spider_input() method
         # (from other spider middleware) raises an exception.
 
         # Should return either None or an iterable of Request or item objects.
-        pass
+        return None
 
     async def process_start(self, start):
         # Called with an async iterator over the spider start() method or the
@@ -50,7 +46,7 @@ class ScraperSpiderMiddleware:
             yield item_or_request
 
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        spider.logger.info("Spider opened: %s", spider.name)
 
 
 class ScraperDownloaderMiddleware:
@@ -61,9 +57,9 @@ class ScraperDownloaderMiddleware:
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
-        s = cls()
-        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
-        return s
+        middleware = cls()
+        crawler.signals.connect(middleware.spider_opened, signal=signals.spider_opened)
+        return middleware
 
     def process_request(self, request, spider):
         # Called for each request that goes through the downloader
@@ -94,7 +90,7 @@ class ScraperDownloaderMiddleware:
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
-        pass
+        return None
 
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        spider.logger.info("Spider opened: %s", spider.name)
