@@ -23,4 +23,21 @@ class JsonPipeline:
         self.file.write("[\n")
         self.first_item = True
 
-    
+    def process_item(self, item: Movie, spider: Spider):
+        if not self.first_item:
+            self.file.write(",\n")
+
+        json.dump(
+            item.model_dump(),
+            self.file,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+        self.first_item = False
+
+        return item
+
+    def close_spider(self, spider: Spider):
+        self.file.write("\n]\n")
+        self.file.close()
