@@ -142,6 +142,10 @@ class MovieSpider(scrapy.Spider):
 
             yield movie
 
+        except Exception as e:
+            with open('errors.log', 'a') as f:
+                f.write(str(e) + '\n')
+
         finally:
             await page.close()
 
