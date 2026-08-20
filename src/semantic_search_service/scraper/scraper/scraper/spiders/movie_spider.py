@@ -108,7 +108,18 @@ class MovieScrapy(scrapy.Spider):
         )
         director = person_list[0].css(
             "div.nbl-fixedSlimPosterBlock__title"
-        )
+        ).get() + " " + person_list[0].css(
+            "div.nbl-fixedSlimPosterBlock__secondTitle"
+        ).get()
+
+        actors = [
+            p.css(
+                "div.nbl-fixedSlimPosterBlock__title"
+            ).get() + " " + p.css(
+                "div.nbl-fixedSlimPosterBlock__secondTitle"
+            ).get()
+            for p in person_list[1:]
+        ]
 
         await page.close()
 
