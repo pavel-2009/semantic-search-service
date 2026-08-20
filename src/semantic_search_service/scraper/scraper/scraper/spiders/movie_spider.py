@@ -5,6 +5,8 @@ import scrapy
 from playwright.async_api import Page
 from scrapy.http import Response
 
+from src.semantic_search_service.scraper.schemas import Movie
+
 
 class MovieScrapy(scrapy.Spider):
     name = "movies"
@@ -120,6 +122,17 @@ class MovieScrapy(scrapy.Spider):
             ).get()
             for p in person_list[1:]
         ]
+
+        movie = Movie(
+            name=name,
+            year=int(year),
+            country=country,
+            director=director,
+            description=description,
+            actors=actors,
+            tags=tags,
+            rating=rating
+        )
 
         await page.close()
 
