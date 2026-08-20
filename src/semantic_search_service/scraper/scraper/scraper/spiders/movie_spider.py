@@ -4,7 +4,7 @@ import scrapy
 from playwright.async_api import Page, Locator
 from scrapy.http import Response
 
-from src.semantic_search_service.scraper.schemas import Movie
+from semantic_search_service.scraper.schemas import Movie
 
 
 class MovieSpider(scrapy.Spider):
