@@ -97,14 +97,12 @@ class MovieSpider(scrapy.Spider):
                 "h1.title__header"
             ).inner_text()
 
-            params_list1 = await page.locator(
-                "div.paramsList.paramsList__badges "
-                "> ul.paramsList__container "
-                "> div.nbl-textBadge__text"
+            country = await page.locator(
+                "tr:has(th.nbl-plankMeta__title:has-text('Страны')) td"
+            ).inner_text()
+            tags = await page.locator(
+                "tr:has(th.nbl-plankMeta__title:has-text('Жанр')) td a"
             ).all_inner_texts()
-
-            country = params_list1[0] if params_list1 else None
-            tags = params_list1[1:]
 
             params_list2 = await page.locator(
                 "div.paramsList.params__paramsList "
@@ -121,15 +119,15 @@ class MovieSpider(scrapy.Spider):
                 except ValueError:
                     rating = None
 
-            year = (
-                params_list2[1]
-                if len(params_list2) > 1
-                else None
-            )
-
-            description = await page.locator(
-                'div[data-test="description_text"]'
+            year = await page.locator(
+                "tr:has(th.nbl-plankMeta__title:has-text('Год')) td"
             ).inner_text()
+
+            description = "\n\n".join(
+                await page.locator(
+                    '[data-test="description_text"] p'
+                ).all_inner_texts()
+)
 
             person_list = page.locator(
                 "div.gallery__list > div.persons_item"
