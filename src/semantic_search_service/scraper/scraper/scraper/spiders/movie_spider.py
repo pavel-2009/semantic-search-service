@@ -74,8 +74,9 @@ class MovieSpider(scrapy.Spider):
         page: Page = response.meta["playwright_page"]
 
         try:
-            await page.locator(
-                "div.nbl-arrowButton__caption"
+            await page.get_by_text(
+                "Показать больше",
+                exact=True,
             ).click()
 
             name = await page.locator(
