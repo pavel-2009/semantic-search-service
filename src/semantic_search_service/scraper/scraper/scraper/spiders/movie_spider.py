@@ -1,11 +1,9 @@
 """Spider for Kinopoisk search"""
-
-from typing import Set, List
+import re
 
 import scrapy
-from scrapy.http import Response
-import re
 from playwright.async_api import Page
+from scrapy.http import Response
 
 
 class MovieScrapy(scrapy.Spider):
@@ -29,7 +27,7 @@ class MovieScrapy(scrapy.Spider):
 
         for link in links:
             yield response.follow(
-                link, 
+                link,
                 callback=self.parse_collections,
                 meta={
                     "playwright": True,
@@ -44,20 +42,10 @@ class MovieScrapy(scrapy.Spider):
         no_new_movies = 0
 
         while no_new_movies < 3:
-            links = await page.locator("a").evaluate_all(
-                "elements => elements.map(el => el.href)"
-            )
-
-            current_movies = {
-                link
-                for link in links
-                if re.search(r"/watch/\d+$", link)
-            }
+            current_movies = await self.get_movie_links(page)
 
             old_count = len(movie_links)
-
             movie_links.update(current_movies)
-
             new_count = len(movie_links)
 
             if new_count == old_count:
@@ -66,11 +54,9 @@ class MovieScrapy(scrapy.Spider):
                 no_new_movies = 0
 
             await page.mouse.wheel(0, 2000)
-
             await page.wait_for_timeout(1500)
 
         for link in movie_links:
-
             yield scrapy.Request(
                 link,
                 callback=self.parse_film,
@@ -81,42 +67,53 @@ class MovieScrapy(scrapy.Spider):
             )
 
         await page.close()
-        
+
     async def parse_film(self, response: Response):
         page: Page = response.meta["playwright_page"]
-        await page.locator("div.nbl-arrowButton__caption").click()
 
-        name = response.css(
-            "h1.title__header::text"
-        ).get()
+        await page.locator(
+            "div.nbl-arrowButton__caption"
+        ).click()
 
-        params_list1 = response.css(
-            "div.paramsList.paramsList__badges > ul.paramsList__container > div.nbl-textBadge__text::text"
-        ).getall()
+        name = await page.locator(
+            "h1.title__header"
+        ).inner_text()
 
-        country = params_list[0]
-        tags = params_list[1:]
+        params_list1 = await page.locator(
+            "div.paramsList.paramsList__badges "
+            "> ul.paramsList__container "
+            "> div.nbl-textBadge__text"
+        ).all_inner_texts()
 
-        params_list2 = response.css(
-            "div.paramsList.params__paramsList > ul.paramsList__container > *"
-        ).getall()
-        rating = params_list2[0].get()
-        year = params_list2[0].get()
+        country = params_list1[0] if params_list1 else None
+        tags = params_list1[1:] if len(params_list1) > 1 else []
 
-        description = ""
+        params_list2 = await page.locator(
+            "div.paramsList.params__paramsList "
+            "> ul.paramsList__container > *"
+        ).all_inner_texts()
 
-        desc_text = response.css(
-            "div.clause__text-inner > p"
-        ).getall()
-        
-        for p in desc_text:
-            description += p.get() + '\n\n'
+        rating = params_list2[0] if len(params_list2) > 0 else None
+        year = params_list2[1] if len(params_list2) > 1 else None
 
-        
+        description = "\n\n".join(
+            " ".join(p.css("::text").getall()).strip()
+            for p in response.css(
+                "div.clause__text-inner > p"
+            )
+        )
 
+        person_list = response.css(
+            "div.gallery__list > div.persons_item"
+        )
+        director = person_list[0].css(
+            "div.nbl-fixedSlimPosterBlock__title"
+        )
 
-    async def get_movie_links(self, page: Page) -> Set[str]:
-        links: List[str] = await page.locator("a").evaluate_all(
+        await page.close()
+
+    async def get_movie_links(self, page: Page) -> set[str]:
+        links: list[str] = await page.locator("a").evaluate_all(
             "elements => elements.map(el => el.href)"
         )
 
