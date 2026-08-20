@@ -6,8 +6,6 @@ from scrapy.http import Response
 
 from semantic_search_service.scraper.schemas import Movie
 
-MAX_COLLECTIONS = 2
-MAX_MOVIES_PER_COLLECTION = 10
 SCROLL_STALE_LIMIT = 3
 MOVIE_LINK_PATTERN = re.compile(r"/watch/\d+$")
 
@@ -23,7 +21,7 @@ class MovieSpider(scrapy.Spider):
     def parse(self, response: Response):
         links = response.css('a[data-test="collection_header"]::attr(href)').getall()
 
-        for link in links[:MAX_COLLECTIONS]:
+        for link in links:
             yield response.follow(
                 link,
                 callback=self.parse_collections,
@@ -41,7 +39,7 @@ class MovieSpider(scrapy.Spider):
                 response.url,
             )
 
-            for link in list(movie_links)[:MAX_MOVIES_PER_COLLECTION]:
+            for link in list(movie_links):
                 yield scrapy.Request(
                     link,
                     callback=self.parse_film,
