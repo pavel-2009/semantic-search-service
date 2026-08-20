@@ -26,7 +26,7 @@ class MovieSpider(scrapy.Spider):
             'a[data-test="collection_header"]::attr(href)'
         ).getall()
 
-        for link in links:
+        for link in links[:2]:
             yield response.follow(
                 link,
                 callback=self.parse_collections,
@@ -57,7 +57,12 @@ class MovieSpider(scrapy.Spider):
                 await page.mouse.wheel(0, 2000)
                 await page.wait_for_timeout(1500)
 
+            current = 0
+
             for link in movie_links:
+                current += 1
+                if current == 10:
+                    break
                 yield scrapy.Request(
                     link,
                     callback=self.parse_film,
