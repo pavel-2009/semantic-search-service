@@ -1,8 +1,6 @@
-"""Film schema"""
+"""Scraped movie schemas."""
 
 from pydantic import BaseModel
-
-from typing import List
 
 
 class Movie(BaseModel):
@@ -11,6 +9,6 @@ class Movie(BaseModel):
     country: str | None
     director: str | None
     description: str
-    actors: List[str]
-    tags: List[str]
+    actors: list[str]
+    tags: list[str]
     rating: float | None
