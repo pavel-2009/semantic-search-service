@@ -130,7 +130,7 @@ class MovieSpider(scrapy.Spider):
 )
 
             person_list = page.locator(
-                "div.gallery__list > div.persons_item"
+                'div.gallery__list > div[data-tests="persons_item"]'
             )
 
             person_count = await person_list.count()
