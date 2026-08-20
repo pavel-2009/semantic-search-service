@@ -103,8 +103,16 @@ class MovieScrapy(scrapy.Spider):
         rating = params_list2[0].get()
         year = params_list2[0].get()
 
+        description = ""
 
+        desc_text = response.css(
+            "div.clause__text-inner > p"
+        ).getall()
+        
+        for p in desc_text:
+            description += p.get() + '\n\n'
 
+        
 
 
     async def get_movie_links(self, page: Page) -> Set[str]:
