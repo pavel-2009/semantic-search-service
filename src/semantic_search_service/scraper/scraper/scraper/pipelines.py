@@ -9,7 +9,7 @@ import json
 
 from scrapy.spiders import Spider
 
-from src.semantic_search_service.scraper.schemas import Movie
+from semantic_search_service.scraper.schemas import Movie
 
 
 class JsonPipeline:
