@@ -128,7 +128,7 @@ class MovieSpider(scrapy.Spider):
             )
 
             description = await page.locator(
-                "div.clause__text-inner"
+                'div[data-test="description_text"]'
             ).inner_text()
 
             person_list = page.locator(

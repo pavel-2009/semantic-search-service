@@ -1,44 +1,164 @@
-Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+https://www.ivi.ru/watch/586549: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 2 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
 
-Locator.click: Timeout 30000ms exceeded.
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
 
-Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+https://www.ivi.ru/watch/642926: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
 
-Locator.click: Timeout 30000ms exceeded.
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
 
-Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+https://www.ivi.ru/watch/645292: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
 
-Locator.click: Timeout 30000ms exceeded.
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
 
-Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+https://www.ivi.ru/watch/97810: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
 
-Locator.click: Timeout 30000ms exceeded.
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
 
-Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+https://www.ivi.ru/watch/635199: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 2 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
 
-Locator.click: Timeout 30000ms exceeded.
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
 
-Locator.click: Timeout 30000ms exceeded.
+https://www.ivi.ru/watch/106069: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
 Call log:
-  - waiting for get_by_text("Показать больше", exact=True)
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/123551: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/115679: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/479136: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/642926: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/645292: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/586549: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 2 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/522277: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/513699: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/133299: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/97810: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/634657: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/635199: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 2 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/106069: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/115679: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
+
+https://www.ivi.ru/watch/504177: Locator.inner_text: Error: strict mode violation: locator("div.clause__text-inner") resolved to 3 elements:
+    1) <div data-test="description_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"description_text\"]")
+    2) <div data-test="plot_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"plot_text\"]")
+    3) <div data-test="did_you_know_text" class="clause__text-inner hidden-children">…</div> aka locator("[data-test=\"did_you_know_text\"]")
+
+Call log:
+  - waiting for locator("div.clause__text-inner")
 
