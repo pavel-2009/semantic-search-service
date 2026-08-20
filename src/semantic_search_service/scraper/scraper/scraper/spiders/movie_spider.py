@@ -1,7 +1,7 @@
 import re
 
 import scrapy
-from playwright.async_api import Page, Locator
+from playwright.async_api import Locator, Page
 from scrapy.http import Response
 
 from semantic_search_service.scraper.schemas import Movie
@@ -57,12 +57,10 @@ class MovieSpider(scrapy.Spider):
                 await page.mouse.wheel(0, 2000)
                 await page.wait_for_timeout(1500)
 
-            current = 0
-
-            for link in movie_links:
-                current += 1
-                if current == 10:
+            for current, link in enumerate(movie_links):
+                if current >= 10:
                     break
+
                 yield scrapy.Request(
                     link,
                     callback=self.parse_film,
@@ -79,10 +77,21 @@ class MovieSpider(scrapy.Spider):
         page: Page = response.meta["playwright_page"]
 
         try:
-            await page.get_by_text(
+            # Кнопка "Показать больше" есть не на каждой странице.
+            button = page.get_by_text(
                 "Показать больше",
                 exact=True,
-            ).click()
+            )
+
+            if await button.count() > 0:
+                button = button.first
+
+                if await button.is_visible():
+                    await button.scroll_into_view_if_needed()
+                    await button.click()
+
+                    # Небольшая пауза, чтобы текст успел раскрыться.
+                    await page.wait_for_timeout(300)
 
             name = await page.locator(
                 "h1.title__header"
@@ -105,7 +114,12 @@ class MovieSpider(scrapy.Spider):
             rating: float | None = None
 
             if params_list2:
-                rating = float(params_list2[0].replace(",", "."))
+                try:
+                    rating = float(
+                        params_list2[0].replace(",", ".")
+                    )
+                except ValueError:
+                    rating = None
 
             year = (
                 params_list2[1]
@@ -142,14 +156,20 @@ class MovieSpider(scrapy.Spider):
                 description=description,
                 actors=actors,
                 tags=tags,
-                rating=rating
+                rating=rating,
             )
 
             yield movie
 
         except Exception as e:
-            with open('errors.log', 'a') as f:
-                f.write(str(e) + '\n')
+            with open(
+                "errors.log",
+                "a",
+                encoding="utf-8",
+            ) as file:
+                file.write(
+                    f"{response.url}: {e}\n"
+                )
 
         finally:
             await page.close()
