@@ -5,9 +5,22 @@
 
 
 # useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
+import json
+
+from scrapy.spiders import Spider
+
+from src.semantic_search_service.scraper.schemas import Movie
 
 
-class ScraperPipeline:
-    def process_item(self, item):
-        return item
+class JsonPipeline:
+    def open_spider(self, spider: Spider):
+        self.file = open(
+            "data/movies.json",
+            "w",
+            encoding="utf-8",
+        )
+
+        self.file.write("[\n")
+        self.first_item = True
+
+    
