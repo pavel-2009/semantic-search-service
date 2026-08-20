@@ -12,7 +12,5 @@ class Movie(BaseModel):
     director: str
     description: str
     actors: List[str]
-    genre: str
+    tags: List[str]
     rating: Optional[float]
-    watchers: Optional[int]
-    status: Optional[str]
