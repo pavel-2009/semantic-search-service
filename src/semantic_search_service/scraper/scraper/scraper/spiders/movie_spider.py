@@ -74,12 +74,38 @@ class MovieScrapy(scrapy.Spider):
             yield scrapy.Request(
                 link,
                 callback=self.parse_film,
+                meta={
+                    "playwright": True,
+                    "playwright_include_page": True,
+                },
             )
 
         await page.close()
         
-    def parse_film(self, response: Response):
-        ...
+    async def parse_film(self, response: Response):
+        page: Page = response.meta["playwright_page"]
+        await page.locator("div.nbl-arrowButton__caption").click()
+
+        name = response.css(
+            "h1.title__header::text"
+        ).get()
+
+        params_list1 = response.css(
+            "div.paramsList.paramsList__badges > ul.paramsList__container > div.nbl-textBadge__text::text"
+        ).getall()
+
+        country = params_list[0]
+        tags = params_list[1:]
+
+        params_list2 = response.css(
+            "div.paramsList.params__paramsList > ul.paramsList__container > *"
+        ).getall()
+        rating = params_list2[0].get()
+        year = params_list2[0].get()
+
+
+
+
 
     async def get_movie_links(self, page: Page) -> Set[str]:
         links: List[str] = await page.locator("a").evaluate_all(
