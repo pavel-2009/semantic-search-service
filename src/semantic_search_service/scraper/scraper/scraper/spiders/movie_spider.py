@@ -1,18 +1,17 @@
-"""Spider for Kinopoisk search"""
 import re
 
 import scrapy
-from playwright.async_api import Page
+from playwright.async_api import Page, Locator
 from scrapy.http import Response
 
 from src.semantic_search_service.scraper.schemas import Movie
 
 
-class MovieScrapy(scrapy.Spider):
+class MovieSpider(scrapy.Spider):
     name = "movies"
 
     start_urls = [
-        "https://www.ivi.ru/movies"
+        "https://www.ivi.ru/movies",
     ]
 
     def start_requests(self):
@@ -40,104 +39,129 @@ class MovieScrapy(scrapy.Spider):
     async def parse_collections(self, response: Response):
         page: Page = response.meta["playwright_page"]
 
-        movie_links: set[str] = set()
-        no_new_movies = 0
+        try:
+            movie_links: set[str] = set()
+            no_new_movies = 0
 
-        while no_new_movies < 3:
-            current_movies = await self.get_movie_links(page)
+            while no_new_movies < 3:
+                current_movies = await self.get_movie_links(page)
 
-            old_count = len(movie_links)
-            movie_links.update(current_movies)
-            new_count = len(movie_links)
+                old_count = len(movie_links)
+                movie_links.update(current_movies)
 
-            if new_count == old_count:
-                no_new_movies += 1
-            else:
-                no_new_movies = 0
+                if len(movie_links) == old_count:
+                    no_new_movies += 1
+                else:
+                    no_new_movies = 0
 
-            await page.mouse.wheel(0, 2000)
-            await page.wait_for_timeout(1500)
+                await page.mouse.wheel(0, 2000)
+                await page.wait_for_timeout(1500)
 
-        for link in movie_links:
-            yield scrapy.Request(
-                link,
-                callback=self.parse_film,
-                meta={
-                    "playwright": True,
-                    "playwright_include_page": True,
-                },
-            )
+            for link in movie_links:
+                yield scrapy.Request(
+                    link,
+                    callback=self.parse_film,
+                    meta={
+                        "playwright": True,
+                        "playwright_include_page": True,
+                    },
+                )
 
-        await page.close()
+        finally:
+            await page.close()
 
     async def parse_film(self, response: Response):
         page: Page = response.meta["playwright_page"]
 
-        await page.locator(
-            "div.nbl-arrowButton__caption"
-        ).click()
+        try:
+            await page.locator(
+                "div.nbl-arrowButton__caption"
+            ).click()
 
-        name = await page.locator(
-            "h1.title__header"
+            name = await page.locator(
+                "h1.title__header"
+            ).inner_text()
+
+            params_list1 = await page.locator(
+                "div.paramsList.paramsList__badges "
+                "> ul.paramsList__container "
+                "> div.nbl-textBadge__text"
+            ).all_inner_texts()
+
+            country = params_list1[0] if params_list1 else None
+            tags = params_list1[1:]
+
+            params_list2 = await page.locator(
+                "div.paramsList.params__paramsList "
+                "> ul.paramsList__container > *"
+            ).all_inner_texts()
+
+            rating = (
+                params_list2[0]
+                if len(params_list2) > 0
+                else None
+            )
+
+            year = (
+                params_list2[1]
+                if len(params_list2) > 1
+                else None
+            )
+
+            description = await page.locator(
+                "div.clause__text-inner"
+            ).inner_text()
+
+            person_list = page.locator(
+                "div.gallery__list > div.persons_item"
+            )
+
+            person_count = await person_list.count()
+
+            director = (
+                await self.parse_person(person_list.nth(0))
+                if person_count > 0
+                else None
+            )
+
+            actors = [
+                await self.parse_person(person_list.nth(i))
+                for i in range(1, person_count)
+            ]
+
+            movie = Movie(
+                name=name,
+                year=int(year) if year else None,
+                country=country,
+                director=director,
+                description=description,
+                actors=actors,
+                tags=tags,
+                rating=rating,
+            )
+
+            yield movie
+
+        finally:
+            await page.close()
+
+    @staticmethod
+    async def parse_person(person: Locator) -> str:
+        title = await person.locator(
+            "div.nbl-fixedSlimPosterBlock__title"
         ).inner_text()
 
-        params_list1 = await page.locator(
-            "div.paramsList.paramsList__badges "
-            "> ul.paramsList__container "
-            "> div.nbl-textBadge__text"
-        ).all_inner_texts()
-
-        country = params_list1[0] if params_list1 else None
-        tags = params_list1[1:] if len(params_list1) > 1 else []
-
-        params_list2 = await page.locator(
-            "div.paramsList.params__paramsList "
-            "> ul.paramsList__container > *"
-        ).all_inner_texts()
-
-        rating = params_list2[0] if len(params_list2) > 0 else None
-        year = params_list2[1] if len(params_list2) > 1 else None
-
-        description = "\n\n".join(
-            " ".join(p.css("::text").getall()).strip()
-            for p in response.css(
-                "div.clause__text-inner > p"
-            )
-        )
-
-        person_list = response.css(
-            "div.gallery__list > div.persons_item"
-        )
-        director = person_list[0].css(
-            "div.nbl-fixedSlimPosterBlock__title"
-        ).get() + " " + person_list[0].css(
+        second_title = await person.locator(
             "div.nbl-fixedSlimPosterBlock__secondTitle"
-        ).get()
+        ).inner_text()
 
-        actors = [
-            p.css(
-                "div.nbl-fixedSlimPosterBlock__title"
-            ).get() + " " + p.css(
-                "div.nbl-fixedSlimPosterBlock__secondTitle"
-            ).get()
-            for p in person_list[1:]
-        ]
+        return f"{title} {second_title}".strip()
 
-        movie = Movie(
-            name=name,
-            year=int(year),
-            country=country,
-            director=director,
-            description=description,
-            actors=actors,
-            tags=tags,
-            rating=rating
-        )
-
-        await page.close()
-
-    async def get_movie_links(self, page: Page) -> set[str]:
-        links: list[str] = await page.locator("a").evaluate_all(
+    @staticmethod
+    async def get_movie_links(page: Page) -> set[str]:
+        links: list[str] = await page.locator(
+            "a"
+        ).evaluate_all(
             "elements => elements.map(el => el.href)"
         )
 
