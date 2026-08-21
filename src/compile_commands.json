@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/build",
+  "command": "/usr/bin/c++ -Dtext_cleaner_EXPORTS -isystem /Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/build/_deps/pybind11-src/include -isystem /Users/pavel/.local/share/uv/python/cpython-3.14.7-macos-aarch64-none/include/python3.14 -std=gnu++20 -arch arm64 -fPIC -fvisibility=hidden -flto -o CMakeFiles/text_cleaner.dir/bindings.cpp.o -c /Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/bindings.cpp",
+  "file": "/Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/bindings.cpp",
+  "output": "CMakeFiles/text_cleaner.dir/bindings.cpp.o"
+},
+{
+  "directory": "/Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/build",
+  "command": "/usr/bin/c++ -Dtext_cleaner_EXPORTS -isystem /Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/build/_deps/pybind11-src/include -isystem /Users/pavel/.local/share/uv/python/cpython-3.14.7-macos-aarch64-none/include/python3.14 -std=gnu++20 -arch arm64 -fPIC -fvisibility=hidden -flto -o CMakeFiles/text_cleaner.dir/cleaner.cpp.o -c /Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/cleaner.cpp",
+  "file": "/Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner/cleaner.cpp",
+  "output": "CMakeFiles/text_cleaner.dir/cleaner.cpp.o"
+}
+]
