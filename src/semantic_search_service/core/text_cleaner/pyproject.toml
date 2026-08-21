@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61.0", "pybind11>=2.13"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "text-cleaner"
+version = "0.1.0"
+description = "Fast C++ text cleaner for semantic search"
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools.cmake]
+cmake-minimum-required = "3.15"
