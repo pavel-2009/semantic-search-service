@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     MAX_TEXT_LENGTH: int = 2000
 
     # Data
-    DATA_PATH: Path = Path("data/movies.json")
+    DATA_PATH: Path = Path("src/semantic_search_service/scraper/scraper/data/movies.json")
 
     # Indexing
     BATCH_SIZE: int = 32
