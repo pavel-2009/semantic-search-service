@@ -85,8 +85,61 @@ class Indexer:
 
         cleaned: str = clean_text(raw_text) # type: ignore
 
-        # Ограничиваем длину
         if len(cleaned) > settings.MAX_TEXT_LENGTH: # type: ignore
             cleaned = cleaned[:settings.MAX_TEXT_LENGTH] # type: ignore
 
         return cleaned # type: ignore
+
+    def index_movies(self, filepath: Path, batch_size: int = settings.BATCH_SIZE) -> None:
+        """Indexing movies"""
+
+        self.create_collection()
+
+        movies = self.load_movies(filepath)
+
+        if not movies:
+            print("❌ No data for indexing")
+            return
+
+        total = len(movies)
+        print(f"🔄 Started indexing {total} films...")
+
+        for i in range(0, total, batch_size):
+            batch = movies[i:i + batch_size]
+            points: List[models.PointStruct] = []
+
+            for movie in batch:
+                text_for_embedding = self.prepare_text(movie)
+
+                vector = self.model.encode(text_for_embedding).tolist() # type: ignore
+
+                payload = {
+                    "id": movie.get("id"),
+                    "title": movie.get("title"),
+                    "year": movie.get("year"),
+                    "country": movie.get("country"),
+                    "director": movie.get("director"),
+                    "description": movie.get("description"),
+                    "actors": movie.get("actors", []),
+                    "tags": movie.get("tags", []),
+                    "rating": movie.get("rating"),
+                    "poster_url": movie.get("poster_url"),
+                }
+
+                point = models.PointStruct(
+                    id=movie.get('id'), # type: ignore
+                    vector=vector,
+                    payload=payload
+                )
+                points.append(point)
+
+            self.qdrant.upsert(
+                collection_name=self.collection_name,
+                points=points
+            )
+
+            print(f"  ✅ Loaded {i + len(batch)}/{total} films")
+
+        print(f"🎉 Indexing finished. Total: {total} films")
+
+    
