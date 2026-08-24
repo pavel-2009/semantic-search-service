@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class Movie(BaseModel):
+    id: int
     name: str
     year: int | None
     country: str | None
