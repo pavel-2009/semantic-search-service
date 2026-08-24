@@ -177,12 +177,12 @@ class MovieSpider(scrapy.Spider):
 
     @staticmethod
     async def parse_person(person: Locator) -> str:
-        title = await person.locator("div.nbl-fixedSlimPosterBlock__title").inner_text()
-        second_title = await person.locator(
+        parts = await person.locator(
+            "div.nbl-fixedSlimPosterBlock__title, "
             "div.nbl-fixedSlimPosterBlock__secondTitle"
-        ).inner_text()
+        ).all_text_contents()
 
-        return f"{title} {second_title}".strip()
+        return " ".join(part.strip() for part in parts if part.strip())
 
     @staticmethod
     async def get_movie_links(page: Page) -> set[str]:
