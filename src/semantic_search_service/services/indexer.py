@@ -148,7 +148,6 @@ class Indexer:
         return {
             "collection": self.collection_name,
             "points_count": collection_info.points_count,
-            "vectors_count": collection_info.vectors_count, # type: ignore
             "status": collection_info.status,
         }
 
