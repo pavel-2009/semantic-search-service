@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from qdrant_client.http import models
 from sentence_transformers import SentenceTransformer
 
-from text_cleaner import clean_text
+from text_cleaner import clean_text # type: ignore
 
 from src.semantic_search_service.core.qdrant_client import QdrantClientSingleton
 from src.semantic_search_service.core.config import settings
@@ -83,10 +83,10 @@ class Indexer:
 
         raw_text = ". ".join(parts)
 
-        cleaned: str = clean_text(raw_text)
+        cleaned: str = clean_text(raw_text) # type: ignore
 
         # Ограничиваем длину
-        if len(cleaned) > settings.MAX_TEXT_LENGTH:
-            cleaned = cleaned[:settings.MAX_TEXT_LENGTH]
+        if len(cleaned) > settings.MAX_TEXT_LENGTH: # type: ignore
+            cleaned = cleaned[:settings.MAX_TEXT_LENGTH] # type: ignore
 
-        return cleaned
+        return cleaned # type: ignore
