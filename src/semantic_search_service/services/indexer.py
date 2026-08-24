@@ -9,8 +9,8 @@ from sentence_transformers import SentenceTransformer
 
 from text_cleaner import clean_text # type: ignore
 
-from src.semantic_search_service.core.qdrant_client import QdrantClientSingleton
-from src.semantic_search_service.core.config import settings
+from semantic_search_service.core.qdrant_client import QdrantClientSingleton
+from semantic_search_service.core.config import settings
 
 
 class Indexer:

@@ -1,7 +1,7 @@
 """Qdrant singleton client"""
 
 from qdrant_client import QdrantClient
-from src.semantic_search_service.core.config import settings
+from semantic_search_service.core.config import settings
 
 
 class QdrantClientSingleton:
