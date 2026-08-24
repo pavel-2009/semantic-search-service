@@ -142,4 +142,23 @@ class Indexer:
 
         print(f"🎉 Indexing finished. Total: {total} films")
 
-    
+    def get_stats(self) -> Dict[str, Any]:
+        """Return collection statistics"""
+        collection_info = self.qdrant.get_collection(self.collection_name)
+        return {
+            "collection": self.collection_name,
+            "points_count": collection_info.points_count,
+            "vectors_count": collection_info.vectors_count, # type: ignore
+            "status": collection_info.status,
+        }
+
+    def clear_collection(self) -> None:
+        """Delete all points from collection"""
+        self.qdrant.delete_collection(self.collection_name)
+        print(f"🗑️ Collection '{self.collection_name}' deleted")
+
+    def recreate_collection(self) -> None:
+        """Recreate collection"""
+        self.clear_collection()
+        self.create_collection()
+        print(f"🔄 Collection '{self.collection_name}' recreated")
