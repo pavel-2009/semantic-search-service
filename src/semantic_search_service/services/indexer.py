@@ -52,3 +52,41 @@ class Indexer:
 
         print(f"📦 Loaded {len(data)} films from {filepath}")
         return data
+
+    def prepare_text(self, movie: Dict[str, Any]) -> str:
+        """Formatting clean text from json"""
+        parts: List[str] = []
+
+        if movie.get("title"):
+            parts.append(f"Название: {movie['title']}")
+
+        if movie.get("description"):
+            parts.append(f"Описание: {movie['description']}")
+
+        if movie.get("director"):
+            parts.append(f"Режиссёр: {movie['director']}")
+
+        if movie.get("country"):
+            parts.append(f"Страна: {movie['country']}")
+
+        if movie.get("year"):
+            parts.append(f"Год: {movie['year']}")
+
+        if movie.get("rating"):
+            parts.append(f"Рейтинг: {movie['rating']}")
+
+        if movie.get("actors"):
+            parts.append(f"Актёры: {', '.join(movie['actors'])}")
+
+        if movie.get("tags"):
+            parts.append(f"Теги: {', '.join(movie['tags'])}")
+
+        raw_text = ". ".join(parts)
+
+        cleaned: str = clean_text(raw_text)
+
+        # Ограничиваем длину
+        if len(cleaned) > settings.MAX_TEXT_LENGTH:
+            cleaned = cleaned[:settings.MAX_TEXT_LENGTH]
+
+        return cleaned
