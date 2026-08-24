@@ -1,0 +1,27 @@
+"""Project configuration"""
+
+from pydantic_settings import BaseSettings
+from pathlib import Path
+
+
+class Settings(BaseSettings):
+    """Project config"""
+
+    # Qdrant
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION: str = "movies"
+
+    # Embedding model
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_DIM: int = 384
+    MAX_TEXT_LENGTH: int = 2000
+
+    # Data
+    DATA_PATH: Path = Path("data/movies.json")
+
+    # Indexing
+    BATCH_SIZE: int = 32
+
+
+settings = Settings()
