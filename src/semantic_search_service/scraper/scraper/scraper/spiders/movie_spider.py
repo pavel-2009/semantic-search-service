@@ -56,7 +56,10 @@ class MovieSpider(scrapy.Spider):
         try:
             await self.expand_description(page)
 
+            film_id = int(response.url.rstrip("/").split("/")[-1])
+
             movie = Movie(
+                id=film_id,
                 name=await self.get_text(page, "h1.title__header"),
                 year=await self.get_year(page),
                 country=await self.get_optional_text(
