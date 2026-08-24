@@ -30,7 +30,6 @@ def main():
     stats = indexer.get_stats()
     print("\n📊 СТАТИСТИКА ПОСЛЕ ИНДЕКСАЦИИ:")
     print(f"  Точки: {stats['points_count']}")
-    print(f"  Векторы: {stats['vectors_count']}")
     print(f"  Статус: {stats['status']}")
 
     print("\n✅ Индексация завершена успешно!")
