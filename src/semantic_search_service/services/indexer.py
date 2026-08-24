@@ -41,3 +41,14 @@ class Indexer:
         )
 
         print(f"✅ Collection '{self.collection_name}' created")
+
+    def load_movies(self, filepath: Path) -> List[Dict[str, Any]]:
+        """Load films from JSON"""
+        if not filepath.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        print(f"📦 Loaded {len(data)} films from {filepath}")
+        return data
