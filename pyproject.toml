@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "scrapy-playwright>=0.0.48",
+    "text-cleaner @ file:///Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner",
 ]
 
 [project.scripts]
