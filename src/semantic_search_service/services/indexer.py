@@ -22,4 +22,22 @@ class Indexer:
         self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
         self.embedding_dim = settings.EMBEDDING_DIM
 
-    
+    def create_collection(self) -> None:
+        """Creats the collection if it doesn't exist"""
+
+        collections = self.qdrant.get_collections().collections
+        exists = any(c.name == self.collection_name for c in collections)
+
+        if exists:
+            print(f"⚠️ Collection '{self.collection_name}' already exists")
+            return
+
+        self.qdrant.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=models.VectorParams(
+                size=self.embedding_dim,
+                distance=models.Distance.COSINE
+            )
+        )
+
+        print(f"✅ Collection '{self.collection_name}' created")
