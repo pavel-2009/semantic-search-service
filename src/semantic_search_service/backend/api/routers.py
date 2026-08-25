@@ -1,9 +1,6 @@
 """Fast API routers"""
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
-
-from typing import Dict, Any
 
 from semantic_search_service.backend.schemas import (
     SearchRequest,
@@ -33,3 +30,35 @@ async def health_check(
         collection=stats["collection"],
         indexed_items=stats["total_points"],
     )
+
+@router.get("/stats", response_model=StatsResponse)
+async def get_stats(
+    service: SearchService = Depends(get_search_service)
+) -> StatsResponse:
+    """Collection stats"""
+    stats = service.get_stats()
+    return StatsResponse(
+        collection=stats["collection"],
+        total_points=stats["total_points"],
+        status=stats["status"],
+        model=stats["model"],
+        embedding_dim=stats["embedding_dim"],
+    )
+
+
+@router.post("/search", response_model=SearchResponse)
+async def search(
+    request: SearchRequest,
+    service: SearchService = Depends(get_search_service)
+) -> SearchResponse:
+    """Семантический поиск по фильмам"""
+    try:
+        results = service.search(request)
+        return SearchResponse(
+            success=True,
+            query=request.query,
+            total=len(results),
+            results=results,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
