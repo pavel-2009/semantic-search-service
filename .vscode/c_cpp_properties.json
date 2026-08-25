@@ -4,7 +4,6 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/.venv/lib/python3.14/site-packages/pybind11/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
