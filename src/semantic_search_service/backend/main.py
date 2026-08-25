@@ -18,3 +18,18 @@ app.add_middleware(
     allow_headers=['*'],
     allow_methods=['*']
 )
+
+from src.semantic_search_service.backend.api.routers import router
+
+app.include_router(router)
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": "Semantic Search API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/v1/health",
+        "search": "/api/v1/search",
+    }
