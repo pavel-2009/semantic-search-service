@@ -31,7 +31,7 @@ class SearchService:
 
         search_result = self.qdrant.query_points(
             collection_name=self.collection_name,
-            vector=vector,
+            query=vector,
             limit=request.top_k,
             query_filter=query_filter,
             with_payload=True,
