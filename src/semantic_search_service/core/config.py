@@ -1,8 +1,8 @@
 """Project configuration"""
 
-from pydantic_settings import BaseSettings
 from pathlib import Path
 
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Project config"""
@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     # Indexing
     BATCH_SIZE: int = 32
+
+    # Observability
+    LOG_LEVEL: str = "INFO"
 
 
 settings = Settings()

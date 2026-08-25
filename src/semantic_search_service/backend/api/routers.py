@@ -1,20 +1,26 @@
 """Fast API routers"""
 
-from fastapi import APIRouter, HTTPException, Depends
+import logging
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from semantic_search_service.backend.schemas import (
+    HealthResponse,
     SearchRequest,
     SearchResponse,
-    HealthResponse,
     StatsResponse,
 )
 from semantic_search_service.backend.services.search_service import SearchService
 
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
+logger = logging.getLogger(__name__)
 
 # Dependency
+@lru_cache
 def get_search_service() -> SearchService:
+    logger.info("Creating shared SearchService instance")
     return SearchService()
 
 
@@ -24,7 +30,11 @@ async def health_check(
 ) -> HealthResponse:
     """Checking App health"""
 
-    stats = search_service.get_stats()
+    try:
+        stats = search_service.get_stats()
+    except Exception as exc:
+        logger.exception("Health check failed while accessing Qdrant")
+        raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
     return HealthResponse(
         status="healthy" if stats["total_points"] > 0 else "degraded",
         collection=stats["collection"],
@@ -36,7 +46,11 @@ async def get_stats(
     service: SearchService = Depends(get_search_service)
 ) -> StatsResponse:
     """Collection stats"""
-    stats = service.get_stats()
+    try:
+        stats = service.get_stats()
+    except Exception as exc:
+        logger.exception("Stats request failed while accessing Qdrant")
+        raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
     return StatsResponse(
         collection=stats["collection"],
         total_points=stats["total_points"],
@@ -61,4 +75,5 @@ async def search(
             results=results,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Search endpoint failed")
+        raise HTTPException(status_code=500, detail="Search request failed; see server logs") from e
