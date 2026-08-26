@@ -1,10 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-
-SPIDER_MODULES = ["semantic_search_service.scraper.movie_scraper.movie_scraper.spiders"]
-NEWSPIDER_MODULE = "semantic_search_service.scraper.movie_scraper.movie_scraper.spiders"
-
 BOT_NAME = "movie_scraper"
 
 ROBOTSTXT_OBEY = False
