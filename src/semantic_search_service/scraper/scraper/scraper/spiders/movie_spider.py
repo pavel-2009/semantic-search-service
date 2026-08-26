@@ -242,6 +242,10 @@ class MovieSpider(scrapy.Spider):
             "playwright": True,
             "playwright_include_page": True,
             "playwright_page_init": MovieSpider.playwright_page_init,   # type: ignore
+            "playwright_page_goto_kwargs": {
+                "wait_until": "domcontentloaded",  
+                "timeout": 60000,
+            },
             "playwright_context_kwargs": { 
                 "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "viewport": {"width": 1920, "height": 1080},

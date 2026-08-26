@@ -130,14 +130,6 @@ LOGGING = {
 DOWNLOAD_TIMEOUT = 120
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 60000
 
-# Уменьшаем параллелизм
-CONCURRENT_REQUESTS = 2
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
-
-# Добавляем задержки
-DOWNLOAD_DELAY = 3
-RANDOMIZE_DOWNLOAD_DELAY = True
-
 # Настройки Playwright
 PLAYWRIGHT_BROWSER_TYPE = 'chromium'
 PLAYWRIGHT_LAUNCH_OPTIONS = {
@@ -150,3 +142,30 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
         "--disable-gpu",
     ]
 }
+
+# Настройки Retry
+RETRY_ENABLED = True
+RETRY_TIMES = 5 
+RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429, 403, 400]
+RETRY_PRIORITY_ADJUST = -1
+
+# Добавляем middleware
+DOWNLOADER_MIDDLEWARES = {
+    'scrapy.downloadermiddlewares.retry.RetryMiddleware': 90,
+    'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+}
+
+
+# AutoThrottle для автоматической регулировки скорости
+AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_START_DELAY = 5.0
+AUTOTHROTTLE_MAX_DELAY = 60.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+AUTOTHROTTLE_DEBUG = True
+
+# Ограничения
+CONCURRENT_REQUESTS = 1  # Один запрос за раз!
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
+CONCURRENT_REQUESTS_PER_IP = 1
+DOWNLOAD_DELAY = 5  # Минимальная задержка между запросами
+RANDOMIZE_DOWNLOAD_DELAY = True
