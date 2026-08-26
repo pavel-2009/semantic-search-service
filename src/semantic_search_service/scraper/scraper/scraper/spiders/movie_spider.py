@@ -1,7 +1,7 @@
 import re
 
 import scrapy
-from playwright.async_api import Locator, Page
+from playwright.async_api import Locator, Page, TimeoutError as PlaywrightTimeoutError
 from scrapy.http import Response
 import random
 
@@ -91,11 +91,103 @@ class MovieSpider(scrapy.Spider):
             await page.close()
 
     async def parse_film(self, response: Response):
-        page: Page = response.meta["playwright_page"]
+        page = response.meta.get("playwright_page")
+        
+        if not page:
+            self.logger.warning("No page for %s, retrying", response.url)
+            yield scrapy.Request(
+                response.url,
+                callback=self.parse_film,
+                meta=self.playwright_meta(),
+                priority=30,
+                dont_filter=True,
+            )
+            return
 
         try:
+            # ===== ДИАГНОСТИЧЕСКИЙ БЛОК =====
+            # Проверяем статус
+            if hasattr(response, 'status') and response.status != 200:
+                self.logger.warning("Non-200 status %d for %s", response.status, response.url)
+                if response.status in [403, 429]:
+                    self.logger.warning("Rate limited or blocked, waiting 60s...")
+                    await page.wait_for_timeout(60000)
+                    yield scrapy.Request(
+                        response.url,
+                        callback=self.parse_film,
+                        meta=self.playwright_meta(),
+                        priority=50,
+                        dont_filter=True,
+                    )
+                    return
+                elif response.status == 404:
+                    self.logger.warning("Movie not found: %s", response.url)
+                    return
+            
+            # Проверяем содержимое
+            content = await page.content()
+            content_size = len(content)
+            
+            # Проверяем на капчу
+            captcha_keywords = ["captcha", "проверка", "verify", "blocked", "доступ ограничен"]
+            if any(keyword in content.lower() for keyword in captcha_keywords):
+                self.logger.error("🚨 CAPTCHA or block detected on %s", response.url)
+                
+                # Сохраняем для анализа
+                debug_filename = f"captcha_{response.url.split('/')[-1]}.html"
+                with open(debug_filename, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self.logger.info("Saved captcha page to %s", debug_filename)
+                
+                # Ждем и пробуем снова с большим таймаутом
+                await page.wait_for_timeout(30000)
+                yield scrapy.Request(
+                    response.url,
+                    callback=self.parse_film,
+                    meta=self.playwright_meta(),
+                    priority=60,
+                    dont_filter=True,
+                )
+                return
+            
+            # Если страница слишком маленькая
+            if content_size < 15000:
+                self.logger.warning("⚠️ Small page: %d bytes, might be blocked", content_size)
+                debug_filename = f"small_{response.url.split('/')[-1]}.html"
+                with open(debug_filename, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self.logger.info("Saved small page to %s", debug_filename)
+                
+                # Пробуем обновить
+                await page.reload()
+                await page.wait_for_timeout(5000)
+                
+                # Проверяем снова
+                content = await page.content()
+                if len(content) < 15000:
+                    self.logger.warning("Still small after reload, skipping %s", response.url)
+                    return
+            
+            # ===== ОСНОВНОЙ ПАРСИНГ =====
+            # Ждем основные элементы
+            try:
+                await page.wait_for_selector('h1.title__header', timeout=30000)
+            except PlaywrightTimeoutError:
+                self.logger.warning("Timeout waiting for title on %s", response.url)
+                # Пробуем еще раз
+                yield scrapy.Request(
+                    response.url,
+                    callback=self.parse_film,
+                    meta=self.playwright_meta(),
+                    priority=30,
+                    dont_filter=True,
+                )
+                return
+
+            # Раскрываем описание (если есть кнопка)
             await self.expand_description(page)
 
+            # Парсим данные
             film_id = int(response.url.rstrip("/").split("/")[-1])
 
             movie = Movie(
@@ -116,12 +208,36 @@ class MovieSpider(scrapy.Spider):
                 rating=await self.get_rating(page),
             )
 
-            self.logger.info("Parsed movie: %s (%s)", movie.name, movie.year)
+            self.logger.info("✅ Parsed movie: %s (%s)", movie.name, movie.year)
+            
+            # Случайная задержка после успешного парсинга
+            await page.wait_for_timeout(random.randint(1000, 3000))
+            
             yield movie
-        except Exception:
+            
+        except PlaywrightTimeoutError as e:
+            self.logger.warning("Timeout parsing %s: %s", response.url, str(e))
+            yield scrapy.Request(
+                response.url,
+                callback=self.parse_film,
+                meta=self.playwright_meta(),
+                priority=40,
+                dont_filter=True,
+            )
+        except Exception as e:
             self.logger.exception("Failed to parse movie: %s", response.url)
+            # Сохраняем страницу для отладки
+            try:
+                content = await page.content()
+                with open(f"error_{response.url.split('/')[-1]}.html", "w", encoding="utf-8") as f:
+                    f.write(content)
+            except Exception:
+                pass
         finally:
-            await page.close()
+            try:
+                await page.close()
+            except Exception:
+                pass
 
     async def collect_movie_links(self, page: Page) -> list[str]:
         movie_links: set[str] = set()
