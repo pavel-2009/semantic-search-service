@@ -80,7 +80,10 @@ class MovieSpider(scrapy.Spider):
                     link,
                     callback=self.parse_film,
                     meta=self.playwright_meta(),
+                    priority=10,
+                    dont_filter=True,
                 )
+                
         except Exception:
             self.logger.exception("Failed to parse collection: %s", response.url)
         finally:
