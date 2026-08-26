@@ -16,27 +16,21 @@ class MovieSpider(scrapy.Spider):
     API_BASE = "https://api.poiskkino.dev/v1.4"
     API_KEY = settings.POISKKINO_API_KEY
 
+    start_urls = [f"{API_BASE}/movie?page=1&limit=50&sortField=rating.kp&sortType=-1"]
+
     def start_requests(self) -> Generator[JsonRequest, None, None]:
-        params = {
-            "page": 1,
-            "limit": 50,
-            "sortField": "rating.kp",
-            "sortType": "-1",
-        }
+        for url in self.start_urls:
+            yield JsonRequest(
+                url=url,
+                headers={
+                    "X-API-KEY": self.API_KEY,
+                    "accept": "application/json",
+                },
+                callback=self.parse,
+                meta={"page": 1},
+            )
 
-        url = f"{self.API_BASE}/movie?{urlencode(params)}"
-
-        yield JsonRequest(
-            url=url,
-            headers={
-                "X-API-KEY": self.API_KEY,
-                "accept": "application/json",
-            },
-            callback=self.parse_movie_list,
-            meta={"page": 1},
-        )
-
-    def parse_movie_list(self, response: Response) -> Generator[JsonRequest, None, None]:
+    def parse(self, response: Response) -> Generator[JsonRequest, None, None]:
         data = response.json()
         movies = data.get("docs", [])
 
@@ -70,7 +64,7 @@ class MovieSpider(scrapy.Spider):
                     "X-API-KEY": self.API_KEY,
                     "accept": "application/json",
                 },
-                callback=self.parse_movie_list,
+                callback=self.parse,
                 meta={"page": next_page},
             )
 
