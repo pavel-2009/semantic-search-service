@@ -1,12 +1,9 @@
 import re
 import random
-import asyncio
 
 import scrapy
 from playwright.async_api import Locator, Page
 from scrapy.http import Response
-
-from playwright_stealth import stealth # type: ignore
 
 from semantic_search_service.scraper.schemas import Movie
 
@@ -32,9 +29,6 @@ class MovieSpider(scrapy.Spider):
             'a[data-test="collection_header"]::attr(href)'
         ).getall()
 
-        # Перемешиваем коллекции для большей случайности
-        random.shuffle(links)
-
         for link in links:
             yield response.follow(
                 link,
@@ -44,9 +38,6 @@ class MovieSpider(scrapy.Spider):
 
     async def parse_collections(self, response: Response):
         page: Page = response.meta["playwright_page"]
-
-        # Маскировка автоматизации
-        await stealth_async(page) # type: ignore
 
         try:
             movie_links = await self.collect_movie_links(page)
@@ -67,9 +58,6 @@ class MovieSpider(scrapy.Spider):
                     dont_filter=True
                 )
 
-            # Случайная пауза после обработки коллекции
-            await asyncio.sleep(random.uniform(4.0, 10.0))
-
         finally:
             await page.close()
 
@@ -77,9 +65,6 @@ class MovieSpider(scrapy.Spider):
         page: Page = response.meta["playwright_page"]
 
         try:
-            # Маскировка автоматизации
-            await stealth_async(page) # type: ignore
-
             await page.wait_for_selector(
                 "h1.title__header",
                 timeout=30000,
@@ -117,9 +102,6 @@ class MovieSpider(scrapy.Spider):
             )
 
             yield movie
-
-            # Длинная случайная пауза между фильмами (5–15 секунд)
-            await asyncio.sleep(random.uniform(5.0, 15.0))
 
         finally:
             await page.close()
