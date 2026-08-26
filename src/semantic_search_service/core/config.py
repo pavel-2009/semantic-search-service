@@ -15,13 +15,7 @@ class Settings(BaseSettings):
     MAX_TEXT_LENGTH: int = 2000
     BATCH_SIZE: int = 32
 
-    DATA_PATH: Path = (
-        Path(__file__).resolve().parents[1]
-        / "scraper"
-        / "scraper"
-        / "data"
-        / "movies.json"
-    )
+    DATA_PATH: Path = Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
 
     LOG_LEVEL: str = "INFO"
     POISKKINO_API_KEY: str = ""
