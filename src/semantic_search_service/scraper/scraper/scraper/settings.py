@@ -26,11 +26,6 @@ ADDONS = {}
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
-# Concurrency and throttling settings
-# CONCURRENT_REQUESTS = 16
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 1
-
 # Disable cookies (enabled by default)
 # COOKIES_ENABLED = False
 
@@ -98,8 +93,6 @@ DOWNLOAD_HANDLERS = {
 
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 
-PLAYWRIGHT_BROWSER_TYPE = "chromium"
-
 LOG_LEVEL = "INFO"
 
 LOGGING = {
@@ -131,4 +124,29 @@ LOGGING = {
             "propagate": True,
         },
     },
+}
+
+# Увеличиваем таймауты
+DOWNLOAD_TIMEOUT = 120
+PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 60000
+
+# Уменьшаем параллелизм
+CONCURRENT_REQUESTS = 2
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
+
+# Добавляем задержки
+DOWNLOAD_DELAY = 3
+RANDOMIZE_DOWNLOAD_DELAY = True
+
+# Настройки Playwright
+PLAYWRIGHT_BROWSER_TYPE = 'chromium'
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": True,
+    "args": [
+        "--disable-blink-features=AutomationControlled",
+        "--disable-dev-shm-usage",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+    ]
 }
