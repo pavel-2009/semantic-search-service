@@ -233,4 +233,13 @@ class MovieSpider(scrapy.Spider):
         return {
             "playwright": True,
             "playwright_include_page": True,
+            "playwright_page_init": MovieSpider.playwright_page_init,   # type: ignore
+            "playwright_context_kwargs": { 
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "viewport": {"width": 1920, "height": 1080},
+                "locale": "ru-RU",
+                "timezone_id": "Europe/Moscow",
+                "geolocation": {"latitude": 55.7558, "longitude": 37.6173},
+                "permissions": ["geolocation"],
+            }
         }
