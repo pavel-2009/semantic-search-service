@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     
     # Poiskkino API
-    POISKKINO_API_KEY: str = ""  
+    POISKKINO_API_KEY: str = "19Y8C8T-1DB4SAP-ND2GYRH-ATGV3A3"  
 
     class Config:
         env_file = ".env"

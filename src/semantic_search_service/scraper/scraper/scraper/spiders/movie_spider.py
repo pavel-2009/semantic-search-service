@@ -19,15 +19,18 @@ class MovieSpider(scrapy.Spider):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         
-        # Load API key from settings
         from semantic_search_service.core.config import settings
-        self.API_KEY = settings.POISKKINO_API_KEY # type: ignore
+        self.API_KEY = settings.POISKKINO_API_KEY
         
-        if not self.API_KEY:
-            self.logger.error("POISKKINO_API_KEY not set! Get your token from @poiskkinodev_bot")
+        self.logger.info(f"=== API_KEY loaded: {self.API_KEY[:10] if self.API_KEY else 'EMPTY'}... ===")
+        self.logger.info(f"=== API_KEY length: {len(self.API_KEY)} ===")
     
     def start_requests(self) -> Generator[JsonRequest, None, None]:
+        """Generate initial requests to fetch movie list."""
+        self.logger.info("=== START_REQUESTS CALLED ===")
+        
         if not self.API_KEY:
+            self.logger.error("API_KEY is empty! Get your token from @poiskkinodev_bot")
             return
         
         params = {
@@ -38,38 +41,48 @@ class MovieSpider(scrapy.Spider):
         }
         
         url = f"{self.API_BASE}/movie?{urlencode(params)}"
+        self.logger.info(f"Requesting: {url}")
         
         yield JsonRequest(
             url=url,
-            headers=self._get_headers(),
+            headers={
+                "X-API-KEY": self.API_KEY,
+                "accept": "application/json",
+            },
             callback=self.parse_movie_list,
             meta={"page": 1},
             dont_filter=True,
         )
     
     def parse_movie_list(self, response: Response) -> Generator[JsonRequest, None, None]:
+        """Parse movie list response."""
+        self.logger.info(f"=== PARSE_MOVIE_LIST, status: {response.status} ===")
+        
         data = response.json()
         movies = data.get("docs", [])
         
-        if not movies:
-            self.logger.info("No more movies found")
-            return
+        self.logger.info(f"Found {len(movies)} movies")
         
-        current_page = response.meta.get("page", 1)
-        self.logger.info(f"Processing {len(movies)} movies from page {current_page}")
+        if not movies:
+            return
         
         for movie in movies:
             movie_id = movie.get("id")
             if movie_id:
                 yield JsonRequest(
                     url=f"{self.API_BASE}/movie/{movie_id}",
-                    headers=self._get_headers(),
+                    headers={
+                        "X-API-KEY": self.API_KEY,
+                        "accept": "application/json",
+                    },
                     callback=self.parse_movie_details,
                     dont_filter=True,
                 )
         
-        # Pagination (demo tariff: first 10 pages)
+        # Pagination
+        current_page = response.meta.get("page", 1)
         total_pages = data.get("pages", 1)
+        
         if current_page < total_pages and current_page < 10:
             next_page = current_page + 1
             params = {
@@ -82,13 +95,17 @@ class MovieSpider(scrapy.Spider):
             
             yield JsonRequest(
                 url=url,
-                headers=self._get_headers(),
+                headers={
+                    "X-API-KEY": self.API_KEY,
+                    "accept": "application/json",
+                },
                 callback=self.parse_movie_list,
                 meta={"page": next_page},
                 dont_filter=True,
             )
     
     def parse_movie_details(self, response: Response) -> Generator[Movie, None, None]:
+        """Parse movie details and yield Movie item."""
         data = response.json()
         
         try:
@@ -100,20 +117,16 @@ class MovieSpider(scrapy.Spider):
             year = data.get("year")
             description = data.get("description") or data.get("shortDescription") or ""
             
-            # Countries
             countries = data.get("countries", [])
             country = self._extract_countries(countries)
             
-            # Persons
             persons = data.get("persons", [])
             director = self._extract_director(persons)
             actors = self._extract_actors(persons)
             
-            # Genres
             genres = data.get("genres", [])
             tags = self._extract_genres(genres)
             
-            # Rating
             rating_data = data.get("rating", {})
             rating = rating_data.get("kp")
             
@@ -129,7 +142,7 @@ class MovieSpider(scrapy.Spider):
                 rating=rating,
             )
             
-            self.logger.info(f"Parsed: {movie.name} ({movie.year})")
+            self.logger.info(f"✅ Parsed: {movie.name} ({movie.year})")
             yield movie
             
         except Exception as e:
@@ -139,7 +152,6 @@ class MovieSpider(scrapy.Spider):
     def _extract_countries(countries: List[Dict[str, str]]) -> Optional[str]:
         if not countries:
             return None
-        
         names = [c.get("name", "") for c in countries if c.get("name")]
         return ", ".join(names) if names else None
     
@@ -163,9 +175,3 @@ class MovieSpider(scrapy.Spider):
     @staticmethod
     def _extract_genres(genres: List[Dict[str, str]]) -> List[str]:
         return [g.get("name", "") for g in genres if g.get("name")]
-    
-    def _get_headers(self) -> Dict[str, str]:
-        return {
-            "X-API-KEY": self.API_KEY or "",
-            "accept": "application/json",
-        }

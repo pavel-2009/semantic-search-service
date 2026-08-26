@@ -1,7 +1,11 @@
-BOT_NAME = "scraper"
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-SPIDER_MODULES = ["scraper.spiders"]
-NEWSPIDER_MODULE = "scraper.spiders"
+SPIDER_MODULES = ["semantic_search_service.scraper.scraper.scraper.spiders"]
+NEWSPIDER_MODULE = "semantic_search_service.scraper.scraper.scraper.spiders"
+
+BOT_NAME = "scraper"
 
 ROBOTSTXT_OBEY = False
 
@@ -20,3 +24,7 @@ LOG_LEVEL = "INFO"
 # Отключаем всё, что связано с Playwright
 DOWNLOAD_HANDLERS = {}
 TWISTED_REACTOR = None
+
+ITEM_PIPELINES = {
+    "scraper.pipelines.JsonPipeline": 300,
+}
