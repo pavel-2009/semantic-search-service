@@ -52,7 +52,6 @@ RETRY_HTTP_CODES = [
 LOG_LEVEL = "INFO"
 
 DOWNLOADER_MIDDLEWARES = {
-    'scrapy_impersonate.ImpersonateMiddleware': 110,
     'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
 }
 
@@ -69,3 +68,10 @@ DOWNLOAD_DELAY = 3.5
 RANDOMIZE_DOWNLOAD_DELAY = True
 
 HTTPCACHE_ENABLED = False
+
+PLAYWRIGHT_CONTEXT_ARGS = {
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "viewport": {"width": 1920, "height": 1080},
+    "locale": "ru-RU",
+    "timezone_id": "Europe/Moscow",
+}
