@@ -14,9 +14,45 @@ class MovieSpider(scrapy.Spider):
     name = "movies"
     start_urls = ["https://www.ivi.ru/movies"]
 
+    async def playwright_page_init(self, page: Page) -> None:
+        
+        await page.add_init_script("""
+            // Удаляем признак webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+            
+            // Добавляем плагины 
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [
+                    { name: 'Chrome PDF Plugin' },
+                    { name: 'Chrome PDF Viewer' },
+                    { name: 'Native Client' }
+                ]
+            });
+            
+            // Добавляем языки
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['ru-RU', 'ru', 'en-US', 'en']
+            });
+            
+            // Добавляем историю
+            window.history.pushState(null, null, window.location.href);
+            
+            // Эмулируем реальный экран
+            Object.defineProperty(screen, 'availWidth', { get: () => 1920 });
+            Object.defineProperty(screen, 'availHeight', { get: () => 1080 });
+            
+            // Удаляем другие следы автоматизации
+            delete navigator.__proto__.webdriver;
+        """)
+        
+        await page.set_viewport_size({"width": 1920, "height": 1080})
+        
+
     def start_requests(self):
         for url in self.start_urls:
-            yield scrapy.Request(url=url, callback=self.parse)
+            yield scrapy.Request(url=url, callback=self.parse, meta=self.playwright_meta())
 
     def parse(self, response: Response):
         links = response.css('a[data-test="collection_header"]::attr(href)').getall()
