@@ -21,7 +21,7 @@ class MovieSpider(scrapy.Spider):
     def parse(self, response: Response):
         links = response.css('a[data-test="collection_header"]::attr(href)').getall()
 
-        for link in links[:3]:
+        for link in links:
             yield response.follow(
                 link,
                 callback=self.parse_collections,
@@ -39,7 +39,7 @@ class MovieSpider(scrapy.Spider):
                 response.url,
             )
 
-            for link in list(movie_links)[:10]:
+            for link in list(movie_links):
                 yield scrapy.Request(
                     link,
                     callback=self.parse_film,
