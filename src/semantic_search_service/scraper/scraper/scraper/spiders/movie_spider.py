@@ -6,7 +6,6 @@ from scrapy.http import Response
 
 from semantic_search_service.scraper.schemas import Movie
 
-SCROLL_STALE_LIMIT = 3
 MOVIE_LINK_PATTERN = re.compile(r"/watch/\d+$")
 
 
@@ -21,7 +20,7 @@ class MovieSpider(scrapy.Spider):
     def parse(self, response: Response):
         links = response.css('a[data-test="collection_header"]::attr(href)').getall()
 
-        for link in links[:3]:
+        for link in links:
             yield response.follow(
                 link,
                 callback=self.parse_collections,
@@ -39,7 +38,7 @@ class MovieSpider(scrapy.Spider):
                 response.url,
             )
 
-            for link in list(movie_links)[:10]:
+            for link in list(movie_links):
                 yield scrapy.Request(
                     link,
                     callback=self.parse_film,
@@ -85,14 +84,17 @@ class MovieSpider(scrapy.Spider):
 
     async def collect_movie_links(self, page: Page) -> list[str]:
         movie_links: set[str] = set()
-        stale_scrolls = 0
+        current_movie: str = ""
 
-        while stale_scrolls < SCROLL_STALE_LIMIT:
+        while current_movie:
             current_movies = await self.get_movie_links(page)
-            old_count = len(movie_links)
             movie_links.update(current_movies)
 
-            stale_scrolls = stale_scrolls + 1 if len(movie_links) == old_count else 0
+            prev_movie: str = current_movie
+            current_movie = list(current_movies)[-1]
+
+            if prev_movie == current_movie:
+                break
 
             await page.mouse.wheel(0, 2000)
             await page.wait_for_timeout(1500)
