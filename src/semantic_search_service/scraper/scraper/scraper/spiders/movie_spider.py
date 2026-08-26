@@ -121,8 +121,10 @@ class MovieSpider(scrapy.Spider):
             else:
                 stale_scrolls = 0
 
-            await page.mouse.wheel(0, 2000)
-            await page.wait_for_timeout(1500)
+            scroll_y = random.randint(1500, 2500)
+            await page.mouse.wheel(0, scroll_y)
+
+            await page.wait_for_timeout(random.uniform(1800, 3200))
 
         return sorted(movie_links)
 
