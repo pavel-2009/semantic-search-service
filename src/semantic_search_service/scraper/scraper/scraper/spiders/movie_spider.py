@@ -1,4 +1,5 @@
 import re
+import random
 
 import scrapy
 from playwright.async_api import Locator, Page
@@ -41,6 +42,8 @@ class MovieSpider(scrapy.Spider):
         try:
             movie_links = await self.collect_movie_links(page)
 
+            random.shuffle(movie_links)
+
             self.logger.info(
                 "Collected %d movie links from %s",
                 len(movie_links),
@@ -52,6 +55,7 @@ class MovieSpider(scrapy.Spider):
                     link,
                     callback=self.parse_film,
                     meta=self.playwright_meta(),
+                    dont_filter=True
                 )
 
         finally:
