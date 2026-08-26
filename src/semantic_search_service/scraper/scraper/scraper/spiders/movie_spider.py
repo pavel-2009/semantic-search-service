@@ -16,36 +16,79 @@ class MovieSpider(scrapy.Spider):
     start_urls = ["https://www.ivi.ru/movies"]
 
     async def playwright_page_init(self, page: Page) -> None:
+        """Инициализация страницы с полной маскировкой"""
         
+        # Добавляем реалистичные заголовки
+        await page.set_extra_http_headers({
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://www.ivi.ru/",
+        })
+        
+        # Маскируем webdriver
         await page.add_init_script("""
-            // Удаляем признак webdriver
+            // Полная маскировка
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
             });
             
-            // Добавляем плагины 
             Object.defineProperty(navigator, 'plugins', {
                 get: () => [
-                    { name: 'Chrome PDF Plugin' },
-                    { name: 'Chrome PDF Viewer' },
-                    { name: 'Native Client' }
+                    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                    { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
                 ]
             });
             
-            // Добавляем языки
             Object.defineProperty(navigator, 'languages', {
                 get: () => ['ru-RU', 'ru', 'en-US', 'en']
             });
             
+            Object.defineProperty(navigator, 'platform', {
+                get: () => 'Win32'
+            });
+            
+            // Эмуляция chrome
+            window.chrome = {
+                runtime: {},
+                loadTimes: function() {},
+                csi: function() {},
+                app: {}
+            };
+            
             // Добавляем историю
             window.history.pushState(null, null, window.location.href);
             
-            // Эмулируем реальный экран
+            // Маскируем screen
             Object.defineProperty(screen, 'availWidth', { get: () => 1920 });
             Object.defineProperty(screen, 'availHeight', { get: () => 1080 });
+            Object.defineProperty(screen, 'width', { get: () => 1920 });
+            Object.defineProperty(screen, 'height', { get: () => 1080 });
+            Object.defineProperty(screen, 'colorDepth', { get: () => 24 });
+            Object.defineProperty(screen, 'pixelDepth', { get: () => 24 });
             
-            // Удаляем другие следы автоматизации
+            // Удаляем следы
             delete navigator.__proto__.webdriver;
+            delete navigator.__proto__.plugins;
+            
+            // Переопределяем permissions
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
         """)
         
         await page.set_viewport_size({"width": 1920, "height": 1080})
