@@ -51,10 +51,6 @@ RETRY_HTTP_CODES = [
 # Логи
 LOG_LEVEL = "INFO"
 
-DOWNLOADER_MIDDLEWARES = {
-    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
-}
-
 IMPERSONATE_BROWSER_VERSION = "chrome124"
 
 COOKIES_ENABLED = False
