@@ -84,17 +84,21 @@ class MovieSpider(scrapy.Spider):
 
     async def collect_movie_links(self, page: Page) -> list[str]:
         movie_links: set[str] = set()
-        current_movie: str = ""
+        previous_count = 0
+        unchanged_rounds = 0
 
-        while current_movie:
+        while unchanged_rounds < 3:
             current_movies = await self.get_movie_links(page)
             movie_links.update(current_movies)
 
-            prev_movie: str = current_movie
-            current_movie = list(current_movies)[-1]
+            current_count = len(movie_links)
 
-            if prev_movie == current_movie:
-                break
+            if current_count == previous_count:
+                unchanged_rounds += 1
+            else:
+                unchanged_rounds = 0
+
+            previous_count = current_count
 
             await page.mouse.wheel(0, 2000)
             await page.wait_for_timeout(1500)
