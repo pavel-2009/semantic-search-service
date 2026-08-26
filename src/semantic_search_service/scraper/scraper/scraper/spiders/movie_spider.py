@@ -3,6 +3,7 @@ import re
 import scrapy
 from playwright.async_api import Locator, Page
 from scrapy.http import Response
+import random
 
 from semantic_search_service.scraper.schemas import Movie
 
@@ -125,6 +126,8 @@ class MovieSpider(scrapy.Spider):
     async def collect_movie_links(self, page: Page) -> list[str]:
         movie_links: set[str] = set()
         stale_scrolls = 0
+        
+        await page.wait_for_timeout(random.randint(1000, 3000))
 
         while stale_scrolls < SCROLL_STALE_LIMIT:
             current_movies = await self.get_movie_links(page)
@@ -133,8 +136,10 @@ class MovieSpider(scrapy.Spider):
 
             stale_scrolls = stale_scrolls + 1 if len(movie_links) == old_count else 0
 
-            await page.mouse.wheel(0, 2000)
-            await page.wait_for_timeout(1500)
+            scroll_distance = random.randint(1500, 2500)
+            await page.mouse.wheel(0, scroll_distance)
+            
+            await page.wait_for_timeout(random.randint(1000, 2000))
 
         return sorted(movie_links)
 
