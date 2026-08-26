@@ -1,269 +1,171 @@
-import re
-import random
+"""Spider for fetching movie data from Poiskkino API."""
+
+from typing import Any, Dict, List, Optional, Generator
+from urllib.parse import urlencode
 
 import scrapy
-from playwright.async_api import Locator, Page
-from scrapy.http import Response
+from scrapy.http import JsonRequest, Response
 
 from semantic_search_service.scraper.schemas import Movie
 
 
-MOVIE_LINK_PATTERN = re.compile(r"/watch/\d+$")
-SCROLL_STALE_LIMIT = 3
-
-
 class MovieSpider(scrapy.Spider):
     name = "movies"
-    start_urls = ["https://www.ivi.ru/movies"]
-
-    def start_requests(self):
-        for url in self.start_urls:
-            yield scrapy.Request(
-                url,
-                callback=self.parse,
-                meta=self.playwright_meta(),
-            )
-
-    def parse(self, response: Response):
-        links = response.css(
-            'a[data-test="collection_header"]::attr(href)'
-        ).getall()
-
-        for link in links:
-            yield response.follow(
-                link,
-                callback=self.parse_collections,
-                meta=self.playwright_meta(),
-            )
-
-    async def parse_collections(self, response: Response):
-        page: Page = response.meta["playwright_page"]
-
-        try:
-            movie_links = await self.collect_movie_links(page)
-
-            random.shuffle(movie_links)
-
-            self.logger.info(
-                "Collected %d movie links from %s",
-                len(movie_links),
-                response.url,
-            )
-
-            for link in movie_links:
-                yield scrapy.Request(
-                    link,
-                    callback=self.parse_film,
-                    meta=self.playwright_meta(),
-                    dont_filter=True
-                )
-
-        finally:
-            await page.close()
-
-    async def parse_film(self, response: Response):
-        page: Page = response.meta["playwright_page"]
-
-        try:
-            await page.wait_for_selector(
-                "h1.title__header",
-                timeout=30000,
-            )
-
-            film_id = int(
-                response.url.rstrip("/").split("/")[-1]
-            )
-
-            movie = Movie(
-                id=film_id,
-                name=await self.get_text(
-                    page,
-                    "h1.title__header",
-                ),
-                year=await self.get_year(page),
-                country=await self.get_optional_text(
-                    page,
-                    "tr:has(th.nbl-plankMeta__title:has-text('Страны')) td",
-                ),
-                director=await self.get_director(page),
-                description=await self.get_description(page),
-                actors=await self.get_actors(page),
-                tags=await self.get_all_text(
-                    page,
-                    "tr:has(th.nbl-plankMeta__title:has-text('Жанр')) td a",
-                ),
-                rating=await self.get_rating(page),
-            )
-
-            self.logger.info(
-                "Parsed movie: %s (%s)",
-                movie.name,
-                movie.year,
-            )
-
-            yield movie
-
-        finally:
-            await page.close()
-
-    async def collect_movie_links(self, page: Page) -> list[str]:
-        movie_links: set[str] = set()
-        stale_scrolls = 0
-
-        while stale_scrolls < SCROLL_STALE_LIMIT:
-            current_movies = await self.get_movie_links(page)
-
-            old_count = len(movie_links)
-            movie_links.update(current_movies)
-
-            if len(movie_links) == old_count:
-                stale_scrolls += 1
-            else:
-                stale_scrolls = 0
-
-            scroll_y = random.randint(1500, 2500)
-            await page.mouse.wheel(0, scroll_y)
-
-            await page.wait_for_timeout(random.uniform(1800, 3200))
-
-        return sorted(movie_links)
-
-    @staticmethod
-    async def get_movie_links(page: Page) -> set[str]:
-        links = await page.locator("a").evaluate_all(
-            "elements => elements.map(element => element.href)"
-        )
-
-        return {
-            link
-            for link in links
-            if MOVIE_LINK_PATTERN.search(link)
+    
+    # API configuration
+    API_BASE = "https://api.poiskkino.dev/v1.4"
+    API_KEY = ""
+    
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        
+        # Load API key from settings
+        from semantic_search_service.core.config import settings
+        self.API_KEY = settings.POISKKINO_API_KEY # type: ignore
+        
+        if not self.API_KEY:
+            self.logger.error("POISKKINO_API_KEY not set! Get your token from @poiskkinodev_bot")
+    
+    def start_requests(self) -> Generator[JsonRequest, None, None]:
+        if not self.API_KEY:
+            return
+        
+        params = {
+            "page": 1,
+            "limit": 50,
+            "sortField": "rating.kp",
+            "sortType": "-1",
         }
-
-    @staticmethod
-    async def get_text(
-        page: Page,
-        selector: str,
-    ) -> str:
-        return (
-            await page.locator(selector).first.inner_text()
-        ).strip()
-
-    @staticmethod
-    async def get_optional_text(
-        page: Page,
-        selector: str,
-    ) -> str | None:
-        locator = page.locator(selector).first
-
-        if await locator.count() == 0:
-            return None
-
-        value = (await locator.inner_text()).strip()
-
-        return value or None
-
-    @staticmethod
-    async def get_all_text(
-        page: Page,
-        selector: str,
-    ) -> list[str]:
-        return [
-            text.strip()
-            for text in await page.locator(selector).all_inner_texts()
-            if text.strip()
-        ]
-
-    @classmethod
-    async def get_year(
-        cls,
-        page: Page,
-    ) -> int | None:
-        value = await cls.get_optional_text(
-            page,
-            "tr:has(th.nbl-plankMeta__title:has-text('Год')) td",
+        
+        url = f"{self.API_BASE}/movie?{urlencode(params)}"
+        
+        yield JsonRequest(
+            url=url,
+            headers=self._get_headers(),
+            callback=self.parse_movie_list,
+            meta={"page": 1},
+            dont_filter=True,
         )
-
-        return int(value) if value and value.isdigit() else None
-
-    @classmethod
-    async def get_rating(
-        cls,
-        page: Page,
-    ) -> float | None:
-        params = await cls.get_all_text(
-            page,
-            "div.paramsList.params__paramsList > ul.paramsList__container > *",
-        )
-
-        if not params:
-            return None
-
+    
+    def parse_movie_list(self, response: Response) -> Generator[JsonRequest, None, None]:
+        data = response.json()
+        movies = data.get("docs", [])
+        
+        if not movies:
+            self.logger.info("No more movies found")
+            return
+        
+        current_page = response.meta.get("page", 1)
+        self.logger.info(f"Processing {len(movies)} movies from page {current_page}")
+        
+        for movie in movies:
+            movie_id = movie.get("id")
+            if movie_id:
+                yield JsonRequest(
+                    url=f"{self.API_BASE}/movie/{movie_id}",
+                    headers=self._get_headers(),
+                    callback=self.parse_movie_details,
+                    dont_filter=True,
+                )
+        
+        # Pagination (demo tariff: first 10 pages)
+        total_pages = data.get("pages", 1)
+        if current_page < total_pages and current_page < 10:
+            next_page = current_page + 1
+            params = {
+                "page": next_page,
+                "limit": 50,
+                "sortField": "rating.kp",
+                "sortType": "-1",
+            }
+            url = f"{self.API_BASE}/movie?{urlencode(params)}"
+            
+            yield JsonRequest(
+                url=url,
+                headers=self._get_headers(),
+                callback=self.parse_movie_list,
+                meta={"page": next_page},
+                dont_filter=True,
+            )
+    
+    def parse_movie_details(self, response: Response) -> Generator[Movie, None, None]:
+        data = response.json()
+        
         try:
-            return float(params[0].replace(",", "."))
-        except ValueError:
+            movie_id = data.get("id")
+            if not movie_id:
+                return
+            
+            name = data.get("name") or data.get("alternativeName") or "Без названия"
+            year = data.get("year")
+            description = data.get("description") or data.get("shortDescription") or ""
+            
+            # Countries
+            countries = data.get("countries", [])
+            country = self._extract_countries(countries)
+            
+            # Persons
+            persons = data.get("persons", [])
+            director = self._extract_director(persons)
+            actors = self._extract_actors(persons)
+            
+            # Genres
+            genres = data.get("genres", [])
+            tags = self._extract_genres(genres)
+            
+            # Rating
+            rating_data = data.get("rating", {})
+            rating = rating_data.get("kp")
+            
+            movie = Movie(
+                id=movie_id,
+                name=name,
+                year=year,
+                country=country,
+                director=director,
+                description=description,
+                actors=actors,
+                tags=tags,
+                rating=rating,
+            )
+            
+            self.logger.info(f"Parsed: {movie.name} ({movie.year})")
+            yield movie
+            
+        except Exception as e:
+            self.logger.error(f"Error parsing movie {data.get('id')}: {e}")
+    
+    @staticmethod
+    def _extract_countries(countries: List[Dict[str, str]]) -> Optional[str]:
+        if not countries:
             return None
-
+        
+        names = [c.get("name", "") for c in countries if c.get("name")]
+        return ", ".join(names) if names else None
+    
     @staticmethod
-    async def get_description(page: Page) -> str:
-        paragraphs = await page.locator(
-            '[data-test="description_text"] p'
-        ).all_inner_texts()
-
-        return "\n\n".join(
-            paragraph.strip()
-            for paragraph in paragraphs
-            if paragraph.strip()
-        )
-
-    @classmethod
-    async def get_director(
-        cls,
-        page: Page,
-    ) -> str | None:
-        person_list = page.locator(
-            'div.gallery__list > div[data-test="persons_item"]'
-        )
-
-        if await person_list.count() == 0:
-            return None
-
-        return await cls.parse_person(person_list.nth(0))
-
-    @classmethod
-    async def get_actors(
-        cls,
-        page: Page,
-    ) -> list[str]:
-        person_list = page.locator(
-            'div.gallery__list > div[data-test="persons_item"]'
-        )
-
-        count = await person_list.count()
-
-        return [
-            await cls.parse_person(person_list.nth(index))
-            for index in range(1, count)
-        ]
-
+    def _extract_director(persons: List[Dict[str, Any]]) -> Optional[str]:
+        for person in persons:
+            if person.get("profession") == "режиссеры":
+                return person.get("name") or person.get("enName")
+        return None
+    
     @staticmethod
-    async def parse_person(
-        person: Locator,
-    ) -> str:
-        parts = await person.locator(
-            "div.nbl-fixedSlimPosterBlock__title, "
-            "div.nbl-fixedSlimPosterBlock__secondTitle"
-        ).all_text_contents()
-
-        return " ".join(
-            part.strip()
-            for part in parts
-            if part.strip()
-        )
-
+    def _extract_actors(persons: List[Dict[str, Any]]) -> List[str]:
+        actors = []
+        for person in persons:
+            if person.get("profession") == "актеры":
+                name = person.get("name") or person.get("enName")
+                if name:
+                    actors.append(name)
+        return actors
+    
     @staticmethod
-    def playwright_meta():
+    def _extract_genres(genres: List[Dict[str, str]]) -> List[str]:
+        return [g.get("name", "") for g in genres if g.get("name")]
+    
+    def _get_headers(self) -> Dict[str, str]:
         return {
-            "playwright": True,
-            "playwright_include_page": True,
+            "X-API-KEY": self.API_KEY or "",
+            "accept": "application/json",
         }

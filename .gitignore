@@ -16,3 +16,4 @@ build/
 # Runtime scraper output
 logs/
 *.log
+.env

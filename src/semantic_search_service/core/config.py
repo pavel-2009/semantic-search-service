@@ -1,8 +1,8 @@
 """Project configuration"""
 
 from pathlib import Path
-
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     """Project config"""
@@ -25,6 +25,12 @@ class Settings(BaseSettings):
 
     # Observability
     LOG_LEVEL: str = "INFO"
+    
+    # Poiskkino API
+    POISKKINO_API_KEY: str = ""  
 
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 settings = Settings()
