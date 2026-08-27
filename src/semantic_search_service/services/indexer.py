@@ -75,7 +75,7 @@ class Indexer:
             parts.append(f"Жанры: {', '.join(map(str, movie['genres']))}")
 
         cleaned = clean_text(". ".join(parts))  # type: ignore
-        return cleaned[: settings.MAX_TEXT_LENGTH]
+        return cleaned[:settings.MAX_TEXT_LENGTH]
 
     def index_movies(
         self,
