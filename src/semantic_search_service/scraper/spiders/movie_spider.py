@@ -5,7 +5,6 @@ from urllib.parse import urlencode
 import scrapy
 from scrapy.http import Request, Response
 
-from semantic_search_service.core.config import settings
 from semantic_search_service.scraper.schemas import Movie
 
 JsonDict = dict[str, Any]
@@ -14,28 +13,19 @@ JsonDict = dict[str, Any]
 class MovieSpider(scrapy.Spider):
     name = "movies"
 
-    API_BASE = "https://api.poiskkino.dev/v1.4"
+    API_BASE = "https://api.poiskkino.dev/v1.4/movie"
+
     PAGE_SIZE = 50
     MAX_PAGES = 10
 
     start_urls = [
-        f"{API_BASE}/movie?"
-        + urlencode(
-            {
-                "page": 1,
-                "limit": PAGE_SIZE,
-                "sortField": "rating.kp",
-                "sortType": "-1",
-            }
-        )
+        f"{API_BASE}?{urlencode({
+            'page': 1,
+            'limit': PAGE_SIZE,
+            'sortField': 'rating.kp',
+            'sortType': '-1',
+        })}"
     ]
-
-    @property
-    def api_headers(self) -> dict[str, str]:
-        return {
-            "X-API-KEY": settings.POISKKINO_API_KEY,
-            "accept": "application/json",
-        }
 
     def parse(
         self,
@@ -52,40 +42,36 @@ class MovieSpider(scrapy.Spider):
             page,
         )
 
-        for movie in movies:
-            movie_id = movie.get("id")
+        for movie_data in movies:
+            movie = self._parse_movie(movie_data)
 
-            if movie_id is None:
-                continue
+            if movie is not None:
+                yield movie
 
-            yield Request(
-                url=f"{self.API_BASE}/movie/{movie_id}",
-                headers=self.api_headers,
-                callback=self.parse_movie,
-                dont_filter=True,
-            )
+        if page >= self.MAX_PAGES:
+            self.logger.info("Reached maximum page: %d", page)
+            return
 
-        total_pages = int(data.get("pages") or page)
+        if not data.get("hasNext", False):
+            self.logger.info("No more pages")
+            return
+
         next_page = page + 1
 
-        if next_page <= min(total_pages, self.MAX_PAGES):
-            yield Request(
-                url=self._movie_list_url(next_page),
-                headers=self.api_headers,
-                callback=self.parse,
-                meta={"page": next_page},
-                dont_filter=True,
-            )
+        yield Request(
+            url=self._movie_list_url(next_page),
+            callback=self.parse,
+            meta={"page": next_page},
+        )
 
-    def parse_movie(
+    def _parse_movie(
         self,
-        response: Response,
-    ) -> Generator[Movie, None, None]:
-        data: JsonDict = response.json()
-
+        data: JsonDict,
+    ) -> Movie | None:
         movie_id = data.get("id")
+
         if movie_id is None:
-            return
+            return None
 
         persons = self._as_dict_list(data.get("persons"))
         rating = data.get("rating")
@@ -121,10 +107,15 @@ class MovieSpider(scrapy.Spider):
                 movie_id,
                 exc,
             )
-            return
+            return None
 
-        self.logger.info("Parsed: %s (%s)", movie.name, movie.year)
-        yield movie
+        self.logger.info(
+            "Parsed: %s (%s)",
+            movie.name,
+            movie.year,
+        )
+
+        return movie
 
     def _movie_list_url(self, page: int) -> str:
         params = {
@@ -134,7 +125,7 @@ class MovieSpider(scrapy.Spider):
             "sortType": "-1",
         }
 
-        return f"{self.API_BASE}/movie?{urlencode(params)}"
+        return f"{self.API_BASE}?{urlencode(params)}"
 
     @staticmethod
     def _as_dict_list(value: object) -> list[dict[str, Any]]:
@@ -188,7 +179,9 @@ class MovieSpider(scrapy.Spider):
                 continue
 
             name = person.get("name") or person.get("enName")
-            return str(name) if name else None
+
+            if name:
+                return str(name)
 
         return None
 
@@ -196,18 +189,13 @@ class MovieSpider(scrapy.Spider):
     def _extract_actors(
         persons: list[dict[str, Any]],
     ) -> list[str]:
-        actors: list[str] = []
-
-        for person in persons:
-            if person.get("profession") != "актеры":
-                continue
-
-            name = person.get("name") or person.get("enName")
-
-            if name:
-                actors.append(str(name))
-
-        return actors
+        return [
+            str(name)
+            for person in persons
+            if person.get("profession") == "актеры"
+            for name in [person.get("name") or person.get("enName")]
+            if name
+        ]
 
     @staticmethod
     def _extract_genres(
