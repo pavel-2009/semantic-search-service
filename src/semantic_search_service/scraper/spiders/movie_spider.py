@@ -14,7 +14,6 @@ class MovieSpider(scrapy.Spider):
     name = "movies"
 
     API_BASE = "https://api.poiskkino.dev/v1.4/movie"
-
     PAGE_SIZE = 50
     MAX_PAGES = 10
 
@@ -27,49 +26,30 @@ class MovieSpider(scrapy.Spider):
         })}"
     ]
 
-    def parse(
-        self,
-        response: Response,
-    ) -> Generator[Request | Movie, None, None]:
+    def parse(self, response: Response) -> Generator[Request | Movie, None, None]:
         data: JsonDict = response.json()
-
         page = int(response.meta.get("page", 1))
         movies = self._as_dict_list(data.get("docs"))
 
-        self.logger.info(
-            "Found %d movies on page %d",
-            len(movies),
-            page,
-        )
+        self.logger.info("Found %d movies on page %d", len(movies), page)
 
         for movie_data in movies:
             movie = self._parse_movie(movie_data)
-
             if movie is not None:
                 yield movie
 
-        if page >= self.MAX_PAGES:
-            self.logger.info("Reached maximum page: %d", page)
-            return
-
-        if not data.get("hasNext", False):
-            self.logger.info("No more pages")
+        if page >= self.MAX_PAGES or not data.get("hasNext", False):
             return
 
         next_page = page + 1
-
         yield Request(
             url=self._movie_list_url(next_page),
             callback=self.parse,
             meta={"page": next_page},
         )
 
-    def _parse_movie(
-        self,
-        data: JsonDict,
-    ) -> Movie | None:
+    def _parse_movie(self, data: JsonDict) -> Movie | None:
         movie_id = data.get("id")
-
         if movie_id is None:
             return None
 
@@ -78,9 +58,9 @@ class MovieSpider(scrapy.Spider):
         rating_data = rating if isinstance(rating, dict) else {}
 
         try:
-            movie = Movie(
+            return Movie(
                 id=int(movie_id),
-                name=str(
+                title=str(
                     data.get("name")
                     or data.get("alternativeName")
                     or "Без названия"
@@ -96,26 +76,15 @@ class MovieSpider(scrapy.Spider):
                     or ""
                 ),
                 actors=self._extract_actors(persons),
-                tags=self._extract_genres(
+                genres=self._extract_genres(
                     self._as_dict_list(data.get("genres"))
                 ),
                 rating=self._as_float(rating_data.get("kp")),
+                poster_url=self._extract_poster_url(data.get("poster")),
             )
         except (TypeError, ValueError) as exc:
-            self.logger.error(
-                "Failed to parse movie %s: %s",
-                movie_id,
-                exc,
-            )
+            self.logger.error("Failed to parse movie %s: %s", movie_id, exc)
             return None
-
-        self.logger.info(
-            "Parsed: %s (%s)",
-            movie.name,
-            movie.year,
-        )
-
-        return movie
 
     def _movie_list_url(self, page: int) -> str:
         params = {
@@ -124,25 +93,18 @@ class MovieSpider(scrapy.Spider):
             "sortField": "rating.kp",
             "sortType": "-1",
         }
-
         return f"{self.API_BASE}?{urlencode(params)}"
 
     @staticmethod
     def _as_dict_list(value: object) -> list[dict[str, Any]]:
         if not isinstance(value, list):
             return []
-
-        return [
-            item
-            for item in value
-            if isinstance(item, dict)
-        ]
+        return [item for item in value if isinstance(item, dict)]
 
     @staticmethod
     def _as_int(value: object) -> int | None:
         if value is None:
             return None
-
         try:
             return int(value)
         except (TypeError, ValueError):
@@ -152,43 +114,35 @@ class MovieSpider(scrapy.Spider):
     def _as_float(value: object) -> float | None:
         if value is None:
             return None
-
         try:
             return float(value)
         except (TypeError, ValueError):
             return None
 
     @staticmethod
-    def _extract_countries(
-        countries: list[dict[str, Any]],
-    ) -> str | None:
-        names = [
-            str(country["name"])
-            for country in countries
-            if country.get("name") is not None
-        ]
+    def _extract_poster_url(poster: object) -> str | None:
+        if not isinstance(poster, dict):
+            return None
+        url = poster.get("url") or poster.get("previewUrl")
+        return str(url) if url else None
 
+    @staticmethod
+    def _extract_countries(countries: list[dict[str, Any]]) -> str | None:
+        names = [str(country["name"]) for country in countries if country.get("name")]
         return ", ".join(names) if names else None
 
     @staticmethod
-    def _extract_director(
-        persons: list[dict[str, Any]],
-    ) -> str | None:
+    def _extract_director(persons: list[dict[str, Any]]) -> str | None:
         for person in persons:
             if person.get("profession") != "режиссеры":
                 continue
-
             name = person.get("name") or person.get("enName")
-
             if name:
                 return str(name)
-
         return None
 
     @staticmethod
-    def _extract_actors(
-        persons: list[dict[str, Any]],
-    ) -> list[str]:
+    def _extract_actors(persons: list[dict[str, Any]]) -> list[str]:
         return [
             str(name)
             for person in persons
@@ -198,11 +152,5 @@ class MovieSpider(scrapy.Spider):
         ]
 
     @staticmethod
-    def _extract_genres(
-        genres: list[dict[str, Any]],
-    ) -> list[str]:
-        return [
-            str(genre["name"])
-            for genre in genres
-            if genre.get("name") is not None
-        ]
+    def _extract_genres(genres: list[dict[str, Any]]) -> list[str]:
+        return [str(genre["name"]) for genre in genres if genre.get("name")]
