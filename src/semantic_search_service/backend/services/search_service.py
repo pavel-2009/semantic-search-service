@@ -21,17 +21,31 @@ class SearchService:
     """Search normalized movie documents stored in Qdrant."""
 
     def __init__(self) -> None:
+        logger.info("Initializing SearchService: collection=%s model=%s", settings.QDRANT_COLLECTION, settings.EMBEDDING_MODEL)
         self.collection_name = settings.QDRANT_COLLECTION
         self.qdrant: QdrantClient = QdrantClientSingleton.get_client()
+        model_started_at = perf_counter()
         self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
+        logger.info("Embedding model loaded: model=%s duration_ms=%.1f", settings.EMBEDDING_MODEL, (perf_counter() - model_started_at) * 1000)
+        logger.info("SearchService initialized: collection=%s embedding_dim=%d", self.collection_name, settings.EMBEDDING_DIM)
 
     def search(self, request: SearchRequest) -> list[MovieResult]:
         """Run semantic search with optional metadata filters."""
         started_at = perf_counter()
-        cleaned_query = clean_text(request.query)  # type: ignore
-        vector = self.model.encode(cleaned_query).tolist()
-        query_filter = self._build_filters(request.filters) if request.filters else None
+        logger.info("Search started: query=%r top_k=%d filters=%s", request.query, request.top_k, request.filters is not None)
 
+        cleaned_query = clean_text(request.query)  # type: ignore
+        logger.debug("Query cleaned: original_length=%d cleaned_length=%d", len(request.query), len(cleaned_query))
+
+        vector_started_at = perf_counter()
+        vector = self.model.encode(cleaned_query).tolist()
+        logger.info("Query vector created: dimension=%d duration_ms=%.1f", len(vector), (perf_counter() - vector_started_at) * 1000)
+
+        query_filter = self._build_filters(request.filters) if request.filters else None
+        logger.debug("Qdrant filter prepared: enabled=%s", query_filter is not None)
+
+        qdrant_started_at = perf_counter()
+        logger.info("Querying Qdrant: collection=%s limit=%d", self.collection_name, request.top_k)
         result = self.qdrant.query_points(
             collection_name=self.collection_name,
             query=vector,
@@ -39,14 +53,11 @@ class SearchService:
             query_filter=query_filter,
             with_payload=True,
         )
+        logger.info("Qdrant query completed: points=%d duration_ms=%.1f", len(result.points), (perf_counter() - qdrant_started_at) * 1000)
 
-        logger.info(
-            "Search completed: query_length=%d results=%d duration_ms=%.1f",
-            len(request.query),
-            len(result.points),
-            (perf_counter() - started_at) * 1000,
-        )
-        return [self._to_movie_result(point) for point in result.points]
+        results = [self._to_movie_result(point) for point in result.points]
+        logger.info("Search completed: query_length=%d results=%d duration_ms=%.1f", len(request.query), len(results), (perf_counter() - started_at) * 1000)
+        return results
 
     @staticmethod
     def _to_movie_result(point: Any) -> MovieResult:
@@ -121,11 +132,15 @@ class SearchService:
                 )
             )
 
+        logger.debug("Qdrant filters built: conditions=%d", len(conditions))
         return models.Filter(must=conditions) if conditions else None
 
     def get_stats(self) -> dict[str, Any]:
         """Return collection statistics."""
+        logger.info("Fetching Qdrant collection stats: collection=%s", self.collection_name)
+        started_at = perf_counter()
         info = self.qdrant.get_collection(self.collection_name)
+        logger.info("Qdrant collection stats received: collection=%s points=%s status=%s duration_ms=%.1f", self.collection_name, info.points_count, info.status, (perf_counter() - started_at) * 1000)
         return {
             "collection": self.collection_name,
             "total_points": info.points_count,
