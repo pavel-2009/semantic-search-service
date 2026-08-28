@@ -57,8 +57,8 @@ class Indexer:
         """Build the text used for movie embeddings."""
         parts: list[str] = []
 
-        if movie.get("title"):
-            parts.append(f"Название: {movie['title']}")
+        if movie.get("name"):
+            parts.append(f"Название: {movie['name']}")
         if movie.get("description"):
             parts.append(f"Описание: {movie['description']}")
         if movie.get("director"):
@@ -71,8 +71,8 @@ class Indexer:
             parts.append(f"Рейтинг: {movie['rating']}")
         if movie.get("actors"):
             parts.append(f"Актёры: {', '.join(map(str, movie['actors']))}")
-        if movie.get("genres"):
-            parts.append(f"Жанры: {', '.join(map(str, movie['genres']))}")
+        if movie.get("tags"):
+            parts.append(f"Жанры: {', '.join(map(str, movie['tags']))}")
 
         cleaned = clean_text(". ".join(parts))  # type: ignore
         return cleaned[:settings.MAX_TEXT_LENGTH]
