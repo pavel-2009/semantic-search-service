@@ -15,7 +15,7 @@ class MovieSpider(scrapy.Spider):
 
     API_BASE = "https://api.poiskkino.dev/v1.4/movie"
     PAGE_SIZE = 50
-    MAX_PAGES = 10
+    MAX_PAGES = 100
 
     start_urls = [
         f"{API_BASE}?{urlencode({
@@ -38,15 +38,28 @@ class MovieSpider(scrapy.Spider):
             if movie is not None:
                 yield movie
 
+        # Проверяем ограничения и наличие следующей страницы
         if page >= self.MAX_PAGES or not data.get("hasNext", False):
             return
 
-        next_page = page + 1
-        yield Request(
-            url=self._movie_list_url(next_page),
-            callback=self.parse,
-            meta={"page": next_page},
-        )
+        # Используем токен next из ответа
+        next_token: str = data.get("next")
+        
+        if not next_token:
+            next_page = page + 1
+            yield Request(
+                url=self._movie_list_url(next_page),
+                callback=self.parse,
+                meta={"page": next_page},
+            )
+        else:
+            next_url = f"{self.base_url}?next={next_token}"
+            
+            yield Request(
+                url=next_url,
+                callback=self.parse,
+                meta={"page": page + 1},  
+            )
 
     def _parse_movie(self, data: JsonDict) -> Movie | None:
         movie_id = data.get("id")
