@@ -4,26 +4,23 @@ from pydantic import BaseModel, Field
 
 
 class YearFilter(BaseModel):
-    gte: int | None = None
-    lte: int | None = None
-
+    gte: int | None = Field(None, description="Год от")
+    lte: int | None = Field(None, description="Год до")
 
 class RatingFilter(BaseModel):
-    gte: float | None = None
-    lte: float | None = None
-
+    gte: float | None = Field(None, description="Рейтинг от")
+    lte: float | None = Field(None, description="Рейтинг до")
 
 class SearchFilters(BaseModel):
-    year: YearFilter | None = None
-    rating: RatingFilter | None = None
-    genre: list[str] | None = None
-    country: str | None = None
-
+    year: YearFilter | None = Field(None, description="Фильтр по году")
+    rating: RatingFilter | None = Field(None, description="Фильтр по рейтингу")
+    genre: list[str] | None = Field(None, description="Фильтр по жанрам")
+    country: str | None = Field(None, description="Фильтр по стране")
 
 class SearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="Поисковый запрос")
-    top_k: int = Field(10, ge=1, le=100, description="Количество результатов")
-    filters: SearchFilters | None = None
+    query: str = Field(..., min_length=1, description="Поисковый запрос", example="интерстеллар") # type: ignore
+    top_k: int = Field(10, ge=1, le=100, description="Количество результатов", example=10) # type: ignore
+    filters: SearchFilters | None = Field(None, description="Фильтры")
 
 
 class MovieResult(BaseModel):
