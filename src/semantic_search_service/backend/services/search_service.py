@@ -56,10 +56,10 @@ class SearchService:
 
         return MovieResult(
             id=int(point.id),
-            title=str(payload.get("title") or "Без названия"),
+            title=str(payload.get("name") or "Без названия"),
             year=payload.get("year"),
             rating=payload.get("rating"),
-            genres=payload.get("genres", []),
+            genres=payload.get("tags", []),
             countries=[str(country)] if country else [],
             director=payload.get("director"),
             actors=payload.get("actors", []),
