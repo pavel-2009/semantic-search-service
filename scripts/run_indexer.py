@@ -22,6 +22,7 @@ def main():
     print("=" * 60)
 
     indexer = Indexer()
+    indexer.recreate_collection()
     indexer.index_movies(
         filepath=settings.DATA_PATH,
         batch_size=settings.BATCH_SIZE,

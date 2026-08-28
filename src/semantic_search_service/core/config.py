@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "movies"
 
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_MODEL: str = "paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIM: int = 384
     MAX_TEXT_LENGTH: int = 2000
     BATCH_SIZE: int = 32

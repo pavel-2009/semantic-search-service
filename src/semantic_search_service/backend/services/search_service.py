@@ -8,11 +8,10 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from sentence_transformers import SentenceTransformer
 
-from text_cleaner import clean_text  # type: ignore
-
 from semantic_search_service.backend.schemas import MovieResult, SearchFilters, SearchRequest
 from semantic_search_service.core.config import settings
 from semantic_search_service.core.qdrant_client import QdrantClientSingleton
+from semantic_search_service.core.text_normalizer import clean_text
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ class SearchService:
         started_at = perf_counter()
         logger.info("Search started: query=%r top_k=%d filters=%s", request.query, request.top_k, request.filters is not None)
 
-        cleaned_query = clean_text(request.query)  # type: ignore
+        cleaned_query = clean_text(request.query)
         logger.debug("Query cleaned: original_length=%d cleaned_length=%d", len(request.query), len(cleaned_query))
 
         vector_started_at = perf_counter()
@@ -63,15 +62,17 @@ class SearchService:
     def _to_movie_result(point: Any) -> MovieResult:
         """Convert a Qdrant point to the public movie response."""
         payload = point.payload or {}
-        country = payload.get("country")
+        countries = payload.get("countries") or []
+        if not countries and payload.get("country"):
+            countries = [country.strip() for country in str(payload["country"]).split(",")]
 
         return MovieResult(
             id=int(point.id),
-            title=str(payload.get("name") or "Без названия"),
+            title=str(payload.get("title") or "Без названия"),
             year=payload.get("year"),
             rating=payload.get("rating"),
-            genres=payload.get("tags", []),
-            countries=[str(country)] if country else [],
+            genres=payload.get("genres", []),
+            countries=[str(country) for country in countries],
             director=payload.get("director"),
             actors=payload.get("actors", []),
             description=payload.get("description") or None,
@@ -119,8 +120,8 @@ class SearchService:
         if filters.country:
             conditions.append(
                 models.FieldCondition(
-                    key="country",
-                    match=models.MatchValue(value=filters.country),
+                    key="countries",
+                    match=models.MatchAny(any=[filters.country]),
                 )
             )
 

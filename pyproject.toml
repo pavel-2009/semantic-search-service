@@ -5,8 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "qdrant-client>=1.19.0",
     "scrapy-playwright>=0.0.48",
-    "text-cleaner @ file:///Users/pavel/ITWork/semantic-search-service/src/semantic_search_service/core/text_cleaner",
+    "sentence-transformers>=6.0.0",
 ]
 
 [project.scripts]

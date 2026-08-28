@@ -1,3 +1,0 @@
-def clean_text(text: str) -> str:
-    """Cleaning text from HTML tags and semantic letter"""
-    ...

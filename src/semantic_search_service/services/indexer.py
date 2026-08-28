@@ -9,10 +9,9 @@ from typing import Any
 from qdrant_client.http import models
 from sentence_transformers import SentenceTransformer
 
-from text_cleaner import clean_text  # type: ignore
-
 from semantic_search_service.core.config import settings
 from semantic_search_service.core.qdrant_client import QdrantClientSingleton
+from semantic_search_service.core.text_normalizer import clean_text
 
 
 logger = logging.getLogger(__name__)
@@ -64,16 +63,31 @@ class Indexer:
             logger.error("Invalid movies JSON: expected list, got=%s", type(data).__name__)
             raise ValueError("Movies JSON must contain a list")
 
-        movies = [movie for movie in data if isinstance(movie, dict)]
+        movies = [self._normalize_movie(movie) for movie in data if isinstance(movie, dict)]
         logger.info("Movies loaded: path=%s count=%d duration_ms=%.1f", filepath, len(movies), (perf_counter() - started_at) * 1000)
         return movies
+
+    @staticmethod
+    def _normalize_movie(movie: dict[str, Any]) -> dict[str, Any]:
+        """Convert legacy scraper keys to the canonical movie contract."""
+        normalized = dict(movie)
+        normalized["title"] = movie.get("title") or movie.get("name") or ""
+        normalized["genres"] = movie.get("genres") or movie.get("tags") or []
+        normalized["countries"] = [
+            country.strip()
+            for country in str(movie.get("country") or "").split(",")
+            if country.strip()
+        ]
+        normalized.pop("name", None)
+        normalized.pop("tags", None)
+        return normalized
 
     def prepare_text(self, movie: dict[str, Any]) -> str:
         """Build the text used for movie embeddings."""
         parts: list[str] = []
 
-        if movie.get("name"):
-            parts.append(f"Название: {movie['name']}")
+        if movie.get("title"):
+            parts.append(f"Название: {movie['title']}")
         if movie.get("description"):
             parts.append(f"Описание: {movie['description']}")
         if movie.get("director"):
@@ -86,10 +100,10 @@ class Indexer:
             parts.append(f"Рейтинг: {movie['rating']}")
         if movie.get("actors"):
             parts.append(f"Актёры: {', '.join(map(str, movie['actors']))}")
-        if movie.get("tags"):
-            parts.append(f"Жанры: {', '.join(map(str, movie['tags']))}")
+        if movie.get("genres"):
+            parts.append(f"Жанры: {', '.join(map(str, movie['genres']))}")
 
-        cleaned = clean_text(". ".join(parts))  # type: ignore
+        cleaned = clean_text(". ".join(parts))
         return cleaned[:settings.MAX_TEXT_LENGTH]
 
     def index_movies(
@@ -136,14 +150,16 @@ class Indexer:
                         vector=vector,
                         payload={
                             "id": int(movie_id),
-                            "name": movie.get("name", ""),
+                            "title": movie.get("title", ""),
                             "year": movie.get("year"),
                             "country": movie.get("country"),
+                            "countries": movie.get("countries", []),
                             "director": movie.get("director"),
                             "description": movie.get("description", ""),
                             "actors": movie.get("actors", []),
-                            "tags": movie.get("tags", []),
+                            "genres": movie.get("genres", []),
                             "rating": movie.get("rating"),
+                            "poster_url": movie.get("poster_url"),
                         },
                     )
                 )
