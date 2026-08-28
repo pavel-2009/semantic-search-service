@@ -38,28 +38,28 @@ class MovieSpider(scrapy.Spider):
             if movie is not None:
                 yield movie
 
-        # Проверяем ограничения и наличие следующей страницы
-        if page >= self.MAX_PAGES or not data.get("hasNext", False):
+        # Получаем информацию о пагинации
+        current_page = data.get("page", 1)
+        total_pages = data.get("pages", 1)
+        
+        self.logger.info("Page %d of %d", current_page, total_pages)
+
+        # Проверяем, нужно ли продолжать
+        if page >= self.MAX_PAGES:
+            self.logger.info("Reached max pages limit (%d)", self.MAX_PAGES)
+            return
+        
+        if current_page >= total_pages:
+            self.logger.info("Reached last page (%d of %d)", current_page, total_pages)
             return
 
-        # Используем токен next из ответа
-        next_token: str = data.get("next")
-        
-        if not next_token:
-            next_page = page + 1
-            yield Request(
-                url=self._movie_list_url(next_page),
-                callback=self.parse,
-                meta={"page": next_page},
-            )
-        else:
-            next_url = f"{self.base_url}?next={next_token}"
-            
-            yield Request(
-                url=next_url,
-                callback=self.parse,
-                meta={"page": page + 1},  
-            )
+        # Переход на следующую страницу
+        next_page = current_page + 1
+        yield Request(
+            url=self._movie_list_url(next_page),
+            callback=self.parse,
+            meta={"page": next_page},
+        )
 
     def _parse_movie(self, data: JsonDict) -> Movie | None:
         movie_id = data.get("id")
