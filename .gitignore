@@ -5,9 +5,10 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .pyright/
-.vscode/
 .coverage
 htmlcov/
+qdrant_storage/
+.vscode/
 dist/
 build/
 *.egg-info/
