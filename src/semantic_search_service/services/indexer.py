@@ -109,15 +109,14 @@ class Indexer:
                         vector=vector,
                         payload={
                             "id": int(movie_id),
-                            "title": movie.get("title", ""),
+                            "name": movie.get("name", ""),
                             "year": movie.get("year"),
                             "country": movie.get("country"),
                             "director": movie.get("director"),
                             "description": movie.get("description", ""),
                             "actors": movie.get("actors", []),
-                            "genres": movie.get("genres", []),
+                            "tags": movie.get("tags", []),
                             "rating": movie.get("rating"),
-                            "poster_url": movie.get("poster_url"),
                         },
                     )
                 )
