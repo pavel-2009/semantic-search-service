@@ -99,7 +99,7 @@ async def search_movies(message: Message) -> None:
 @dp.callback_query(F.data.startswith("movie:"))
 async def show_movie_details(callback: CallbackQuery) -> None:
     """Show full information for a selected movie."""
-    if not callback.data:
+    if not callback.data or callback.message is None:
         return
 
     movie_id = int(callback.data.removeprefix("movie:"))
