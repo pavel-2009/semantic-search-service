@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiogram>=3.22.0",
     "qdrant-client>=1.19.0",
     "scrapy-playwright>=0.0.48",
     "sentence-transformers>=6.0.0",
@@ -12,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 semantic-search-service = "semantic_search_service:main"
+semantic-search-bot = "semantic_search_service.bot.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
