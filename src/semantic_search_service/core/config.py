@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
     POISKKINO_API_KEY: str = "19Y8C8T-1DB4SAP-ND2GYRH-ATGV3A3"
+    BOT_TOKEN: str
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
