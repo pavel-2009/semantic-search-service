@@ -9,14 +9,14 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from semantic_search_service.backend.schemas import MovieResult, SearchRequest
-from semantic_search_service.backend.services.search_service import SearchService
 from semantic_search_service.core.config import settings
+from semantic_search_service.core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher()
-search_service = SearchService()
+search_service = get_search_service()
 
 
 def movie_card(movie: MovieResult) -> str:
