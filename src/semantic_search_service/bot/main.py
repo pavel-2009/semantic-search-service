@@ -17,27 +17,23 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher()
 search_service = SearchService()
-movies: dict[int, MovieResult] = {}
 
 
 def movie_card(movie: MovieResult) -> str:
     """Build a compact movie search result."""
     parts = [f"<b>{html.escape(movie.title)}</b>"]
-
     if movie.year is not None:
         parts.append(f"📅 {movie.year}")
     if movie.rating is not None:
         parts.append(f"⭐ {movie.rating:.1f}")
     if movie.genres:
         parts.append(f"🎬 {html.escape(', '.join(movie.genres))}")
-
     return "\n".join(parts)
 
 
 def movie_details(movie: MovieResult) -> str:
     """Build the detailed movie response."""
     lines = [f"<b>{html.escape(movie.title)}</b>"]
-
     if movie.year is not None:
         lines.append(f"📅 Год: {movie.year}")
     if movie.rating is not None:
@@ -52,7 +48,6 @@ def movie_details(movie: MovieResult) -> str:
         lines.append(f"👥 Актёры: {html.escape(', '.join(movie.actors))}")
     if movie.description:
         lines.append(f"\n{html.escape(movie.description)}")
-
     return "\n".join(lines)
 
 
@@ -71,7 +66,6 @@ async def search_movies(message: Message) -> None:
     query = message.text.strip()
     if not query:
         return
-
     try:
         results = await asyncio.to_thread(
             search_service.search,
@@ -87,7 +81,6 @@ async def search_movies(message: Message) -> None:
         return
 
     for movie in results:
-        movies[movie.id] = movie
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="Подробнее", callback_data=f"movie:{movie.id}")]
@@ -98,14 +91,24 @@ async def search_movies(message: Message) -> None:
 
 @dp.callback_query(F.data.startswith("movie:"))
 async def show_movie_details(callback: CallbackQuery) -> None:
-    """Show full information for a selected movie."""
+    """Fetch and show full information for a selected movie."""
     if not callback.data or callback.message is None:
         return
+    try:
+        movie_id = int(callback.data.removeprefix("movie:"))
+    except ValueError:
+        await callback.answer("Некорректный идентификатор фильма.", show_alert=True)
+        return
 
-    movie_id = int(callback.data.removeprefix("movie:"))
-    movie = movies.get(movie_id)
+    try:
+        movie = await asyncio.to_thread(search_service.get_by_id, movie_id)
+    except Exception:
+        logger.exception("Movie lookup failed: movie_id=%d", movie_id)
+        await callback.answer("Не удалось получить информацию о фильме.", show_alert=True)
+        return
+
     if movie is None:
-        await callback.answer("Информация о фильме устарела.", show_alert=True)
+        await callback.answer("Фильм не найден.", show_alert=True)
         return
 
     await callback.answer()
