@@ -32,19 +32,13 @@ class SearchService:
         """Run semantic search with optional metadata filters."""
         started_at = perf_counter()
         logger.info("Search started: query=%r top_k=%d filters=%s", request.query, request.top_k, request.filters is not None)
-
         cleaned_query = clean_text(request.query)
         logger.debug("Query cleaned: original_length=%d cleaned_length=%d", len(request.query), len(cleaned_query))
-
         vector_started_at = perf_counter()
         vector = self.model.encode(cleaned_query).tolist()
         logger.info("Query vector created: dimension=%d duration_ms=%.1f", len(vector), (perf_counter() - vector_started_at) * 1000)
-
         query_filter = self._build_filters(request.filters) if request.filters else None
-        logger.debug("Qdrant filter prepared: enabled=%s", query_filter is not None)
-
         qdrant_started_at = perf_counter()
-        logger.info("Querying Qdrant: collection=%s limit=%d", self.collection_name, request.top_k)
         result = self.qdrant.query_points(
             collection_name=self.collection_name,
             query=vector,
@@ -53,35 +47,22 @@ class SearchService:
             with_payload=True,
         )
         logger.info("Qdrant query completed: points=%d duration_ms=%.1f", len(result.points), (perf_counter() - qdrant_started_at) * 1000)
-
         results = [self._to_movie_result(point) for point in result.points]
         logger.info("Search completed: query_length=%d results=%d duration_ms=%.1f", len(request.query), len(results), (perf_counter() - started_at) * 1000)
         return results
 
     def get_by_id(self, movie_id: int) -> MovieResult | None:
         """Return a movie by its Qdrant point ID."""
-        started_at = perf_counter()
-        logger.info("Fetching movie by id: movie_id=%d", movie_id)
-
         points = self.qdrant.retrieve(
             collection_name=self.collection_name,
             ids=[movie_id],
             with_payload=True,
             with_vectors=False,
         )
-
         if not points:
             logger.info("Movie not found: movie_id=%d", movie_id)
             return None
-
-        movie = self._to_movie_result(points[0])
-        logger.info(
-            "Movie fetched: movie_id=%d title=%r duration_ms=%.1f",
-            movie_id,
-            movie.title,
-            (perf_counter() - started_at) * 1000,
-        )
-        return movie
+        return self._to_movie_result(points[0])
 
     @staticmethod
     def _to_movie_result(point: Any) -> MovieResult:
@@ -90,7 +71,6 @@ class SearchService:
         countries = payload.get("countries") or []
         if not countries and payload.get("country"):
             countries = [country.strip() for country in str(payload["country"]).split(",")]
-
         return MovieResult(
             id=int(point.id),
             title=str(payload.get("title") or "Без названия"),
@@ -109,34 +89,25 @@ class SearchService:
     def _build_filters(filters: SearchFilters) -> models.Filter | None:
         """Build Qdrant filters from API filter schemas."""
         conditions: list[models.Condition] = []
-
         if filters.year:
             if filters.year.gte is not None:
                 conditions.append(models.FieldCondition(key="year", range=models.Range(gte=filters.year.gte)))
             if filters.year.lte is not None:
                 conditions.append(models.FieldCondition(key="year", range=models.Range(lte=filters.year.lte)))
-
         if filters.rating:
             if filters.rating.gte is not None:
                 conditions.append(models.FieldCondition(key="rating", range=models.Range(gte=filters.rating.gte)))
             if filters.rating.lte is not None:
                 conditions.append(models.FieldCondition(key="rating", range=models.Range(lte=filters.rating.lte)))
-
         if filters.country:
             conditions.append(models.FieldCondition(key="countries", match=models.MatchAny(any=[filters.country])))
-
         if filters.genre:
             conditions.append(models.FieldCondition(key="genres", match=models.MatchAny(any=filters.genre)))
-
-        logger.debug("Qdrant filters built: conditions=%d", len(conditions))
         return models.Filter(must=conditions) if conditions else None
 
     def get_stats(self) -> dict[str, Any]:
         """Return collection statistics."""
-        logger.info("Fetching Qdrant collection stats: collection=%s", self.collection_name)
-        started_at = perf_counter()
         info = self.qdrant.get_collection(self.collection_name)
-        logger.info("Qdrant collection stats received: collection=%s points=%s status=%s duration_ms=%.1f", self.collection_name, info.points_count, info.status, (perf_counter() - started_at) * 1000)
         return {
             "collection": self.collection_name,
             "total_points": info.points_count,
