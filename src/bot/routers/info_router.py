@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
+from aiogram.enums import ParseMode
 
 from backend.schemas import MovieResult
 from core.dependencies import get_search_service
@@ -44,19 +45,34 @@ async def show_movie_details(callback: CallbackQuery) -> None:
     try:
         movie_id = int(callback.data.removeprefix("movie:"))
     except ValueError:
-        await callback.answer("Некорректный идентификатор фильма.", show_alert=True)
+        await callback.answer(
+            "Некорректный идентификатор фильма.",
+            show_alert=True,
+            parse_mode=ParseMode.HTML
+        )
         return
 
     try:
         movie = await asyncio.to_thread(search_service.get_by_id, movie_id)
     except Exception:
         logger.exception("Movie lookup failed: movie_id=%d", movie_id)
-        await callback.answer("Не удалось получить информацию о фильме.", show_alert=True)
+        await callback.answer(
+            "Не удалось получить информацию о фильме.",
+            show_alert=True,
+            parse_mode=ParseMode.HTML
+        )
         return
 
     if movie is None:
-        await callback.answer("Фильм не найден.", show_alert=True)
+        await callback.answer(
+            "Фильм не найден.",
+            show_alert=True,
+            parse_mode=ParseMode.HTML
+        )
         return
 
     await callback.answer()
-    await callback.message.answer(movie_details(movie))
+    await callback.message.answer(
+        movie_details(movie),
+        parse_mode=ParseMode.HTML
+    )

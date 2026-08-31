@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.enums import ParseMode
 
 from backend.schemas import MovieResult, SearchRequest
 from core.dependencies import get_search_service
@@ -62,14 +63,21 @@ async def search_movies(message: Message) -> None:
         )
     except Exception:
         logger.exception("Telegram search failed: query=%r", query)
-        await message.answer("❌ <b>Не удалось выполнить поиск.</b>\nПопробуй ещё раз.")
+        await message.answer(
+            "❌ <b>Не удалось выполнить поиск.</b>\nПопробуй ещё раз.",
+            parse_mode=ParseMode.HTML
+        )
         return
 
     if not results:
-        await message.answer("🔎 <b>Ничего не найдено.</b>\nПопробуй изменить запрос.")
+        await message.answer(
+            "🔎 <b>Ничего не найдено.</b>\nПопробуй изменить запрос.",
+            parse_mode=ParseMode.HTML
+        )
         return
 
     await message.answer(
         search_results_message(results),
         reply_markup=search_results_keyboard(results),
+        parse_mode=ParseMode.HTML
     )
