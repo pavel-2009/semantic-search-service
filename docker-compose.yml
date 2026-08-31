@@ -13,25 +13,19 @@ services:
     restart: unless-stopped
     networks:
       - semantic-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 2s
-      timeout: 1s
-      retries: 5
-      start_period: 5s
   scraper:
     build:
       context: .
       dockerfile: Dockerfile.scraper
     container_name: semantic-scraper
     environment:
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY}
+      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
     volumes:
       - ./src:/app/src
       - ./src/semantic_search_service/scraper/data:/app/src/semantic_search_service/scraper/data
     depends_on:
       qdrant:
-        condition: service_healthy
+        condition: service_started
     restart: "no"
     networks:
       - semantic-network
@@ -51,7 +45,7 @@ services:
       scraper:
         condition: service_completed_successfully
       qdrant:
-        condition: service_healthy
+        condition: service_started
     restart: "no"
     networks:
       - semantic-network
@@ -68,15 +62,15 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - LOG_LEVEL=INFO
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY}
-      - BOT_TOKEN=${BOT_TOKEN}
+      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
+      - BOT_TOKEN=${BOT_TOKEN:-}
     volumes:
       - ./src:/app/src
     depends_on:
       indexer:
         condition: service_completed_successfully
       qdrant:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     networks:
       - semantic-network
@@ -91,15 +85,15 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - LOG_LEVEL=INFO
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY}
-      - BOT_TOKEN=${BOT_TOKEN}
+      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
+      - BOT_TOKEN=${BOT_TOKEN:-}
     volumes:
       - ./src:/app/src
     depends_on:
       api:
         condition: service_started
       qdrant:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     networks:
       - semantic-network

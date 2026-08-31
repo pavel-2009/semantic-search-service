@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     DATA_PATH: Path = Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
 
     LOG_LEVEL: str = "INFO"
-    POISKKINO_API_KEY: str
-    BOT_TOKEN: str
+    POISKKINO_API_KEY: str = ""
+    BOT_TOKEN: str = ""
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
