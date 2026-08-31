@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 import scrapy
 from scrapy.http import Request, Response
 
-from semantic_search_service.scraper.schemas import Movie
+from scraper.schemas import Movie
 
 JsonDict = dict[str, Any]
 
@@ -38,22 +38,19 @@ class MovieSpider(scrapy.Spider):
             if movie is not None:
                 yield movie
 
-        # Получаем информацию о пагинации
         current_page = data.get("page", 1)
         total_pages = data.get("pages", 1)
-        
+
         self.logger.info("Page %d of %d", current_page, total_pages)
 
-        # Проверяем, нужно ли продолжать
         if page >= self.MAX_PAGES:
             self.logger.info("Reached max pages limit (%d)", self.MAX_PAGES)
             return
-        
+
         if current_page >= total_pages:
             self.logger.info("Reached last page (%d of %d)", current_page, total_pages)
             return
 
-        # Переход на следующую страницу
         next_page = current_page + 1
         yield Request(
             url=self._movie_list_url(next_page),
@@ -73,25 +70,13 @@ class MovieSpider(scrapy.Spider):
         try:
             return Movie(
                 id=int(movie_id),
-                title=str(
-                    data.get("name")
-                    or data.get("alternativeName")
-                    or "Без названия"
-                ),
+                title=str(data.get("name") or data.get("alternativeName") or "Без названия"),
                 year=self._as_int(data.get("year")),
-                country=self._extract_countries(
-                    self._as_dict_list(data.get("countries"))
-                ),
+                country=self._extract_countries(self._as_dict_list(data.get("countries"))),
                 director=self._extract_director(persons),
-                description=str(
-                    data.get("description")
-                    or data.get("shortDescription")
-                    or ""
-                ),
+                description=str(data.get("description") or data.get("shortDescription") or ""),
                 actors=self._extract_actors(persons),
-                genres=self._extract_genres(
-                    self._as_dict_list(data.get("genres"))
-                ),
+                genres=self._extract_genres(self._as_dict_list(data.get("genres"))),
                 rating=self._as_float(rating_data.get("kp")),
                 poster_url=self._extract_poster_url(data.get("poster")),
             )
