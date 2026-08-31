@@ -2,18 +2,14 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install uv
 RUN pip install --no-cache-dir uv
 
-# Copy project files
-COPY pyproject.toml pyrightconfig.json README.md ./
+COPY pyproject.toml uv.lock README.md pyrightconfig.json ./
 COPY src ./src
 COPY scripts ./scripts
 
-# Install Python dependencies using uv
-RUN uv sync --no-dev --no-group dev
+RUN uv sync --no-dev
 
-# Run scraper
 ENV PYTHONPATH=/app/src
 
 CMD ["uv", "run", "python", "scripts/run_scraper.py"]
