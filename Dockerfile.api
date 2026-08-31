@@ -6,11 +6,11 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Copy project files
-COPY pyproject.toml pyrightconfig.json ./
+COPY pyproject.toml pyrightconfig.json README.md ./
 COPY src ./src
 
 # Install Python dependencies using uv
-RUN uv sync
+RUN uv sync --no-dev --no-group dev
 
 # Expose port for API
 EXPOSE 8000
