@@ -5,7 +5,7 @@ from time import perf_counter
 
 from qdrant_client import QdrantClient
 
-from semantic_search_service.core.config import settings
+from core.config import settings
 
 
 logger = logging.getLogger(__name__)
