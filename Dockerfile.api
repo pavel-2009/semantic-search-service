@@ -4,13 +4,13 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml pyrightconfig.json README.md ./
+COPY pyproject.toml uv.lock README.md pyrightconfig.json ./
 COPY src ./src
 
-RUN uv sync --no-dev --no-group dev
-
-EXPOSE 8000
+RUN uv sync --no-dev
 
 ENV PYTHONPATH=/app/src
+
+EXPOSE 8000
 
 CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
