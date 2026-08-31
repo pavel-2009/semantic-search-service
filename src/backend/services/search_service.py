@@ -20,23 +20,48 @@ class SearchService:
     """Search normalized movie documents stored in Qdrant."""
 
     def __init__(self) -> None:
-        logger.info("Initializing SearchService: collection=%s model=%s", settings.QDRANT_COLLECTION, settings.EMBEDDING_MODEL)
+        logger.info(
+            "Initializing SearchService: collection=%s model=%s",
+            settings.QDRANT_COLLECTION,
+            settings.EMBEDDING_MODEL,
+        )
         self.collection_name = settings.QDRANT_COLLECTION
         self.qdrant: QdrantClient = QdrantClientSingleton.get_client()
         model_started_at = perf_counter()
         self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
-        logger.info("Embedding model loaded: model=%s duration_ms=%.1f", settings.EMBEDDING_MODEL, (perf_counter() - model_started_at) * 1000)
-        logger.info("SearchService initialized: collection=%s embedding_dim=%d", self.collection_name, settings.EMBEDDING_DIM)
+        logger.info(
+            "Embedding model loaded: model=%s duration_ms=%.1f",
+            settings.EMBEDDING_MODEL,
+            (perf_counter() - model_started_at) * 1000,
+        )
+        logger.info(
+            "SearchService initialized: collection=%s embedding_dim=%d",
+            self.collection_name,
+            settings.EMBEDDING_DIM,
+        )
 
     def search(self, request: SearchRequest) -> list[MovieResult]:
         """Run semantic search with optional metadata filters."""
         started_at = perf_counter()
-        logger.info("Search started: query=%r top_k=%d filters=%s", request.query, request.top_k, request.filters is not None)
+        logger.info(
+            "Search started: query=%r top_k=%d filters=%s",
+            request.query,
+            request.top_k,
+            request.filters is not None,
+        )
         cleaned_query = clean_text(request.query)
-        logger.debug("Query cleaned: original_length=%d cleaned_length=%d", len(request.query), len(cleaned_query))
+        logger.debug(
+            "Query cleaned: original_length=%d cleaned_length=%d",
+            len(request.query),
+            len(cleaned_query),
+        )
         vector_started_at = perf_counter()
         vector = self.model.encode(cleaned_query).tolist()
-        logger.info("Query vector created: dimension=%d duration_ms=%.1f", len(vector), (perf_counter() - vector_started_at) * 1000)
+        logger.info(
+            "Query vector created: dimension=%d duration_ms=%.1f",
+            len(vector),
+            (perf_counter() - vector_started_at) * 1000,
+        )
         query_filter = self._build_filters(request.filters) if request.filters else None
         qdrant_started_at = perf_counter()
         result = self.qdrant.query_points(
@@ -46,9 +71,18 @@ class SearchService:
             query_filter=query_filter,
             with_payload=True,
         )
-        logger.info("Qdrant query completed: points=%d duration_ms=%.1f", len(result.points), (perf_counter() - qdrant_started_at) * 1000)
+        logger.info(
+            "Qdrant query completed: points=%d duration_ms=%.1f",
+            len(result.points),
+            (perf_counter() - qdrant_started_at) * 1000,
+        )
         results = [self._to_movie_result(point) for point in result.points]
-        logger.info("Search completed: query_length=%d results=%d duration_ms=%.1f", len(request.query), len(results), (perf_counter() - started_at) * 1000)
+        logger.info(
+            "Search completed: query_length=%d results=%d duration_ms=%.1f",
+            len(request.query),
+            len(results),
+            (perf_counter() - started_at) * 1000,
+        )
         return results
 
     def get_by_id(self, movie_id: int) -> MovieResult | None:
@@ -71,6 +105,7 @@ class SearchService:
         countries = payload.get("countries") or []
         if not countries and payload.get("country"):
             countries = [country.strip() for country in str(payload["country"]).split(",")]
+
         return MovieResult(
             id=int(point.id),
             title=str(payload.get("title") or "Без названия"),
@@ -82,7 +117,7 @@ class SearchService:
             actors=payload.get("actors", []),
             description=payload.get("description") or None,
             poster_url=payload.get("poster_url"),
-            score=float(point.score) if point.score is not None else 0.0,
+            score=0.0,
         )
 
     @staticmethod
@@ -91,18 +126,48 @@ class SearchService:
         conditions: list[models.Condition] = []
         if filters.year:
             if filters.year.gte is not None:
-                conditions.append(models.FieldCondition(key="year", range=models.Range(gte=filters.year.gte)))
+                conditions.append(
+                    models.FieldCondition(
+                        key="year",
+                        range=models.Range(gte=filters.year.gte),
+                    )
+                )
             if filters.year.lte is not None:
-                conditions.append(models.FieldCondition(key="year", range=models.Range(lte=filters.year.lte)))
+                conditions.append(
+                    models.FieldCondition(
+                        key="year",
+                        range=models.Range(lte=filters.year.lte),
+                    )
+                )
         if filters.rating:
             if filters.rating.gte is not None:
-                conditions.append(models.FieldCondition(key="rating", range=models.Range(gte=filters.rating.gte)))
+                conditions.append(
+                    models.FieldCondition(
+                        key="rating",
+                        range=models.Range(gte=filters.rating.gte),
+                    )
+                )
             if filters.rating.lte is not None:
-                conditions.append(models.FieldCondition(key="rating", range=models.Range(lte=filters.rating.lte)))
+                conditions.append(
+                    models.FieldCondition(
+                        key="rating",
+                        range=models.Range(lte=filters.rating.lte),
+                    )
+                )
         if filters.country:
-            conditions.append(models.FieldCondition(key="countries", match=models.MatchAny(any=[filters.country])))
+            conditions.append(
+                models.FieldCondition(
+                    key="countries",
+                    match=models.MatchAny(any=[filters.country]),
+                )
+            )
         if filters.genre:
-            conditions.append(models.FieldCondition(key="genres", match=models.MatchAny(any=filters.genre)))
+            conditions.append(
+                models.FieldCondition(
+                    key="genres",
+                    match=models.MatchAny(any=filters.genre),
+                )
+            )
         return models.Filter(must=conditions) if conditions else None
 
     def get_stats(self) -> dict[str, Any]:
