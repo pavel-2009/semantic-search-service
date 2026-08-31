@@ -1,16 +1,16 @@
-"""Entry point for FastApi App"""
+"""Entry point for FastAPI application."""
 
 import logging
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
-from typing import Callable, Awaitable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.routers import router
+from backend.api.info_router import get_info_service, router as info_router
+from backend.api.search_router import router as search_router
 from core.config import settings
-
 
 logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
@@ -32,9 +32,7 @@ async def lifespan(_: FastAPI):
     )
     started_at = perf_counter()
     try:
-        from backend.api.routers import get_search_service
-
-        service = get_search_service()
+        service = get_info_service()
         logger.info("Checking Qdrant collection during startup: %s", settings.QDRANT_COLLECTION)
         stats = service.get_stats()
     except Exception:
@@ -53,6 +51,7 @@ async def lifespan(_: FastAPI):
         yield
     finally:
         logger.info("Shutting down Semantic Search API")
+
 
 app = FastAPI(
     title="Semantic Search API",
@@ -96,15 +95,17 @@ async def log_http_request(
     return response
 
 
-app.include_router(router)
+app.include_router(search_router)
+app.include_router(info_router)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {
         "service": "Semantic Search API",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/api/v1/health",
         "search": "/api/v1/search",
+        "movie": "/api/v1/movies/{movie_id}",
     }
