@@ -22,30 +22,19 @@ dependencies = [
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.uv.build-backend]
-module-name = "src"
-module-root = "."
+[tool.uv]
+package = false
 
 [dependency-groups]
 dev = [
-    "aiogram>=3.31.0",
-    "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "nanobind>=2.15.0",
-    "playwright>=1.62.0",
-    "playwright-stealth>=2.0.3",
-    "pydantic>=2.13.4",
-    "pydantic-settings>=2.15.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
-    "qdrant-client>=1.19.0",
     "ruff>=0.16.3",
-    "scrapy>=2.17.0",
     "scrapy-impersonate>=1.8.1",
     "scrapy-user-agents>=0.1.1",
-    "sentence-transformers>=6.0.0",
     "tenacity>=9.1.4",
-    "uvicorn>=0.52.4",
 ]
 
 [tool.ruff]
@@ -53,15 +42,7 @@ line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = [
-    "E",
-    "W",
-    "F",
-    "I",
-    "UP",
-    "B",
-    "SIM",
-]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.format]
 quote-style = "double"
