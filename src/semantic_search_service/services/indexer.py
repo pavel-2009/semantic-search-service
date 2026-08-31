@@ -9,9 +9,9 @@ from typing import Any
 from qdrant_client.http import models
 from sentence_transformers import SentenceTransformer
 
-from semantic_search_service.core.config import settings
-from semantic_search_service.core.qdrant_client import QdrantClientSingleton
-from semantic_search_service.core.text_normalizer import clean_text
+from core.config import settings
+from core.qdrant_client import QdrantClientSingleton
+from core.text_normalizer import clean_text
 
 
 logger = logging.getLogger(__name__)
@@ -106,11 +106,7 @@ class Indexer:
         cleaned = clean_text(". ".join(parts))
         return cleaned[:settings.MAX_TEXT_LENGTH]
 
-    def index_movies(
-        self,
-        filepath: Path,
-        batch_size: int = settings.BATCH_SIZE,
-    ) -> None:
+    def index_movies(self, filepath: Path, batch_size: int = settings.BATCH_SIZE) -> None:
         """Create embeddings and upsert movies into Qdrant."""
         started_at = perf_counter()
         logger.info("Starting movie indexing: path=%s batch_size=%d", filepath, batch_size)
@@ -167,10 +163,7 @@ class Indexer:
             if points:
                 logger.info("Uploading vectors to Qdrant: collection=%s points=%d", self.collection_name, len(points))
                 upsert_started_at = perf_counter()
-                self.qdrant.upsert(
-                    collection_name=self.collection_name,
-                    points=points,
-                )
+                self.qdrant.upsert(collection_name=self.collection_name, points=points)
                 logger.info("Vectors uploaded: collection=%s points=%d duration_ms=%.1f", self.collection_name, len(points), (perf_counter() - upsert_started_at) * 1000)
 
             total_indexed += len(points)
