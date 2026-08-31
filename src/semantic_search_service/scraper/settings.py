@@ -1,13 +1,13 @@
-from semantic_search_service.core.config import settings
+from core.config import settings
 
 
 BOT_NAME = "semantic_search_service"
 
 SPIDER_MODULES = [
-    "semantic_search_service.scraper.spiders",
+    "scraper.spiders",
 ]
 
-NEWSPIDER_MODULE = "semantic_search_service.scraper.spiders"
+NEWSPIDER_MODULE = "scraper.spiders"
 
 ROBOTSTXT_OBEY = False
 
@@ -19,7 +19,7 @@ DEFAULT_REQUEST_HEADERS = {
 }
 
 ITEM_PIPELINES = {
-    "semantic_search_service.scraper.pipelines.JsonPipeline": 300,
+    "scraper.pipelines.JsonPipeline": 300,
 }
 
 LOG_LEVEL = "INFO"
