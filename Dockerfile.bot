@@ -9,4 +9,6 @@ COPY src ./src
 
 RUN uv sync --no-dev --no-group dev
 
+ENV PYTHONPATH=/app/src
+
 CMD ["uv", "run", "python", "-m", "bot.main"]
