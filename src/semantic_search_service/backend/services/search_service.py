@@ -8,10 +8,10 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from sentence_transformers import SentenceTransformer
 
-from semantic_search_service.backend.schemas import MovieResult, SearchFilters, SearchRequest
-from semantic_search_service.core.config import settings
-from semantic_search_service.core.qdrant_client import QdrantClientSingleton
-from semantic_search_service.core.text_normalizer import clean_text
+from backend.schemas import MovieResult, SearchFilters, SearchRequest
+from core.config import settings
+from core.qdrant_client import QdrantClientSingleton
+from core.text_normalizer import clean_text
 
 logger = logging.getLogger(__name__)
 
