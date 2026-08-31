@@ -2,10 +2,10 @@
 
 import logging
 from time import perf_counter
-from typing import Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from qdrant_client.http.models import Record, ScoredPoint
 from sentence_transformers import SentenceTransformer
 
 from backend.schemas import MovieResult, SearchFilters, SearchRequest
@@ -76,7 +76,7 @@ class SearchService:
             len(result.points),
             (perf_counter() - qdrant_started_at) * 1000,
         )
-        results = [self._to_movie_result(point) for point in result.points]
+        results = [self._movie_from_scored_point(point) for point in result.points]
         logger.info(
             "Search completed: query_length=%d results=%d duration_ms=%.1f",
             len(request.query),
@@ -96,18 +96,40 @@ class SearchService:
         if not points:
             logger.info("Movie not found: movie_id=%d", movie_id)
             return None
-        return self._to_movie_result(points[0])
+        return self._movie_from_record(points[0])
 
     @staticmethod
-    def _to_movie_result(point: Any) -> MovieResult:
-        """Convert a Qdrant point to the public movie response."""
-        payload = point.payload or {}
+    def _movie_from_scored_point(point: ScoredPoint) -> MovieResult:
+        """Convert a scored search result to a movie response."""
+        return SearchService._movie_from_payload(
+            point_id=point.id,
+            payload=point.payload,
+            score=float(point.score),
+        )
+
+    @staticmethod
+    def _movie_from_record(record: Record) -> MovieResult:
+        """Convert a retrieved Qdrant record to a movie response."""
+        return SearchService._movie_from_payload(
+            point_id=record.id,
+            payload=record.payload,
+            score=0.0,
+        )
+
+    @staticmethod
+    def _movie_from_payload(
+        point_id: int | str,
+        payload: dict | None,
+        score: float,
+    ) -> MovieResult:
+        """Build a movie response from common Qdrant point data."""
+        payload = payload or {}
         countries = payload.get("countries") or []
         if not countries and payload.get("country"):
             countries = [country.strip() for country in str(payload["country"]).split(",")]
 
         return MovieResult(
-            id=int(point.id),
+            id=int(point_id),
             title=str(payload.get("title") or "Без названия"),
             year=payload.get("year"),
             rating=payload.get("rating"),
@@ -117,7 +139,7 @@ class SearchService:
             actors=payload.get("actors", []),
             description=payload.get("description") or None,
             poster_url=payload.get("poster_url"),
-            score=0.0,
+            score=score,
         )
 
     @staticmethod
@@ -170,7 +192,7 @@ class SearchService:
             )
         return models.Filter(must=conditions) if conditions else None
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> dict[str, object]:
         """Return collection statistics."""
         info = self.qdrant.get_collection(self.collection_name)
         return {
