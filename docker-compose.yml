@@ -10,11 +10,6 @@ services:
       - qdrant_storage:/qdrant/storage
     environment:
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     restart: unless-stopped
     networks:
       - semantic-network
@@ -48,8 +43,8 @@ services:
       - ./src:/app/src
       - ./data:/app/data
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant
+      - scraper
     restart: "no"
     profiles:
       - indexer
@@ -73,8 +68,7 @@ services:
     volumes:
       - ./src:/app/src
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant
     restart: unless-stopped
     networks:
       - semantic-network
