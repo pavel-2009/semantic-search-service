@@ -1,4 +1,4 @@
-"""Movie information and service information routes."""
+"""Service and movie information API routes."""
 
 import logging
 from functools import lru_cache
@@ -6,19 +6,45 @@ from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.schemas import MovieResult, StatsResponse
+from backend.schemas import HealthResponse, MovieResult, StatsResponse
 from backend.services.search_service import SearchService
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/api/v1", tags=["info"])
 
 
 @lru_cache
 def get_info_service() -> SearchService:
-    """Return the shared search service instance."""
+    """Return the shared SearchService instance used by info routes."""
     logger.info("Creating shared SearchService instance for info routes")
     return SearchService()
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check(
+    service: SearchService = Depends(get_info_service),
+) -> HealthResponse:
+    """Check API and vector database health."""
+    started_at = perf_counter()
+    logger.info("Health check started")
+    try:
+        stats = service.get_stats()
+    except Exception as exc:
+        logger.exception("Health check failed while accessing Qdrant")
+        raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
+
+    response = HealthResponse(
+        status="healthy" if stats["total_points"] > 0 else "degraded",
+        collection=stats["collection"],
+        indexed_items=stats["total_points"],
+    )
+    logger.info(
+        "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
+        response.status,
+        response.indexed_items,
+        (perf_counter() - started_at) * 1000,
+    )
+    return response
 
 
 @router.get("/movies/{movie_id}", response_model=MovieResult)
