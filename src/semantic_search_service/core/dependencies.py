@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from semantic_search_service.backend.services.search_service import SearchService
+from backend.services.search_service import SearchService
 
 
 @lru_cache(maxsize=1)
