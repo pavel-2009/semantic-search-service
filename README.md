@@ -92,16 +92,15 @@ The default embedding model is `paraphrase-multilingual-MiniLM-L12-v2` with 384-
 ```text
 semantic-search-service/
 ├── src/
-│   └── semantic_search_service/
-│       ├── backend/              # FastAPI application and API schemas
-│       ├── bot/                  # Telegram bot
-│       ├── core/                 # configuration and shared dependencies
-│       ├── scraper/              # Scrapy project and movie spider
-│       └── services/              # indexing and search services
+│   ├── backend/                # FastAPI application and API schemas
+│   ├── bot/                    # Telegram bot
+│   ├── core/                   # configuration and shared dependencies
+│   ├── scraper/                # Scrapy project and movie spider
+│   └── services/               # indexing and search services
 │
-├── scripts/                     # pipeline entry points
-├── tests/                       # automated tests
-├── docker-compose.yml            # Qdrant + scraper + indexer + API + bot
+├── scripts/                    # pipeline entry points
+├── tests/                      # automated tests
+├── docker-compose.yml           # Qdrant + scraper + indexer + API + bot
 ├── Dockerfile.api
 ├── Dockerfile.bot
 ├── Dockerfile.indexer
@@ -111,6 +110,8 @@ semantic-search-service/
 ├── .env.example
 └── README.md
 ```
+
+The `src/` directory intentionally contains the application modules directly. There is no additional `semantic_search_service/` package layer.
 
 ## 🔌 API
 
@@ -122,16 +123,6 @@ Returns service health and the number of indexed objects.
 
 ```bash
 curl http://localhost:8000/api/v1/health
-```
-
-Example response:
-
-```json
-{
-  "status": "healthy",
-  "collection": "movies",
-  "indexed_items": 5000
-}
 ```
 
 ### `GET /api/v1/stats`
@@ -283,13 +274,13 @@ uv sync --dev
 Run the API:
 
 ```bash
-uv run uvicorn src.semantic_search_service.backend.main:app --reload
+uv run uvicorn backend.main:app --reload
 ```
 
 Run the bot:
 
 ```bash
-uv run python -m src.semantic_search_service.bot.main
+uv run python -m bot.main
 ```
 
 Run the scraper:
