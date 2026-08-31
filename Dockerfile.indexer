@@ -1,0 +1,17 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Copy project files
+COPY pyproject.toml pyrightconfig.json README.md ./
+COPY src ./src
+COPY scripts ./scripts
+
+# Install Python dependencies using uv
+RUN uv sync --no-dev --no-group dev
+
+# Run indexer
+CMD ["uv", "run", "python", "scripts/run_indexer.py"]

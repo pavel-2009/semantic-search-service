@@ -13,41 +13,46 @@ services:
     restart: unless-stopped
     networks:
       - semantic-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+      start_period: 5s
   scraper:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.scraper
     container_name: semantic-scraper
-    command: uv run python scripts/run_scraper.py
     environment:
       - POISKKINO_API_KEY=${POISKKINO_API_KEY}
     volumes:
       - ./src:/app/src
-      - ./data:/app/data
+      - ./src/semantic_search_service/scraper/data:/app/src/semantic_search_service/scraper/data
+    depends_on:
+      qdrant:
+        condition: service_healthy
     restart: "no"
-    profiles:
-      - scraper
     networks:
       - semantic-network
 
   indexer:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.indexer
     container_name: semantic-indexer
-    command: uv run python scripts/run_indexer.py
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
     volumes:
       - ./src:/app/src
-      - ./data:/app/data
+      - ./src/semantic_search_service/scraper/data:/app/src/semantic_search_service/scraper/data
     depends_on:
-      - qdrant
-      - scraper
+      scraper:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_healthy
     restart: "no"
-    profiles:
-      - indexer
     networks:
       - semantic-network
 
@@ -68,7 +73,10 @@ services:
     volumes:
       - ./src:/app/src
     depends_on:
-      - qdrant
+      indexer:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - semantic-network
@@ -88,7 +96,10 @@ services:
     volumes:
       - ./src:/app/src
     depends_on:
-      - api
+      api:
+        condition: service_started
+      qdrant:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - semantic-network
