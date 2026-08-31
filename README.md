@@ -1,744 +1,389 @@
-Semantic Content Search Engine
+# Semantic Search Service
 
-«Семантическая поисковая система на Python и C++ с векторной базой Qdrant, REST API и Telegram-интерфейсом.»
+[![Python](https://img.shields.io/badge/Python-3.14%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-FF4F00?logo=qdrant&logoColor=white)](https://qdrant.tech/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![Lint](https://img.shields.io/badge/lint-Ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
+[![CI](https://img.shields.io/github/actions/workflow/status/pavel-2009/semantic-search-service/ci.yml?label=CI)](https://github.com/pavel-2009/semantic-search-service/actions)
 
-""Python" (https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)" (https://www.python.org/)
-""C++" (https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)" (https://isocpp.org/)
-""FastAPI" (https://img.shields.io/badge/FastAPI-0.1+-009688?logo=fastapi&logoColor=white)" (https://fastapi.tiangolo.com/)
-""Qdrant" (https://img.shields.io/badge/Qdrant-Vector%20DB-FF4F00)" (https://qdrant.tech/)
-""Docker" (https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)" (https://www.docker.com/)
-""Tests" (https://img.shields.io/badge/tests-pytest-0A9EDC)" (https://pytest.org/)
+**Semantic movie search service built with Python, Sentence Transformers, Qdrant, FastAPI and Aiogram.**
 
-📌 О проекте
+Search is based on the meaning of a query rather than exact keyword matches. The project covers the full path from data collection and indexing to a REST API and Telegram interface.
 
-Semantic Content Search Engine — поисковая система, которая ищет контент по смыслу, а не только по совпадению ключевых слов.
+> **Status:** portfolio / learning project.
 
-Например, запрос:
+## ✨ Features
 
-пушистый домашний питомец
+- 🔎 Semantic search over movie data
+- 🧠 Multilingual text embeddings with [Sentence Transformers](https://www.sbert.net/)
+- 🗄️ Vector storage and similarity search with [Qdrant](https://qdrant.tech/)
+- 🎯 Metadata filtering by year, rating, genre and country
+- 🌐 Versioned REST API with [FastAPI](https://fastapi.tiangolo.com/)
+- 🤖 Telegram interface powered by [Aiogram 3](https://docs.aiogram.dev/)
+- 🕷️ Data collection with [Scrapy](https://scrapy.org/) and [Playwright](https://playwright.dev/)
+- 🐳 Reproducible local environment with Docker Compose
+- 🧪 Automated tests with [pytest](https://docs.pytest.org/)
+- 🔍 Static analysis and formatting with [Ruff](https://docs.astral.sh/ruff/) and [Pyright](https://microsoft.github.io/pyright/)
+- 🔄 CI through GitHub Actions
 
-может найти материалы про кошек, даже если слово "кот" непосредственно в запросе отсутствует.
+## 🏗️ Architecture
 
-Система проходит полный pipeline:
+```text
+                         ┌──────────────────────┐
+                         │      Data Source     │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Scraper              │
+                         │ Scrapy + Playwright  │
+                         └──────────┬───────────┘
+                                    │ JSON
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Indexer              │
+                         │ Normalization        │
+                         │ + embeddings         │
+                         └──────────┬───────────┘
+                                    │ vectors
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Qdrant               │
+                         │ Vector database      │
+                         └──────────▲───────────┘
+                                    │ similarity search
+                                    │
+              ┌─────────────────────┴─────────────────────┐
+              │                                           │
+              ▼                                           ▼
+     ┌───────────────────┐                       ┌───────────────────┐
+     │ FastAPI            │                       │ Telegram Bot      │
+     │ REST API           │                       │ Aiogram 3         │
+     └─────────┬─────────┘                       └───────────────────┘
+               │
+               ▼
+        JSON search results
+```
 
-Data Source
+### Search pipeline
+
+```text
+User query
     ↓
-Scraper
-    ↓
-C++ Text Cleaner
+Text normalization
     ↓
 Sentence Transformer
     ↓
-Qdrant Vector Database
+Query embedding (384 dimensions)
     ↓
-FastAPI
-    ↓
-Telegram Bot / API Client
-
-Проект демонстрирует практическую интеграцию Python, C++, ML-моделей, vector database, REST API и Docker.
-
----
-
-✨ Возможности
-
-- 🔎 Семантический поиск по текстовому контенту
-- 🧠 Генерация embedding-векторов с помощью "sentence-transformers"
-- 🗄️ Хранение и поиск векторов в Qdrant
-- 🎯 Фильтрация результатов по metadata
-- ⚡ Высокопроизводительная очистка текста на C++
-- 🔗 Интеграция C++ и Python через "pybind11"
-- 🌐 REST API на FastAPI
-- 🤖 Telegram Bot на Aiogram 3
-- 🕷️ Асинхронный сбор данных через "aiohttp"
-- 🐳 Полностью контейнеризированное окружение
-- 🧪 Unit и integration tests
-- 🔄 CI через GitHub Actions
-
----
-
-🏗️ Архитектура
-
-┌─────────────────────────────────────────────────────────────┐
-│                      Docker Compose                         │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│                 │                 │                         │
-│    Scraper      │     Qdrant      │        Backend          │
-│    Python       │   Vector DB     │      FastAPI             │
-│                 │                 │                         │
-└────────┬────────┴────────┬────────┴──────────┬──────────────┘
-         │                 │                   │
-         ▼                 │                   ▼
-┌─────────────────┐        │          ┌──────────────────────┐
-│   C++ Cleaner   │        │          │    Telegram Bot      │
-│     pybind11    │        │          │      Aiogram 3       │
-└────────┬────────┘        │          └──────────────────────┘
-         │                 │
-         ▼                 ▼
-┌─────────────────┐   ┌──────────────────┐
-│ Sentence        │   │ Vector Search    │
-│ Transformers    │   │ + Metadata       │
-│ Embeddings      │   │ Filtering        │
-└─────────────────┘   └──────────────────┘
-
-Pipeline поиска
-
-User Query
-    │
-    ▼
-FastAPI
-    │
-    ▼
-Text Cleaner
-    │
-    ▼
-Embedding Model
-    │
-    ▼
-Query Vector
-    │
-    ▼
-Qdrant
-    │
-    ▼
-Top-K Results
-    │
-    ▼
-JSON Response / Telegram
-
----
-
-🧩 Компоненты
-
-Компонент| Технологии| Назначение
-Scraper| Python, aiohttp, BeautifulSoup| Сбор исходных данных
-C++ Cleaner| C++20, pybind11, CMake| Очистка и нормализация текста
-Indexer| Python, Sentence Transformers| Создание embeddings
-Qdrant| Qdrant| Хранение и поиск векторов
-Backend| FastAPI, Pydantic| REST API
-Telegram Bot| Aiogram 3| Пользовательский интерфейс
-Infrastructure| Docker Compose| Запуск сервисов
-Testing| pytest| Unit и integration tests
-CI| GitHub Actions| Автоматические проверки
-
----
-
-📂 Структура проекта
-
-semantic-search/
-│
-├── docker-compose.yml
-├── .env.example
-├── README.md
-│
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   │
-│   └── app/
-│       ├── main.py
-│       ├── models.py
-│       │
-│       ├── api/
-│       │   └── routes.py
-│       │
-│       ├── services/
-│       │   ├── search_service.py
-│       │   └── indexer.py
-│       │
-│       └── core/
-│           ├── config.py
-│           └── qdrant_client.py
-│
-├── scraper/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── scraper.py
-│   └── data/
-│       └── raw_content.json
-│
-├── cpp_cleaner/
-│   ├── CMakeLists.txt
-│   ├── cleaner.cpp
-│   ├── cleaner.h
-│   ├── bindings.cpp
-│   ├── setup.py
-│   └── README.md
-│
-├── bot/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── bot.py
-│   └── handlers.py
-│
-└── tests/
-    ├── conftest.py
-    ├── test_search.py
-    └── test_cleaner.py
-
----
-
-🕷️ Data Collection
-
-Проект может работать с различными типами контента:
-
-- фильмы и сериалы;
-- книги;
-- статьи;
-- товары;
-- документы;
-- записи базы знаний.
-
-Для демонстрационной версии используется набор из 5000+ объектов.
-
-Пример исходной записи:
-
-{
-  "id": "movie_001",
-  "title": "Дюна: Часть вторая",
-  "description": "Пол Атрейдес объединяется с фременами...",
-  "genre": [
-    "фантастика",
-    "драма"
-  ],
-  "year": 2024,
-  "actors": [
-    "Тимоти Шаламе",
-    "Зендея"
-  ],
-  "rating": 8.7
-}
-
-Scraper реализован асинхронно и поддерживает:
-
-- пагинацию;
-- обработку ошибок;
-- повторные запросы;
-- сохранение результата в JSON.
-
----
-
-⚡ C++ Text Cleaner
-
-Очистка текста вынесена в отдельный C++20-модуль.
-
-Основная функция:
-
-std::string clean_text(const std::string& input);
-
-Модуль выполняет:
-
-- удаление лишних символов;
-- нормализацию пробелов;
-- нормализацию кавычек;
-- приведение текста к единому формату;
-- удаление ненужного Unicode/emoji-мусора.
-
-Python-интерфейс предоставляется через "pybind11":
-
-from text_cleaner import clean_text
-
-result = clean_text(text)
-
-Зачем здесь C++?
-
-Это отдельный эксперимент проекта с native extension и интеграцией C++/Python.
-
-Производительность должна оцениваться отдельным benchmark-тестом:
-
-Python implementation
-        vs
-C++ implementation
-
-Такой подход позволяет не просто заявлять об ускорении, а показывать реальные результаты измерений.
-
----
-
-🧠 Semantic Embeddings
-
-После очистки текст преобразуется в embedding-вектор с помощью:
-
-sentence-transformers
-
-Используемая модель:
-
-all-MiniLM-L6-v2
-
-Размерность embedding:
-
-384
-
-Каждый объект превращается в точку в векторном пространстве.
-
-Например:
-
-{
-  "id": "movie_001",
-  "vector": [0.123, -0.456, "..."],
-  "payload": {
-    "title": "Дюна: Часть вторая",
-    "genre": [
-      "фантастика",
-      "драма"
-    ],
-    "year": 2024,
-    "rating": 8.7
-  }
-}
-
----
-
-🗄️ Qdrant
-
-Qdrant используется как vector database.
-
-Он отвечает за:
-
-- хранение embeddings;
-- similarity search;
-- фильтрацию по metadata;
-- получение Top-K результатов.
-
-Пример логического запроса:
-
-Query:
-"психоделический триллер про сон"
-
-Filters:
-genre = фантастика
-year >= 2020
-
-↓
-
-Embedding
-
-↓
-
 Qdrant similarity search
+    ↓
+Metadata filters
+    ↓
+Top-K movies
+```
 
-↓
+The default embedding model is `paraphrase-multilingual-MiniLM-L12-v2` with 384-dimensional vectors.
 
-Top 5 results
+## 🧩 Project structure
 
----
+```text
+semantic-search-service/
+├── src/
+│   └── semantic_search_service/
+│       ├── backend/              # FastAPI application and API schemas
+│       ├── bot/                  # Telegram bot
+│       ├── core/                 # configuration and shared dependencies
+│       ├── scraper/              # Scrapy project and movie spider
+│       └── services/              # indexing and search services
+│
+├── scripts/                     # pipeline entry points
+├── tests/                       # automated tests
+├── docker-compose.yml            # Qdrant + scraper + indexer + API + bot
+├── Dockerfile.api
+├── Dockerfile.bot
+├── Dockerfile.indexer
+├── Dockerfile.scraper
+├── pyproject.toml
+├── uv.lock
+├── .env.example
+└── README.md
+```
 
-🌐 REST API
+## 🔌 API
 
-Backend реализован на FastAPI.
+All application endpoints are exposed under `/api/v1`.
 
-"GET /health"
+### `GET /api/v1/health`
 
-Проверка состояния сервиса.
+Returns service health and the number of indexed objects.
 
-Пример:
+```bash
+curl http://localhost:8000/api/v1/health
+```
 
+Example response:
+
+```json
 {
   "status": "healthy",
+  "collection": "movies",
   "indexed_items": 5000
 }
+```
 
----
+### `GET /api/v1/stats`
 
-"GET /stats"
+Returns the Qdrant collection status, number of indexed objects, embedding model and vector dimensionality.
 
-Возвращает статистику поискового индекса.
+```bash
+curl http://localhost:8000/api/v1/stats
+```
 
----
+### `POST /api/v1/search`
 
-"POST /search"
+Performs semantic movie search. `top_k` accepts 1–100 results. Optional filters support year, rating, genre and country.
 
-Семантический поиск.
+```bash
+curl -X POST http://localhost:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "психологический триллер про человека, который теряет связь с реальностью",
+    "top_k": 5,
+    "filters": {
+      "year": {"gte": 2015},
+      "rating": {"gte": 7.0},
+      "genre": ["триллер"]
+    }
+  }'
+```
 
-Request
+Example response shape:
 
-{
-  "query": "психоделический триллер про сон",
-  "top_k": 5,
-  "filter_genre": [
-    "фантастика"
-  ],
-  "min_year": 2020
-}
-
-Response
-
+```json
 {
   "success": true,
+  "query": "психологический триллер про человека, который теряет связь с реальностью",
+  "total": 5,
   "results": [
     {
-      "id": "movie_001",
-      "title": "Дюна: Часть вторая",
-      "genre": [
-        "фантастика",
-        "драма"
-      ],
-      "year": 2024,
+      "id": 123456,
+      "title": "Example Movie",
+      "year": 2020,
+      "rating": 8.1,
+      "genres": ["триллер", "драма"],
+      "countries": ["США"],
+      "director": "Director Name",
+      "actors": ["Actor Name"],
+      "description": "...",
+      "poster_url": null,
       "score": 0.89
     }
   ]
 }
+```
 
-После запуска API также доступна автоматически генерируемая документация FastAPI:
+### Interactive documentation
 
-/docs
-/redoc
+After starting the API:
 
----
+- Swagger UI: [`http://localhost:8000/docs`](http://localhost:8000/docs)
+- ReDoc: [`http://localhost:8000/redoc`](http://localhost:8000/redoc)
 
-🤖 Telegram Bot
+## 🤖 Telegram bot
 
-Telegram Bot предоставляет простой пользовательский интерфейс поверх REST API.
+The bot provides a simple interface for semantic movie search.
 
-Поддерживаемые команды
+- `/start` — start the bot
+- Send any text message — use it as a search query
+- **Подробнее** — load full information about a selected movie
 
-Команда| Описание
-"/start"| Информация о боте
-"/search <query>"| Семантический поиск
-"/trends"| Популярный контент
-"/info <id>"| Информация об объекте
+The bot uses the shared search service and retrieves movie details by ID.
 
-Пример:
+## 📦 Data & indexing
 
-/search грустное кино 90-х про любовь
+The indexer reads movie data from JSON, builds a searchable text representation from fields such as title, description, director, country, year, rating, actors and genres, generates embeddings and upserts the resulting points into Qdrant.
 
-Ответ:
+Each point contains:
 
-🔍 Найдено 5 результатов
+- numeric movie ID;
+- 384-dimensional embedding;
+- payload with title, year, rating, genres, countries, director, actors, description and poster URL.
 
-1. 🎬 Титаник (1997)
-   Рейтинг: 8.0
-   Релевантность: 92%
+The default Qdrant collection is `movies` and the default indexing batch size is `32`.
 
-2. 🎬 Английский пациент (1996)
-   Рейтинг: 7.8
-   Релевантность: 87%
+## 🚀 Quick start
 
----
+### Prerequisites
 
-🐳 Docker
+For the Docker setup:
 
-Все основные компоненты запускаются через Docker Compose.
+- Docker with Docker Compose
+- Telegram bot token if you want to run the bot
+- PoiskKino API key if you want to run the scraper
 
-Архитектура:
+For local development, the project targets **Python 3.14+** and uses `uv` for dependency management.
 
-┌──────────────┐
-│   scraper    │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│    indexer   │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│    qdrant    │
-└──────┬───────┘
-       ▲
-       │
-┌──────┴───────┐
-│   backend    │
-└──────┬───────┘
-       ▲
-       │
-┌──────┴───────┐
-│     bot      │
-└──────────────┘
+### 1. Clone
 
----
+```bash
+git clone https://github.com/pavel-2009/semantic-search-service.git
+cd semantic-search-service
+```
 
-🚀 Быстрый запуск
+### 2. Configure environment
 
-1. Клонирование
-
-git clone https://github.com/your-username/semantic-search.git
-
-cd semantic-search
-
-2. Настройка окружения
-
+```bash
 cp .env.example .env
+```
 
-Укажите необходимые переменные окружения, например:
+Set the required values in `.env`:
 
+```dotenv
+QDRANT_HOST=qdrant
+QDRANT_PORT=6333
+QDRANT_COLLECTION=movies
 BOT_TOKEN=your_telegram_bot_token
-QDRANT_HOST=qdrant
-QDRANT_PORT=6333
+POISKKINO_API_KEY=your_api_key
+```
 
-3. Запуск
+### 3. Start the full pipeline
 
+```bash
 docker compose up --build
+```
 
-После запуска:
+The Compose stack starts Qdrant, then the scraper and indexer, followed by the API and Telegram bot.
 
-FastAPI:
-http://localhost:8000
+Services exposed locally:
 
-Swagger:
-http://localhost:8000/docs
+| Service | Address |
+|---|---|
+| FastAPI | `http://localhost:8000` |
+| Swagger UI | `http://localhost:8000/docs` |
+| ReDoc | `http://localhost:8000/redoc` |
+| Qdrant | `http://localhost:6333` |
 
-Qdrant:
-http://localhost:6333
+### 4. Check the API
 
-4. Проверка
+```bash
+curl http://localhost:8000/api/v1/health
+```
 
-curl http://localhost:8000/health
+## 🛠️ Local development
 
-Ожидаемый результат:
+Install dependencies:
 
-{
-  "status": "healthy"
-}
+```bash
+uv sync --dev
+```
 
----
+Run the API:
 
-🧪 Тестирование
+```bash
+uv run uvicorn src.semantic_search_service.backend.main:app --reload
+```
 
-Для тестирования используется "pytest".
+Run the bot:
 
-Запуск:
+```bash
+uv run python -m src.semantic_search_service.bot.main
+```
 
-pytest
+Run the scraper:
 
-С coverage:
+```bash
+uv run python scripts/run_scraper.py
+```
 
-pytest --cov=app
+Run indexing:
 
-Основные категории тестов:
+```bash
+uv run python scripts/run_indexer.py
+```
 
-- unit-тесты C++ cleaner;
-- тесты FastAPI endpoints;
-- тесты search service;
-- integration-тесты с Qdrant;
-- проверка корректности фильтрации;
-- проверка формата API response.
+## 🧪 Testing & quality
 
-Целевой уровень покрытия:
+Run tests:
 
-70%+
+```bash
+uv run pytest
+```
 
----
+Run linting:
 
-📊 Benchmark
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
 
-Производительность C++ cleaner сравнивается с Python-реализацией на одинаковом наборе данных.
+Run type checking:
 
-Пример:
+```bash
+uv run pyright
+```
 
-Dataset: 5000 documents
+## 🔐 Configuration
 
-Python:
-████████████████████  X.XX sec
+| Variable | Default | Description |
+|---|---|---|
+| `QDRANT_HOST` | `localhost` | Qdrant hostname |
+| `QDRANT_PORT` | `6333` | Qdrant HTTP port |
+| `QDRANT_COLLECTION` | `movies` | Vector collection name |
+| `EMBEDDING_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | Sentence Transformer model |
+| `EMBEDDING_DIM` | `384` | Embedding dimensionality |
+| `MAX_TEXT_LENGTH` | `2000` | Maximum indexed text length |
+| `BATCH_SIZE` | `32` | Indexing batch size |
+| `LOG_LEVEL` | `INFO` | Application log level |
+| `POISKKINO_API_KEY` | empty | API key for data collection |
+| `BOT_TOKEN` | empty | Telegram bot token |
 
-C++:
-██                   X.XX sec
+## 🐳 Docker architecture
 
-«Конкретные цифры должны быть получены реальным benchmark-тестом и не являются заранее заданным результатом.»
+The Docker Compose environment contains five services:
 
----
+1. **qdrant** — vector database;
+2. **scraper** — collects source data;
+3. **indexer** — creates embeddings and fills Qdrant;
+4. **api** — serves the REST API;
+5. **bot** — runs the Telegram interface.
 
-🔧 Конфигурация
+Qdrant data is persisted in the `qdrant_storage` Docker volume.
 
-Основные настройки передаются через environment variables.
+## 🗺️ Roadmap
 
-Пример ".env":
-
-BOT_TOKEN=your_token
-
-QDRANT_HOST=qdrant
-QDRANT_PORT=6333
-
-DATA_PATH=/app/data/raw_content.json
-
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-
-Секреты не должны храниться в Git.
-
-Используйте:
-
-.env
-
-и добавьте его в:
-
-.gitignore
-
-В репозитории должен находиться только:
-
-.env.example
-
----
-
-🛠️ Технологический стек
-
-Backend
-
-- Python 3.11+
-- FastAPI
-- Pydantic
-- Uvicorn
-
-Data Collection
-
-- aiohttp
-- BeautifulSoup
-
-Machine Learning
-
-- Sentence Transformers
-- PyTorch
-
-Vector Search
-
-- Qdrant
-
-Native Extension
-
-- C++20
-- pybind11
-- CMake
-
-Telegram
-
-- Aiogram 3
-
-Infrastructure
-
-- Docker
-- Docker Compose
-- GitHub Actions
-
-Testing
-
-- pytest
-- pytest-asyncio
-- pytest-cov
-
----
-
-📈 Что демонстрирует проект
-
-Проект объединяет несколько направлений разработки:
-
-Навык| Реализация
-Python Backend| FastAPI
-Async Python| aiohttp / asyncio
-Web Scraping| BeautifulSoup + aiohttp
-Vector Search| Qdrant
-Machine Learning| Sentence Transformers
-C++| C++20 native module
-Python/C++ Integration| pybind11
-REST API| FastAPI
-Telegram Development| Aiogram
-Containers| Docker
-Orchestration| Docker Compose
-Testing| pytest
-CI/CD| GitHub Actions
-
----
-
-🗺️ Roadmap
-
-Core
-
-- [x] Scraper
-- [x] C++ text cleaner
-- [x] Python/C++ integration
-- [x] Embedding generation
-- [x] Qdrant indexing
-- [x] Semantic search API
-- [x] Telegram Bot
-- [x] Docker Compose
-
-Production improvements
-
-- [ ] Redis cache
-- [ ] PostgreSQL for structured metadata
-- [ ] Celery background jobs
-- [ ] Search result caching
-- [ ] Structured logging
-- [ ] Prometheus metrics
-- [ ] Grafana dashboard
-- [ ] CI pipeline
-- [ ] Automated benchmark
-- [ ] Load testing
-- [ ] Authentication / API keys
-- [ ] Rate limiting
-
----
-
-💼 Возможные применения
-
-Архитектура проекта может быть адаптирована под различные типы данных.
-
-🛒 E-commerce
-
-Семантический поиск по каталогу:
-
-"лёгкая чёрная куртка для зимы"
-
-📚 Knowledge Base
-
-Поиск по внутренней документации:
-
-"как восстановить доступ к аккаунту"
-
-📄 Документы
-
-Поиск информации по корпоративным документам.
-
-🎬 Контент
-
-Поиск фильмов, книг, статей и другого контента по описанию.
-
-🤖 Recommendation Systems
-
-Embedding-based retrieval может использоваться как один из компонентов рекомендательной системы.
-
----
-
-🎯 Project Goals
-
-Проект создан для практического изучения:
-
-- semantic search;
-- vector databases;
-- embeddings;
-- Python/C++ integration;
-- asynchronous data processing;
-- REST API development;
-- containerization;
-- testing and CI/CD.
-
-Главная цель — построить не отдельный ML-эксперимент, а полноценный сервис от сбора данных до пользовательского интерфейса.
-
----
-
-📄 License
-
-This project is intended for educational and portfolio purposes.
-
-Add your preferred license here, for example:
-
-MIT License
-
----
-
-👨‍💻 Author
-
-Pavel
-
-GitHub: "https://github.com/your-username"
-
----
-
-⭐ Если проект оказался полезен
-
-Если вам интересны:
-
-- Semantic Search
-- Vector Databases
-- Python + C++
-- FastAPI
-- Qdrant
-- ML Infrastructure
-
-— можете посмотреть исходный код и предложить улучшения через Issues или Pull Requests.
+- [ ] Add production deployment configuration
+- [ ] Add benchmark suite for embedding and search latency
+- [ ] Add richer ranking / reranking
+- [ ] Improve observability with metrics and tracing
+- [ ] Expand integration-test coverage
+- [ ] Add a dedicated frontend client
+
+## 📚 Tech stack
+
+| Area | Technology |
+|---|---|
+| Language | Python 3.14+ |
+| API | FastAPI, Pydantic |
+| Embeddings | Sentence Transformers |
+| Vector DB | Qdrant |
+| Scraping | Scrapy, Playwright |
+| Telegram | Aiogram 3 |
+| Runtime | Uvicorn |
+| Containers | Docker Compose |
+| Testing | pytest |
+| Linting / formatting | Ruff |
+| Type checking | Pyright |
+| Dependency management | uv |
+
+## 📄 License
+
+No license file is currently included in the repository. If this project is intended for public reuse, add an appropriate open-source license.
+
+## 👤 Author
+
+**Pavel** — [@pavel-2009](https://github.com/pavel-2009)
+
+[Repository](https://github.com/pavel-2009/semantic-search-service)
