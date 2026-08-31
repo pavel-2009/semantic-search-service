@@ -21,6 +21,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "aiogram>=3.31.0",
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
     "nanobind>=2.15.0",

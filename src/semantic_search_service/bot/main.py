@@ -69,7 +69,7 @@ async def search_movies(message: Message) -> None:
     try:
         results = await asyncio.to_thread(
             search_service.search,
-            SearchRequest(query=query, top_k=10),
+            SearchRequest(query=query, top_k=10, filters=None),
         )
     except Exception:
         logger.exception("Telegram search failed: query=%r", query)
