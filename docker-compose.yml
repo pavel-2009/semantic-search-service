@@ -3,21 +3,67 @@ version: '3.8'
 services:
   qdrant:
     image: qdrant/qdrant:latest
+    container_name: semantic-qdrant
     ports:
       - "6333:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
     environment:
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - semantic-network
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: semantic-scraper
+    command: uv run python scripts/run_scraper.py
+    environment:
+      - POISKKINO_API_KEY=${POISKKINO_API_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    restart: "no"
+    profiles:
+      - scraper
+    networks:
+      - semantic-network
+
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: semantic-indexer
+    command: uv run python scripts/run_indexer.py
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - indexer
+    networks:
+      - semantic-network
 
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
+    container_name: semantic-api
+    command: uv run uvicorn src.semantic_search_service.backend.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
-    depends_on:
-      - qdrant
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
@@ -26,14 +72,19 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - ./src:/app/src
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - semantic-network
 
   bot:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    depends_on:
-      - qdrant
-      - api
+    container_name: semantic-bot
+    command: uv run python -m src.semantic_search_service.bot.main
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
@@ -42,6 +93,15 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - ./src:/app/src
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - semantic-network
 
 volumes:
   qdrant_storage:
+
+networks:
+  semantic-network:
+    driver: bridge
