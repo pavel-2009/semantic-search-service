@@ -1,0 +1,17 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY pyproject.toml pyrightconfig.json ./
+COPY src ./src
+
+# Install Python dependencies using pip
+RUN pip install --no-cache-dir -e .
+
+# Run Telegram bot
+CMD ["python", "-m", "semantic_search_service.bot.main"]
