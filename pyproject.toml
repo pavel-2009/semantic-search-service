@@ -1,7 +1,7 @@
 [project]
 name = "semantic-search-service"
 version = "0.1.0"
-description = "Add your description here"
+description = "Semantic movie search service powered by embeddings and Qdrant"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -19,8 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-semantic-search-service = "semantic_search_service:main"
-semantic-search-bot = "semantic_search_service.bot.main:main"
+semantic-search-bot = "bot.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
