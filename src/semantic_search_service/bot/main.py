@@ -8,9 +8,9 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from semantic_search_service.backend.schemas import MovieResult, SearchRequest
-from semantic_search_service.core.config import settings
-from semantic_search_service.core.dependencies import get_search_service
+from backend.schemas import MovieResult, SearchRequest
+from core.config import settings
+from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 
