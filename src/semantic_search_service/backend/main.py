@@ -8,8 +8,8 @@ from typing import Callable, Awaitable
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from semantic_search_service.backend.api.routers import router
-from semantic_search_service.core.config import settings
+from backend.api.routers import router
+from core.config import settings
 
 
 logging.basicConfig(
@@ -32,8 +32,7 @@ async def lifespan(_: FastAPI):
     )
     started_at = perf_counter()
     try:
-        # Import lazily to keep module initialization failures visible in the startup log.
-        from semantic_search_service.backend.api.routers import get_search_service
+        from backend.api.routers import get_search_service
 
         service = get_search_service()
         logger.info("Checking Qdrant collection during startup: %s", settings.QDRANT_COLLECTION)
@@ -57,26 +56,25 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Semantic Search API",
-    description="Семантический поиск по фильмам с Qdrant и C++ Cleaner",
+    description="Семантический поиск по фильмам с Qdrant",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
 )
 
-# Cors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
-    allow_headers=['*'],
-    allow_methods=['*']
+    allow_origins=["*"],
+    allow_headers=["*"],
+    allow_methods=["*"],
 )
 
 
 @app.middleware("http")
 async def log_http_request(
-    request: Request, 
-    call_next: Callable[[Request], Awaitable[Response]]
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     """Log every request and preserve a traceback for unexpected API failures."""
     started_at = perf_counter()
