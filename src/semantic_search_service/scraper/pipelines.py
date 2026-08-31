@@ -4,7 +4,7 @@ from typing import TextIO
 
 from scrapy.spiders import Spider
 
-from semantic_search_service.scraper.schemas import Movie
+from scraper.schemas import Movie
 
 DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.json"
 
