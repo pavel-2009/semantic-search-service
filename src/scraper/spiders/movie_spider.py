@@ -6,6 +6,7 @@ import scrapy
 from scrapy.http import Request, Response
 
 from scraper.schemas import Movie
+from core.config import settings
 
 JsonDict = dict[str, Any]
 
@@ -15,7 +16,7 @@ class MovieSpider(scrapy.Spider):
 
     API_BASE = "https://api.poiskkino.dev/v1.4/movie"
     PAGE_SIZE = 50
-    MAX_PAGES = 100
+    MAX_PAGES = settings.MAX_PAGES_SCRAPER
 
     start_urls = [
         f"{API_BASE}?{urlencode({

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     BATCH_SIZE: int = 32
 
     DATA_PATH: Path = Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
+    MAX_PAGES_SCRAPER: int = 100
 
     LOG_LEVEL: str = "INFO"
     POISKKINO_API_KEY: str = ""
