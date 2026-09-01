@@ -1,7 +1,12 @@
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+import sys
+from pathlib import Path
 
-from src.core.config import settings
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from qdrant_client import QdrantClient  # noqa: E402
+from sentence_transformers import SentenceTransformer  # noqa: E402
+
+from core.config import settings  # noqa: E402
 
 
 QDRANT_URL = "http://localhost:6333"

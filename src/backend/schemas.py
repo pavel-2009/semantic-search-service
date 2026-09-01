@@ -7,9 +7,11 @@ class YearFilter(BaseModel):
     gte: int | None = Field(None, description="Год от")
     lte: int | None = Field(None, description="Год до")
 
+
 class RatingFilter(BaseModel):
     gte: float | None = Field(None, description="Рейтинг от")
     lte: float | None = Field(None, description="Рейтинг до")
+
 
 class SearchFilters(BaseModel):
     year: YearFilter | None = Field(None, description="Фильтр по году")
@@ -17,9 +19,16 @@ class SearchFilters(BaseModel):
     genre: list[str] | None = Field(None, description="Фильтр по жанрам")
     country: str | None = Field(None, description="Фильтр по стране")
 
+
 class SearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="Поисковый запрос", example="интерстеллар") # type: ignore
-    top_k: int = Field(10, ge=1, le=100, description="Количество результатов", example=10) # type: ignore
+    query: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Поисковый запрос",
+        example="интерстеллар",
+    )
+    top_k: int = Field(10, ge=1, le=100, description="Количество результатов", example=10)
     filters: SearchFilters | None = Field(None, description="Фильтры")
 
 

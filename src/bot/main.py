@@ -4,12 +4,12 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-from aiogram.enums import ParseMode
 
-from core.config import settings
 from bot.routers import info_router, search_router
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +24,19 @@ async def start(message: Message) -> None:
     await message.answer(
         "🎬 <b>Семантический поиск фильмов</b>\n\n"
         "Опиши фильм или настроение — я найду подходящие варианты.",
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
     )
 
 
 async def main() -> None:
     """Start the Telegram bot."""
     logger.info("Starting Telegram bot")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    except KeyboardInterrupt:
+        logger.info("Telegram bot stopped by user")
+    finally:
+        await bot.session.close()
 
 
 if __name__ == "__main__":

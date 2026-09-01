@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "movies"
+    QDRANT_API_KEY: str = ""
 
     EMBEDDING_MODEL: str = "paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIM: int = 384
