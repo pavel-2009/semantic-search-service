@@ -3,10 +3,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
+from qdrant_client import QdrantClient  # noqa: E402
+from sentence_transformers import SentenceTransformer  # noqa: E402
 
-from core.config import settings
+from core.config import settings  # noqa: E402
 
 
 QDRANT_URL = "http://localhost:6333"
