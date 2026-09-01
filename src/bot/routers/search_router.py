@@ -4,8 +4,9 @@ import asyncio
 import html
 import logging
 
-from aiogram import F, Router
+from aiogram import Router
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.filters import Command, CommandObject
 from aiogram.enums import ParseMode
 
 from backend.schemas import MovieResult, SearchRequest
@@ -49,11 +50,16 @@ def search_results_keyboard(results: list[MovieResult]) -> InlineKeyboardMarkup:
     )
 
 
-@router.message(F.text)
-async def search_movies(message: Message) -> None:
+@router.message(Command("search"))
+async def search_movies(message: Message, command: CommandObject) -> None:
     """Search for the top 10 similar movies."""
-    query = message.text.strip()
+    query = command.args
+
     if not query:
+        await message.answer(
+            "❌ <b>Вы ввели пустой запрос.</b>\nПожалуйста, введите описание фильма, который вы хотели бы посмотреть.",
+            parse_mode=ParseMode.HTML
+        )
         return
 
     try:
