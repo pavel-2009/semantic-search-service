@@ -104,6 +104,9 @@ class Indexer:
             parts.append(f"Жанры: {', '.join(map(str, movie['genres']))}")
 
         cleaned = clean_text(". ".join(parts))
+        if not cleaned:
+            logger.warning(f"Empty text for movie {movie.get('id')}")
+            cleaned = "Фильм без описания."
         return cleaned[:settings.MAX_TEXT_LENGTH]
 
     def index_movies(self, filepath: Path, batch_size: int = settings.BATCH_SIZE) -> None:
