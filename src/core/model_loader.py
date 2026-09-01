@@ -4,6 +4,7 @@ import logging
 from time import perf_counter
 
 from sentence_transformers import SentenceTransformer
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from core.config import settings
 
@@ -17,8 +18,12 @@ class ModelLoader:
     _model: SentenceTransformer | None = None
 
     @classmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+    )
     def get_model(cls) -> SentenceTransformer:
-        """Return the shared embedding model instance."""
+        """Return the shared embedding model instance, retrying failed loads."""
         if cls._model is not None:
             logger.debug("Reusing embedding model: model=%s", settings.EMBEDDING_MODEL)
             return cls._model
