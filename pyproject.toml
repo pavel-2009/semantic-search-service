@@ -15,6 +15,7 @@ dependencies = [
     "playwright-stealth>=2.0.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
+    "tenacity>=9.1.4",
     "uvicorn>=0.52.4",
 ]
 
@@ -34,7 +35,6 @@ dev = [
     "ruff>=0.16.3",
     "scrapy-impersonate>=1.8.1",
     "scrapy-user-agents>=0.1.1",
-    "tenacity>=9.1.4",
 ]
 
 [tool.pytest.ini_options]

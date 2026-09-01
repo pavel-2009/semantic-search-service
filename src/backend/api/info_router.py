@@ -1,37 +1,34 @@
 """Service and movie information API routes."""
 
 import logging
-from functools import lru_cache
 from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.schemas import HealthResponse, MovieResult, StatsResponse
 from backend.services.search_service import SearchService
+from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
 
 
-@lru_cache
-def get_info_service() -> SearchService:
-    """Return the shared SearchService instance used by info routes."""
-    logger.info("Creating shared SearchService instance for info routes")
-    return SearchService()
-
-
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
-    service: SearchService = Depends(get_info_service),
+    service: SearchService = Depends(get_search_service),
 ) -> HealthResponse:
     """Check API and vector database health."""
     started_at = perf_counter()
     logger.info("Health check started")
     try:
         stats = service.get_stats()
-        if stats['total_points'] == 0:
+        if stats["total_points"] == 0:
             logger.warning("Qdrant collection exists but is empty")
-            return HealthResponse(status="degraded", collection='', indexed_items=0)
+            return HealthResponse(
+                status="degraded",
+                collection=service.collection_name,
+                indexed_items=0,
+            )
 
         response = HealthResponse(
             status="healthy",
@@ -54,7 +51,7 @@ async def health_check(
 @router.get("/movies/{movie_id}", response_model=MovieResult)
 async def get_movie(
     movie_id: int,
-    service: SearchService = Depends(get_info_service),
+    service: SearchService = Depends(get_search_service),
 ) -> MovieResult:
     """Return detailed information about a movie by its ID."""
     started_at = perf_counter()
@@ -79,7 +76,7 @@ async def get_movie(
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
-    service: SearchService = Depends(get_info_service),
+    service: SearchService = Depends(get_search_service),
 ) -> StatsResponse:
     """Return vector collection statistics."""
     started_at = perf_counter()

@@ -19,4 +19,4 @@ def clean_text(text: str) -> str:
     normalized = _HTML_TAG_RE.sub(" ", normalized)
     normalized = _UNSUPPORTED_CHAR_RE.sub(" ", normalized)
     normalized = _WHITESPACE_RE.sub(" ", normalized)
-    return normalized.casefold().strip()
+    return normalized.lower().strip()

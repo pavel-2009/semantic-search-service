@@ -1,24 +1,17 @@
 """Search API routes."""
 
 import logging
-from functools import lru_cache
 from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.schemas import SearchRequest, SearchResponse
 from backend.services.search_service import SearchService
+from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
-
-
-@lru_cache
-def get_search_service() -> SearchService:
-    """Return the shared search service instance."""
-    logger.info("Creating shared SearchService instance")
-    return SearchService()
 
 
 @router.post("", response_model=SearchResponse)

@@ -52,9 +52,17 @@ def search_results_keyboard(results: list[MovieResult]) -> InlineKeyboardMarkup:
 
 async def _handle_search(message: Message, query: str) -> None:
     """Run a movie search and send formatted results."""
-    if not query:
+    query = query.strip()
+    if len(query) < 2:
         await message.answer(
-            "❌ <b>Вы ввели пустой запрос.</b>\nПожалуйста, введите описание фильма, который вы хотели бы посмотреть.",
+            "❌ Слишком короткий запрос. Напиши хотя бы 2 символа.",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    if len(query) > 500:
+        await message.answer(
+            "❌ Слишком длинный запрос. Максимум 500 символов.",
             parse_mode=ParseMode.HTML,
         )
         return
