@@ -125,6 +125,9 @@ class SearchService:
         """Build a movie response from common Qdrant point data."""
         payload = payload or {}
         countries = payload.get("countries") or []
+        if isinstance(countries, str):
+            countries = [countries]
+            
         if not countries and payload.get("country"):
             countries = [country.strip() for country in str(payload["country"]).split(",")]
 
