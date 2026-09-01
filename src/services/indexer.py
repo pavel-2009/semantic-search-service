@@ -36,6 +36,7 @@ class Indexer:
         collections = self.qdrant.get_collections().collections
         if any(collection.name == self.collection_name for collection in collections):
             logger.info("Qdrant collection already exists: collection=%s", self.collection_name)
+            self.recreate_collection()
             return
 
         logger.info("Creating Qdrant collection: collection=%s vector_size=%d distance=cosine", self.collection_name, self.embedding_dim)
