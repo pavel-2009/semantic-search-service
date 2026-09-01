@@ -1,7 +1,7 @@
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
-from semantic_search_service.core.config import settings
+from src.core.config import settings
 
 
 QDRANT_URL = "http://localhost:6333"
