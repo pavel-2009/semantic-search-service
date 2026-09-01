@@ -32,6 +32,8 @@ class QdrantClientSingleton:
             cls._instance = QdrantClient(
                 host=settings.QDRANT_HOST,
                 port=settings.QDRANT_PORT,
+                timeout=10,
+                grpc_options={"grpc.max_receive_message_length": 100_000_000},
             )
         except Exception:
             logger.exception(
