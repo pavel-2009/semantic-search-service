@@ -6,10 +6,10 @@ from time import perf_counter
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Record, ScoredPoint
-from sentence_transformers import SentenceTransformer
 
 from backend.schemas import MovieResult, SearchFilters, SearchRequest
 from core.config import settings
+from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
 
@@ -27,13 +27,7 @@ class SearchService:
         )
         self.collection_name = settings.QDRANT_COLLECTION
         self.qdrant: QdrantClient = QdrantClientSingleton.get_client()
-        model_started_at = perf_counter()
-        self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
-        logger.info(
-            "Embedding model loaded: model=%s duration_ms=%.1f",
-            settings.EMBEDDING_MODEL,
-            (perf_counter() - model_started_at) * 1000,
-        )
+        self.model = ModelLoader.get_model()
         logger.info(
             "SearchService initialized: collection=%s embedding_dim=%d",
             self.collection_name,
@@ -57,7 +51,7 @@ class SearchService:
         )
         vector_started_at = perf_counter()
         vector = self.model.encode(cleaned_query).tolist()
-        logger.info(
+        logger.debug(
             "Query vector created: dimension=%d duration_ms=%.1f",
             len(vector),
             (perf_counter() - vector_started_at) * 1000,
@@ -71,7 +65,7 @@ class SearchService:
             query_filter=query_filter,
             with_payload=True,
         )
-        logger.info(
+        logger.debug(
             "Qdrant query completed: points=%d duration_ms=%.1f",
             len(result.points),
             (perf_counter() - qdrant_started_at) * 1000,
@@ -127,7 +121,7 @@ class SearchService:
         countries = payload.get("countries") or []
         if isinstance(countries, str):
             countries = [countries]
-            
+
         if not countries and payload.get("country"):
             countries = [country.strip() for country in str(payload["country"]).split(",")]
 
