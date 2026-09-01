@@ -7,9 +7,9 @@ from time import perf_counter
 from typing import Any
 
 from qdrant_client.http import models
-from sentence_transformers import SentenceTransformer
 
 from core.config import settings
+from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
 
@@ -24,19 +24,20 @@ class Indexer:
         logger.info("Initializing indexer: collection=%s model=%s", settings.QDRANT_COLLECTION, settings.EMBEDDING_MODEL)
         self.qdrant = QdrantClientSingleton.get_client()
         self.collection_name = settings.QDRANT_COLLECTION
-        model_started_at = perf_counter()
-        self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
-        logger.info("Embedding model loaded: model=%s duration_ms=%.1f", settings.EMBEDDING_MODEL, (perf_counter() - model_started_at) * 1000)
+        self.model = ModelLoader.get_model()
         self.embedding_dim = settings.EMBEDDING_DIM
         logger.info("Indexer initialized: embedding_dim=%d", self.embedding_dim)
 
-    def create_collection(self) -> None:
+    def create_collection(self, force_recreate: bool = False) -> None:
         """Create the collection if it does not exist."""
         logger.info("Checking Qdrant collection: %s", self.collection_name)
+        if force_recreate:
+            self.recreate_collection()
+            return
+
         collections = self.qdrant.get_collections().collections
         if any(collection.name == self.collection_name for collection in collections):
-            logger.info("Qdrant collection already exists: collection=%s", self.collection_name)
-            self.recreate_collection()
+            logger.info("Collection already exists: %s", self.collection_name)
             return
 
         logger.info("Creating Qdrant collection: collection=%s vector_size=%d distance=cosine", self.collection_name, self.embedding_dim)
@@ -121,6 +122,15 @@ class Indexer:
             logger.warning("No movies available for indexing: path=%s", filepath)
             return
 
+        existing_points, _ = self.qdrant.scroll(
+            collection_name=self.collection_name,
+            limit=10_000,
+            with_payload=False,
+            with_vectors=False,
+        )
+        existing_ids = {point.id for point in existing_points}
+        logger.info("Existing Qdrant points loaded: collection=%s count=%d", self.collection_name, len(existing_ids))
+
         total = len(movies)
         total_indexed = 0
         logger.info("Indexing started: total_movies=%d batch_size=%d", total, batch_size)
@@ -140,16 +150,22 @@ class Indexer:
                     logger.warning("Skipping movie without id")
                     continue
 
+                point_id = int(movie_id)
+                if point_id in existing_ids:
+                    skipped += 1
+                    logger.debug("Skipping existing movie: movie_id=%d", point_id)
+                    continue
+
                 text = self.prepare_text(movie)
                 vector_started_at = perf_counter()
                 vector = self.model.encode(text).tolist()
                 logger.debug("Vector created: movie_id=%s text_length=%d vector_dim=%d duration_ms=%.1f", movie_id, len(text), len(vector), (perf_counter() - vector_started_at) * 1000)
                 points.append(
                     models.PointStruct(
-                        id=int(movie_id),
+                        id=point_id,
                         vector=vector,
                         payload={
-                            "id": int(movie_id),
+                            "id": point_id,
                             "title": movie.get("title", ""),
                             "year": movie.get("year"),
                             "country": movie.get("country"),
@@ -163,6 +179,7 @@ class Indexer:
                         },
                     )
                 )
+                existing_ids.add(point_id)
 
             if points:
                 logger.info("Uploading vectors to Qdrant: collection=%s points=%d", self.collection_name, len(points))
@@ -171,7 +188,7 @@ class Indexer:
                 logger.info("Vectors uploaded: collection=%s points=%d duration_ms=%.1f", self.collection_name, len(points), (perf_counter() - upsert_started_at) * 1000)
 
             total_indexed += len(points)
-            logger.info("Batch completed: processed=%d/%d indexed=%d skipped=%d duration_ms=%.1f", min(start + len(batch), total), total, total_indexed, skipped, (perf_counter() - batch_started_at) * 1000)
+            logger.debug("Batch completed: processed=%d/%d indexed=%d skipped=%d duration_ms=%.1f", min(start + len(batch), total), total, total_indexed, skipped, (perf_counter() - batch_started_at) * 1000)
 
         logger.info("Indexing finished: indexed=%d total=%d duration_ms=%.1f", total_indexed, total, (perf_counter() - started_at) * 1000)
 
