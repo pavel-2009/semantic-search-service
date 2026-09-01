@@ -29,22 +29,26 @@ async def health_check(
     logger.info("Health check started")
     try:
         stats = service.get_stats()
+        if stats['total_points'] == 0:
+            logger.warning("Qdrant collection exists but is empty")
+            return HealthResponse(status="degraded", collection='', indexed_items=0)
+
+        response = HealthResponse(
+            status="healthy",
+            collection=stats["collection"],
+            indexed_items=stats["total_points"],
+        )
+        logger.info(
+            "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
+            response.status,
+            response.indexed_items,
+            (perf_counter() - started_at) * 1000,
+        )
+        return response
+
     except Exception as exc:
         logger.exception("Health check failed while accessing Qdrant")
         raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
-
-    response = HealthResponse(
-        status="healthy" if stats["total_points"] > 0 else "degraded",
-        collection=stats["collection"],
-        indexed_items=stats["total_points"],
-    )
-    logger.info(
-        "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
-        response.status,
-        response.indexed_items,
-        (perf_counter() - started_at) * 1000,
-    )
-    return response
 
 
 @router.get("/movies/{movie_id}", response_model=MovieResult)
