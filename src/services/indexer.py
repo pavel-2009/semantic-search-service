@@ -124,7 +124,7 @@ class Indexer:
 
         existing_points, _ = self.qdrant.scroll(
             collection_name=self.collection_name,
-            limit=10_000,
+            limit=settings.MAX_SCROLL_LIMIT,
             with_payload=False,
             with_vectors=False,
         )
@@ -183,9 +183,12 @@ class Indexer:
 
             if points:
                 logger.info("Uploading vectors to Qdrant: collection=%s points=%d", self.collection_name, len(points))
-                upsert_started_at = perf_counter()
-                self.qdrant.upsert(collection_name=self.collection_name, points=points)
-                logger.info("Vectors uploaded: collection=%s points=%d duration_ms=%.1f", self.collection_name, len(points), (perf_counter() - upsert_started_at) * 1000)
+                try:
+                    upsert_started_at = perf_counter()
+                    self.qdrant.upsert(collection_name=self.collection_name, points=points)
+                    logger.info("Vectors uploaded: collection=%s points=%d duration_ms=%.1f", self.collection_name, len(points), (perf_counter() - upsert_started_at) * 1000)
+                except Exception:
+                    logger.exception("Failed to upsert batch: collection=%s points=%d", self.collection_name, len(points))
 
             total_indexed += len(points)
             logger.debug("Batch completed: processed=%d/%d indexed=%d skipped=%d duration_ms=%.1f", min(start + len(batch), total), total, total_indexed, skipped, (perf_counter() - batch_started_at) * 1000)
