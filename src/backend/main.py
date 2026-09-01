@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from time import perf_counter
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.info_router import get_info_service, router as info_router
@@ -95,6 +96,12 @@ async def log_http_request(
         (perf_counter() - started_at) * 1000,
     )
     return response
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception")
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 app.include_router(search_router)
