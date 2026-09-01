@@ -22,15 +22,18 @@ class Indexer:
 
     def __init__(self) -> None:
         logger.info("Initializing indexer: collection=%s model=%s", settings.QDRANT_COLLECTION, settings.EMBEDDING_MODEL)
+
         self.qdrant = QdrantClientSingleton.get_client()
         self.collection_name = settings.QDRANT_COLLECTION
         self.model = ModelLoader.get_model()
         self.embedding_dim = settings.EMBEDDING_DIM
+
         logger.info("Indexer initialized: embedding_dim=%d", self.embedding_dim)
 
     def create_collection(self, force_recreate: bool = False) -> None:
         """Create the collection if it does not exist."""
         logger.info("Checking Qdrant collection: %s", self.collection_name)
+
         if force_recreate:
             self.recreate_collection()
             return
@@ -41,6 +44,7 @@ class Indexer:
             return
 
         logger.info("Creating Qdrant collection: collection=%s vector_size=%d distance=cosine", self.collection_name, self.embedding_dim)
+
         self.qdrant.create_collection(
             collection_name=self.collection_name,
             vectors_config=models.VectorParams(
@@ -48,11 +52,13 @@ class Indexer:
                 distance=models.Distance.COSINE,
             ),
         )
+
         logger.info("Qdrant collection created: collection=%s", self.collection_name)
 
     def load_movies(self, filepath: Path) -> list[dict[str, Any]]:
         """Load normalized movies from JSON."""
         logger.info("Loading movies: path=%s", filepath)
+        
         if not filepath.exists():
             logger.error("Movies file not found: path=%s", filepath)
             raise FileNotFoundError(f"File not found: {filepath}")
