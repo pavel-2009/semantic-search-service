@@ -35,6 +35,8 @@ async def lifespan(_: FastAPI):
         service = get_info_service()
         logger.info("Checking Qdrant collection during startup: %s", settings.QDRANT_COLLECTION)
         stats = service.get_stats()
+        if stats["total_points"] == 0:
+            logger.warning("⚠️ Collection is empty! Indexer may have failed.")
     except Exception:
         logger.critical(
             "API startup failed; see traceback below for the failing stage", exc_info=True
