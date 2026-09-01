@@ -1,7 +1,12 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
-from src.core.config import settings
+from core.config import settings
 
 
 QDRANT_URL = "http://localhost:6333"
