@@ -20,13 +20,14 @@ class Settings(BaseSettings):
 
     DATA_PATH: Path = Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
     MAX_PAGES_SCRAPER: int = 100
+    MAX_SCROLL_LIMIT: int = 10_000
 
     LOG_LEVEL: str = "INFO"
     POISKKINO_API_KEY: str = ""
     BOT_TOKEN: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env",
+        env_file=PROJECT_ROOT / ".env" if (PROJECT_ROOT / ".env").exists() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )
