@@ -3,17 +3,23 @@
 import asyncio
 import html
 import logging
+from functools import lru_cache
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
 from aiogram.enums import ParseMode
+from aiogram.types import CallbackQuery
 
 from backend.schemas import MovieResult
 from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = Router(name="info")
-search_service = get_search_service()
+
+
+@lru_cache(maxsize=1)
+def get_service():
+    """Return the lazily initialized shared search service."""
+    return get_search_service()
 
 
 def movie_details(movie: MovieResult) -> str:
@@ -48,18 +54,19 @@ async def show_movie_details(callback: CallbackQuery) -> None:
         await callback.answer(
             "Некорректный идентификатор фильма.",
             show_alert=True,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         )
         return
 
     try:
-        movie = await asyncio.to_thread(search_service.get_by_id, movie_id)
+        service = get_service()
+        movie = await asyncio.to_thread(service.get_by_id, movie_id)
     except Exception:
         logger.exception("Movie lookup failed: movie_id=%d", movie_id)
         await callback.answer(
             "Не удалось получить информацию о фильме.",
             show_alert=True,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         )
         return
 
@@ -67,12 +74,12 @@ async def show_movie_details(callback: CallbackQuery) -> None:
         await callback.answer(
             "Фильм не найден.",
             show_alert=True,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         )
         return
 
     await callback.answer()
     await callback.message.answer(
         movie_details(movie),
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
     )
