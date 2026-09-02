@@ -19,7 +19,7 @@ def test_index_and_search_roundtrip(indexed_integration):
 
 def test_search_with_filters(indexed_integration):
     """Search respects year and rating filters."""
-    indexed_integration
+    _, _ = indexed_integration
     service = SearchService()
     request = SearchRequest(
         query="space",
@@ -38,7 +38,7 @@ def test_search_with_filters(indexed_integration):
 
 def test_get_movie_by_id(indexed_integration):
     """Indexed movies can be retrieved by ID."""
-    indexed_integration
+    _, _ = indexed_integration
     service = SearchService()
 
     movie = service.get_by_id(1)
