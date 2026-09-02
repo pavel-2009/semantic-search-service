@@ -2107,6 +2107,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "docker" },
     { name = "httpx" },
     { name = "nanobind" },
     { name = "pyright" },
@@ -2142,6 +2143,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "docker", specifier = ">=7.2.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "nanobind", specifier = ">=2.15.0" },
     { name = "pyright", specifier = ">=1.1.411" },
