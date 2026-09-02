@@ -48,6 +48,14 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (require external services)",
+    "e2e: End-to-end tests (full pipeline)",
+    "performance: Performance and load tests",
+    "slow: Tests that take a long time",
+]
 
 [tool.ruff]
 line-length = 100
