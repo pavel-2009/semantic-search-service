@@ -127,7 +127,7 @@ class SearchService:
 
         return MovieResult(
             id=int(point_id),
-            title=str(payload.get("title") or "Без названия"),
+            title=str(payload.get("title") or "Фильм без названия"),
             year=payload.get("year"),
             rating=payload.get("rating"),
             genres=payload.get("genres", []),
@@ -143,51 +143,55 @@ class SearchService:
     def _build_filters(filters: SearchFilters) -> models.Filter | None:
         """Build Qdrant filters from API filter schemas."""
         conditions: list[models.Condition] = []
-        if filters.year:
-            if filters.year.gte is not None:
+        try:
+            if filters.year:
+                if filters.year.gte is not None:
+                    conditions.append(
+                        models.FieldCondition(
+                            key="year",
+                            range=models.Range(gte=filters.year.gte),
+                        )
+                    )
+                if filters.year.lte is not None:
+                    conditions.append(
+                        models.FieldCondition(
+                            key="year",
+                            range=models.Range(lte=filters.year.lte),
+                        )
+                    )
+            if filters.rating:
+                if filters.rating.gte is not None:
+                    conditions.append(
+                        models.FieldCondition(
+                            key="rating",
+                            range=models.Range(gte=filters.rating.gte),
+                        )
+                    )
+                if filters.rating.lte is not None:
+                    conditions.append(
+                        models.FieldCondition(
+                            key="rating",
+                            range=models.Range(lte=filters.rating.lte),
+                        )
+                    )
+            if filters.country:
                 conditions.append(
                     models.FieldCondition(
-                        key="year",
-                        range=models.Range(gte=filters.year.gte),
+                        key="countries",
+                        match=models.MatchAny(any=[filters.country]),
                     )
                 )
-            if filters.year.lte is not None:
+            if filters.genre:
                 conditions.append(
                     models.FieldCondition(
-                        key="year",
-                        range=models.Range(lte=filters.year.lte),
+                        key="genres",
+                        match=models.MatchAny(any=filters.genre),
                     )
                 )
-        if filters.rating:
-            if filters.rating.gte is not None:
-                conditions.append(
-                    models.FieldCondition(
-                        key="rating",
-                        range=models.Range(gte=filters.rating.gte),
-                    )
-                )
-            if filters.rating.lte is not None:
-                conditions.append(
-                    models.FieldCondition(
-                        key="rating",
-                        range=models.Range(lte=filters.rating.lte),
-                    )
-                )
-        if filters.country:
-            conditions.append(
-                models.FieldCondition(
-                    key="countries",
-                    match=models.MatchAny(any=[filters.country]),
-                )
-            )
-        if filters.genre:
-            conditions.append(
-                models.FieldCondition(
-                    key="genres",
-                    match=models.MatchAny(any=filters.genre),
-                )
-            )
-        return models.Filter(must=conditions) if conditions else None
+            return models.Filter(must=conditions) if conditions else None
+        except AttributeError:
+            return None
+        
 
     def get_stats(self) -> dict[str, object]:
         """Return collection statistics."""
