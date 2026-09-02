@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import tempfile
 from unittest.mock import Mock, patch
+import numpy as np
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ def mock_embedding_model():
     with patch('core.model_loader.ModelLoader.get_model') as mock:
         model = Mock()
 
-        model.encode.return_value = [0.0] * 384
+        model.encode.return_value = np.array([0.0] * 384)
         mock.return_value = model
         yield model
 
