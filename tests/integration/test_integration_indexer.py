@@ -1,6 +1,6 @@
 """Integration tests for indexing and search with real Qdrant."""
 
-from backend.schemas import SearchFilters, SearchRequest, RatingFilter, YearFilter
+from backend.schemas import RatingFilter, SearchFilters, SearchRequest, YearFilter
 from backend.services.search_service import SearchService
 from services.indexer import Indexer
 
@@ -19,7 +19,7 @@ def test_index_and_search_roundtrip(indexed_integration):
 
 def test_search_with_filters(indexed_integration):
     """Search respects year and rating filters."""
-    _, _ = indexed_integration
+    indexed_integration
     service = SearchService()
     request = SearchRequest(
         query="space",
@@ -38,7 +38,7 @@ def test_search_with_filters(indexed_integration):
 
 def test_get_movie_by_id(indexed_integration):
     """Indexed movies can be retrieved by ID."""
-    _, _ = indexed_integration
+    indexed_integration
     service = SearchService()
 
     movie = service.get_by_id(1)
