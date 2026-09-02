@@ -39,10 +39,11 @@ def sample_movie_data():
     ]
 
 @pytest.fixture
-def temp_json_file():
+def temp_json_file(sample_movie_data):
     """Create a temporary JSON file with movie data."""
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
         json.dump(sample_movie_data, f, ensure_ascii=False, indent=2)
+        f.flush()
         yield Path(f.name)
 
     Path(f.name).unlink(missing_ok=True)
@@ -52,13 +53,12 @@ def mock_qdrant_client():
     """Mock Qdrant client for unit tests."""
     with patch('core.qdrant_client.QdrantClientSingleton.get_client') as mock:
         client = Mock()
-
+        
         collection_info = Mock()
-
         collection_info.points_count = 100
         collection_info.status = "green"
         client.get_collection.return_value = collection_info
-
+        
         point = Mock()
         point.id = 1
         point.score = 0.95
@@ -71,13 +71,22 @@ def mock_qdrant_client():
             "countries": ["USA"],
             "director": "Christopher Nolan",
             "actors": ["Leonardo DiCaprio"],
-            "description": "A thief who steals corporate secrets"
+            "description": "A thief who steals corporate secrets",
+            "poster_url": "https://example.com/poster.jpg"
         }
-
         result = Mock()
         result.points = [point]
         client.query_points.return_value = result
+        
+        client.retrieve.return_value = [point]
+        
+        collection_obj = Mock()
+        collection_obj.name = "movies"
 
+        collections_response = Mock()
+        collections_response.collections = [collection_obj]
+        client.get_collections.return_value = collections_response
+        
         mock.return_value = client
         yield client
 

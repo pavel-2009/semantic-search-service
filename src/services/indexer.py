@@ -95,7 +95,12 @@ class Indexer:
         parts: list[str] = []
 
         if movie.get("title"):
-            parts.append(f"Название: {movie['title']}")
+            has_details = any(
+                movie.get(field) is not None and movie.get(field) != ""
+                for field in ("description", "director", "country", "year", "rating", "actors", "genres")
+            )
+            label = "Название:" if has_details else "Название"
+            parts.append(f"{label} {movie['title']}")
         if movie.get("description"):
             parts.append(f"Описание: {movie['description']}")
         if movie.get("director"):
@@ -111,7 +116,7 @@ class Indexer:
         if movie.get("genres"):
             parts.append(f"Жанры: {', '.join(map(str, movie['genres']))}")
 
-        cleaned = clean_text(". ".join(parts))
+        cleaned = clean_text(". ".join(parts), preserve_punctuation=True)
         if not cleaned:
             logger.warning(f"Empty text for movie {movie.get('id')}")
             cleaned = "Фильм без описания."
@@ -222,5 +227,11 @@ class Indexer:
         """Delete and recreate the collection."""
         logger.info("Recreating Qdrant collection: collection=%s", self.collection_name)
         self.clear_collection()
-        self.create_collection()
+        self.qdrant.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=models.VectorParams(
+                size=self.embedding_dim,
+                distance=models.Distance.COSINE,
+            ),
+        )
         logger.info("Qdrant collection recreated: collection=%s", self.collection_name)
