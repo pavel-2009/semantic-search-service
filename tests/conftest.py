@@ -149,7 +149,6 @@ def qdrant_container():
     # Останавливаем контейнер после тестов
     container.stop()
 
-
 @pytest.fixture(scope="function")
 def qdrant_test_client(qdrant_container):
     """Создаёт клиент Qdrant для тестов."""
@@ -180,7 +179,6 @@ def qdrant_test_client(qdrant_container):
         client.delete_collection(test_collection)
     except Exception:
         pass
-
 
 @pytest.fixture
 def test_movie_data():
@@ -226,7 +224,6 @@ def test_movie_data():
             "poster_url": "https://example.com/interstellar.jpg"
         }
     ]
-
 
 @pytest.fixture
 def test_movies_file(tmp_path, test_movie_data) -> str:

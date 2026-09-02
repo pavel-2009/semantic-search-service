@@ -12,6 +12,10 @@ from core.dependencies import get_search_service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
 
+def get_info_service() -> SearchService:
+    """Return the shared search service instance."""
+    return get_search_service()
+
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
