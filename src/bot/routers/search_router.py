@@ -88,7 +88,7 @@ async def _handle_search(message: Message, query: str) -> None:
         return
 
     await message.answer(
-        search_results_message(results),
+        text=search_results_message(results),
         reply_markup=search_results_keyboard(results),
         parse_mode=ParseMode.HTML,
     )
