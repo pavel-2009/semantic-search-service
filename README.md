@@ -240,13 +240,15 @@ BOT_TOKEN=your_telegram_bot_token
 POISKKINO_API_KEY=your_api_key
 ```
 
+The `.env` file is read at runtime and is not copied into Docker images.
+
 ### 3. Start the full pipeline
 
 ```bash
 docker compose up --build
 ```
 
-The Compose stack starts Qdrant, then the scraper and indexer, followed by the API and Telegram bot.
+Compose waits for Qdrant to become healthy before starting dependent services, waits for the scraper and indexer to complete successfully before starting the API, and waits for the API health check before starting the bot.
 
 Services exposed locally:
 
@@ -297,24 +299,45 @@ uv run python scripts/run_indexer.py
 
 ## 🧪 Testing & quality
 
-Run tests:
+The test suite is split into fast unit tests and real integration tests. Integration tests start an isolated Qdrant instance automatically through the project's Docker Compose definition and use a single real embedding model for the whole test session. The API and indexer run in-process, so the full application stack does not need to be started just to run integration tests.
+
+Run everything:
 
 ```bash
-uv run pytest
+make test-all
 ```
 
-Run linting:
+Or directly:
 
 ```bash
-uv run ruff check .
-uv run ruff format --check .
+uv run pytest tests -v
 ```
 
-Run type checking:
+Unit tests only:
 
 ```bash
-uv run pyright
+make test-unit
 ```
+
+Integration tests only:
+
+```bash
+make test-integration
+```
+
+Coverage:
+
+```bash
+make test-cov
+```
+
+Linting and type checking:
+
+```bash
+make check
+```
+
+Integration tests are intentionally not run with pytest-xdist because they share one isolated Qdrant collection and real model session.
 
 ## 🔐 Configuration
 
