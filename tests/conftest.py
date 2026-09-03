@@ -1,18 +1,15 @@
-"""Common pytest fixtures for all tests."""
+"""Shared pytest fixtures."""
 
 import json
-import tempfile
-import time
-from pathlib import Path
+import os
+import subprocess
 from unittest.mock import Mock, patch
 
-import docker
 import numpy as np
 import pytest
-import requests
+from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from fastapi.testclient import TestClient
 
 from backend.main import app
 from core.config import settings
@@ -24,7 +21,6 @@ from services.indexer import Indexer
 
 @pytest.fixture
 def sample_movie_data():
-    """Sample movie data for testing."""
     return [
         {
             "id": 1,
@@ -54,112 +50,96 @@ def sample_movie_data():
 
 
 @pytest.fixture
-def temp_json_file(sample_movie_data):
-    """Create a temporary JSON file with movie data."""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as file:
-        json.dump(sample_movie_data, file, ensure_ascii=False, indent=2)
-        file.flush()
-        path = Path(file.name)
-
-    yield path
-    path.unlink(missing_ok=True)
+def temp_json_file(tmp_path, sample_movie_data):
+    path = tmp_path / "movies.json"
+    path.write_text(json.dumps(sample_movie_data, ensure_ascii=False), encoding="utf-8")
+    return path
 
 
 @pytest.fixture
 def mock_qdrant_client():
-    """Mock Qdrant client for unit tests."""
-    with patch("core.qdrant_client.QdrantClientSingleton.get_client") as mock:
+    with patch("core.qdrant_client.QdrantClientSingleton.get_client") as get_client:
         client = Mock()
+        client.get_collection.return_value = Mock(points_count=100, status="green")
 
-        collection_info = Mock()
-        collection_info.points_count = 100
-        collection_info.status = "green"
-        client.get_collection.return_value = collection_info
-
-        point = Mock()
-        point.id = 1
-        point.score = 0.95
-        point.payload = {
-            "id": 1,
-            "title": "Inception",
-            "year": 2010,
-            "rating": 8.8,
-            "genres": ["sci-fi", "thriller"],
-            "countries": ["USA"],
-            "director": "Christopher Nolan",
-            "actors": ["Leonardo DiCaprio"],
-            "description": "A thief who steals corporate secrets",
-            "poster_url": "https://example.com/poster.jpg",
-        }
-        result = Mock()
-        result.points = [point]
-        client.query_points.return_value = result
+        point = Mock(
+            id=1,
+            score=0.95,
+            payload={
+                "id": 1,
+                "title": "Inception",
+                "year": 2010,
+                "rating": 8.8,
+                "genres": ["sci-fi", "thriller"],
+                "countries": ["USA"],
+                "director": "Christopher Nolan",
+                "actors": ["Leonardo DiCaprio"],
+                "description": "A thief who steals corporate secrets",
+                "poster_url": "https://example.com/poster.jpg",
+            },
+        )
+        client.query_points.return_value = Mock(points=[point])
         client.retrieve.return_value = [point]
+        client.get_collections.return_value = Mock(collections=[Mock(name="movies")])
 
-        collection_obj = Mock()
-        collection_obj.name = "movies"
-        collections_response = Mock()
-        collections_response.collections = [collection_obj]
-        client.get_collections.return_value = collections_response
-
-        mock.return_value = client
+        get_client.return_value = client
         yield client
 
 
 @pytest.fixture
 def mock_embedding_model():
-    """Mock SentenceTransformer model."""
-    with patch("core.model_loader.ModelLoader.get_model") as mock:
+    with patch("core.model_loader.ModelLoader.get_model") as get_model:
         model = Mock()
-        model.encode.return_value = np.array([0.0] * 384)
-        mock.return_value = model
+        model.encode.return_value = np.zeros(384)
+        get_model.return_value = model
         yield model
-
-
-@pytest.fixture
-def test_collection_name():
-    """Return a unique collection name for tests."""
-    return "test_movies"
 
 
 @pytest.fixture(scope="session")
 def qdrant_container():
-    """Run Qdrant in Docker for integration tests."""
-    client = docker.from_env()
+    """Start isolated test Qdrant through the project's Compose definition."""
+    env = os.environ.copy()
+    env["QDRANT_PORT"] = "6334"
+    project = "semantic-search-tests"
 
-    try:
-        container = client.containers.get("test-qdrant")
-        if container.status == "running":
-            yield container
-            return
-    except docker.errors.NotFound:
-        pass
-
-    container = client.containers.run(
-        "qdrant/qdrant:latest",
-        ports={"6333/tcp": 6334},
-        detach=True,
-        remove=True,
-        name="test-qdrant",
-        environment={"QDRANT__LOG_LEVEL": "ERROR"},
+    subprocess.run(
+        ["docker", "compose", "-p", project, "up", "-d", "--wait", "qdrant"],
+        check=True,
+        env=env,
+    )
+    yield
+    subprocess.run(
+        ["docker", "compose", "-p", project, "down", "--remove-orphans"],
+        check=True,
+        env=env,
     )
 
-    for _ in range(30):
-        try:
-            response = requests.get("http://localhost:6334/health", timeout=1)
-            if response.status_code == 200:
-                break
-        except requests.exceptions.ConnectionError:
-            pass
-        time.sleep(1)
 
-    yield container
-    container.stop()
+@pytest.fixture
+def qdrant_test_client(qdrant_container):
+    client = QdrantClient(host="localhost", port=6334)
+    collection_name = "test_movies"
+
+    if client.collection_exists(collection_name):
+        client.delete_collection(collection_name=collection_name, timeout=10)
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
+    )
+
+    yield client, collection_name
+
+    client.delete_collection(collection_name=collection_name, timeout=10)
+    client.close()
+
+
+@pytest.fixture(scope="session")
+def integration_model():
+    return ModelLoader.get_model()
 
 
 @pytest.fixture
 def test_movie_data():
-    """Movie data shared by integration tests."""
     return [
         {
             "id": 1,
@@ -203,48 +183,22 @@ def test_movie_data():
     ]
 
 
-@pytest.fixture(scope="function")
-def qdrant_test_client(qdrant_container):
-    """Create an isolated Qdrant collection for one integration test."""
-    client = QdrantClient(host="localhost", port=6334)
-    collection_name = "test_movies"
-
-    try:
-        client.delete_collection(collection_name)
-    except Exception:
-        pass
-
-    client.create_collection(
-        collection_name=collection_name,
-        vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
-    )
-
-    yield client, collection_name
-
-    try:
-        client.delete_collection(collection_name)
-    except Exception:
-        pass
-
-
-@pytest.fixture(scope="session")
-def integration_model():
-    """Load the real embedding model once for integration tests."""
-    return ModelLoader.get_model()
+@pytest.fixture
+def test_movies_file(tmp_path, test_movie_data):
+    path = tmp_path / "movies.json"
+    path.write_text(json.dumps(test_movie_data, ensure_ascii=False), encoding="utf-8")
+    return path
 
 
 @pytest.fixture
 def indexed_integration(qdrant_test_client, test_movies_file, integration_model, monkeypatch):
-    """Prepare a real Qdrant collection with test movies before each integration test."""
     client, collection_name = qdrant_test_client
-
     monkeypatch.setattr(settings, "QDRANT_COLLECTION", collection_name)
+    monkeypatch.setattr(settings, "QDRANT_PORT", 6334)
     monkeypatch.setattr(QdrantClientSingleton, "_instance", client)
     monkeypatch.setattr(ModelLoader, "get_model", lambda: integration_model)
 
-    indexer = Indexer()
-    indexer.index_movies(test_movies_file, batch_size=2)
-
+    Indexer().index_movies(test_movies_file, batch_size=2)
     get_search_service.cache_clear()
     yield client, collection_name
     get_search_service.cache_clear()
@@ -252,16 +206,5 @@ def indexed_integration(qdrant_test_client, test_movies_file, integration_model,
 
 @pytest.fixture
 def api_client(indexed_integration):
-    """FastAPI client backed by an indexed test collection."""
     with TestClient(app) as client:
         yield client
-
-@pytest.fixture
-def test_movies_file(tmp_path, test_movie_data):
-    """Create a temporary JSON file with integration-test movies."""
-    file_path = tmp_path / "test_movies.json"
-    file_path.write_text(
-        json.dumps(test_movie_data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return file_path
