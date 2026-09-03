@@ -56,32 +56,51 @@ def test_build_filters_empty():
     assert SearchService._build_filters(SearchFilters()) is None
 
 
-@pytest.mark.parametrize(
-    "payload",
-    [
-        MoviePayload(
-            id=1,
-            title="Inception",
-            year=2010,
-            rating=8.8,
-            genres=["sci-fi", "thriller"],
-            countries=["USA"],
-            director="Christopher Nolan",
-            actors=["Leonardo DiCaprio", "Joseph Gordon-Levitt"],
-            description="A thief who steals corporate secrets",
-            poster_url="https://example.com/poster.jpg",
-        ),
-        MoviePayload(title="Unknown"),
-    ],
-)
-def test_movie_from_payload(payload):
+def test_movie_from_payload_complete():
+    payload = MoviePayload(
+        id=1,
+        title="Inception",
+        year=2010,
+        rating=8.8,
+        genres=["sci-fi", "thriller"],
+        countries=["USA"],
+        director="Christopher Nolan",
+        actors=["Leonardo DiCaprio", "Joseph Gordon-Levitt"],
+        description="A thief who steals corporate secrets",
+        poster_url="https://example.com/poster.jpg",
+    )
+
     movie = SearchService._movie_from_payload(1, payload, 0.95)
 
-    assert movie.id == 1
-    assert movie.title == payload.title
-    assert movie.score == 0.95
-    assert movie.genres == payload.genres
-    assert movie.countries == payload.countries
+    assert movie.model_dump() == {
+        "id": 1,
+        "title": "Inception",
+        "year": 2010,
+        "rating": 8.8,
+        "genres": ["sci-fi", "thriller"],
+        "countries": ["USA"],
+        "director": "Christopher Nolan",
+        "actors": ["Leonardo DiCaprio", "Joseph Gordon-Levitt"],
+        "description": "A thief who steals corporate secrets",
+        "poster_url": "https://example.com/poster.jpg",
+        "score": 0.95,
+    }
+
+
+def test_movie_from_payload_minimal():
+    movie = SearchService._movie_from_payload(999, MoviePayload(title="Unknown"), 0.5)
+
+    assert movie.id == 999
+    assert movie.title == "Unknown"
+    assert movie.year is None
+    assert movie.rating is None
+    assert movie.genres == []
+    assert movie.countries == []
+    assert movie.director is None
+    assert movie.actors == []
+    assert movie.description is None
+    assert movie.poster_url is None
+    assert movie.score == 0.5
 
 
 def test_movie_from_payload_legacy_country_and_empty():
