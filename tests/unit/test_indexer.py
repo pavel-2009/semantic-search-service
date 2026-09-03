@@ -83,17 +83,17 @@ def test_create_collection_new(mock_qdrant_client):
 
 
 def test_create_collection_exists(mock_qdrant_client):
-    mock_qdrant_client.get_collections.return_value.collections = [
-        Mock(name=settings.QDRANT_COLLECTION)
-    ]
+    collection_mock = Mock()
+    collection_mock.name = settings.QDRANT_COLLECTION
+    mock_qdrant_client.get_collections.return_value.collections = [collection_mock]
     Indexer().create_collection()
     mock_qdrant_client.create_collection.assert_not_called()
 
 
 def test_create_collection_force_recreate(mock_qdrant_client):
-    mock_qdrant_client.get_collections.return_value.collections = [
-        Mock(name=settings.QDRANT_COLLECTION)
-    ]
+    collection_mock = Mock()
+    collection_mock.name = settings.QDRANT_COLLECTION
+    mock_qdrant_client.get_collections.return_value.collections = [collection_mock]
     Indexer().create_collection(force_recreate=True)
     mock_qdrant_client.delete_collection.assert_called_once_with(settings.QDRANT_COLLECTION)
     mock_qdrant_client.create_collection.assert_called_once_with(

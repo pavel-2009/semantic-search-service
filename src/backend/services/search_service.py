@@ -179,18 +179,18 @@ class SearchService:
                         range=models.Range(lte=filters.rating.lte),
                     )
                 )
-        if filters.country:
-            conditions.append(
-                models.FieldCondition(
-                    key="countries",
-                    match=models.MatchAny(any=[filters.country]),
-                )
-            )
         if filters.genre:
             conditions.append(
                 models.FieldCondition(
                     key="genres",
                     match=models.MatchAny(any=filters.genre),
+                )
+            )
+        if filters.country:
+            conditions.append(
+                models.FieldCondition(
+                    key="countries",
+                    match=models.MatchAny(any=[filters.country]),
                 )
             )
         return models.Filter(must=conditions) if conditions else None

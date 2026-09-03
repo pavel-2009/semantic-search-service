@@ -80,7 +80,11 @@ def mock_qdrant_client():
         )
         client.query_points.return_value = Mock(points=[point])
         client.retrieve.return_value = [point]
-        client.get_collections.return_value = Mock(collections=[Mock(name="movies")])
+        
+        # Properly configure collection mock with name attribute
+        collection_mock = Mock()
+        collection_mock.name = "movies"
+        client.get_collections.return_value = Mock(collections=[collection_mock])
 
         get_client.return_value = client
         yield client
