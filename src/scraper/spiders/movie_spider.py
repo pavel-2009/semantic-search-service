@@ -7,7 +7,15 @@ import scrapy
 from scrapy.http import Request, Response
 
 from core.config import settings
-from scraper.schemas import Movie, PoiskKinoMovie, PoiskKinoResponse
+from scraper.schemas import (
+    Movie,
+    PoiskKinoCountry,
+    PoiskKinoGenre,
+    PoiskKinoMovie,
+    PoiskKinoPerson,
+    PoiskKinoPoster,
+    PoiskKinoResponse,
+)
 
 
 class MovieSpider(scrapy.Spider):
@@ -87,42 +95,40 @@ class MovieSpider(scrapy.Spider):
         return f"{self.API_BASE}?{urlencode(params)}"
 
     @staticmethod
-    def _extract_poster_url(poster: object) -> str | None:
+    def _extract_poster_url(poster: PoiskKinoPoster) -> str | None:
         """Extract a usable poster URL."""
-        if not hasattr(poster, "url"):
-            return None
-        url = getattr(poster, "url") or getattr(poster, "previewUrl", None)
+        url = poster.url or poster.previewUrl
         return str(url) if url else None
 
     @staticmethod
-    def _extract_countries(countries: list[object]) -> str | None:
+    def _extract_countries(countries: list[PoiskKinoCountry]) -> str | None:
         """Extract country names from API objects."""
-        names = [str(country.name) for country in countries if getattr(country, "name", None)]
+        names = [str(country.name) for country in countries if country.name]
         return ", ".join(names) if names else None
 
     @staticmethod
-    def _extract_director(persons: list[object]) -> str | None:
+    def _extract_director(persons: list[PoiskKinoPerson]) -> str | None:
         """Extract the first director name."""
         for person in persons:
-            if getattr(person, "profession", None) != "режиссеры":
+            if person.profession != "режиссеры":
                 continue
-            name = getattr(person, "name", None) or getattr(person, "enName", None)
+            name = person.name or person.enName
             if name:
                 return str(name)
         return None
 
     @staticmethod
-    def _extract_actors(persons: list[object]) -> list[str]:
+    def _extract_actors(persons: list[PoiskKinoPerson]) -> list[str]:
         """Extract actor names."""
         return [
             str(name)
             for person in persons
-            if getattr(person, "profession", None) == "актеры"
-            for name in [getattr(person, "name", None) or getattr(person, "enName", None)]
+            if person.profession == "актеры"
+            for name in [person.name or person.enName]
             if name
         ]
 
     @staticmethod
-    def _extract_genres(genres: list[object]) -> list[str]:
+    def _extract_genres(genres: list[PoiskKinoGenre]) -> list[str]:
         """Extract genre names."""
-        return [str(genre.name) for genre in genres if getattr(genre, "name", None)]
+        return [str(genre.name) for genre in genres if genre.name]
