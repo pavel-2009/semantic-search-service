@@ -122,7 +122,11 @@ class SearchService:
         movie = MoviePayload.model_validate(payload or {})
         countries = movie.countries
         if not countries and movie.country:
-            countries = [country.strip() for country in movie.country.split(",") if country.strip()]
+            countries = [
+                country.strip()
+                for country in movie.country.split(",")
+                if country.strip()
+            ]
 
         return MovieResult(
             id=int(point_id),
@@ -139,8 +143,11 @@ class SearchService:
         )
 
     @staticmethod
-    def _build_filters(filters: SearchFilters) -> models.Filter | None:
+    def _build_filters(filters: SearchFilters | None) -> models.Filter | None:
         """Build Qdrant filters from API filter schemas."""
+        if filters is None:
+            return None
+
         conditions: list[models.Condition] = []
         if filters.year:
             if filters.year.gte is not None:
