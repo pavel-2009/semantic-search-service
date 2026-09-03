@@ -203,17 +203,6 @@ def test_movie_data():
     ]
 
 
-@pytest.fixture
-def test_movies_file(tmp_path, test_movie_data) -> Path:
-    """Create a temporary JSON file with integration-test movies."""
-    file_path = tmp_path / "test_movies.json"
-    file_path.write_text(
-        json.dumps(test_movie_data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return file_path
-
-
 @pytest.fixture(scope="function")
 def qdrant_test_client(qdrant_container):
     """Create an isolated Qdrant collection for one integration test."""
@@ -266,3 +255,13 @@ def api_client(indexed_integration):
     """FastAPI client backed by an indexed test collection."""
     with TestClient(app) as client:
         yield client
+
+@pytest.fixture
+def test_movies_file(tmp_path, test_movie_data):
+    """Create a temporary JSON file with integration-test movies."""
+    file_path = tmp_path / "test_movies.json"
+    file_path.write_text(
+        json.dumps(test_movie_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return file_path
