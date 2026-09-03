@@ -2,6 +2,7 @@
 
 import logging
 from time import perf_counter
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -11,6 +12,8 @@ from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
+SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
+
 
 def get_info_service() -> SearchService:
     """Return the shared search service instance."""
@@ -18,15 +21,13 @@ def get_info_service() -> SearchService:
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check(
-    service: SearchService = Depends(get_search_service),
-) -> HealthResponse:
+async def health_check(service: SearchServiceDependency) -> HealthResponse:
     """Check API and vector database health."""
     started_at = perf_counter()
     logger.info("Health check started")
     try:
         stats = service.get_stats()
-        if stats["total_points"] == 0:
+        if stats.total_points == 0:
             logger.warning("Qdrant collection exists but is empty")
             return HealthResponse(
                 status="degraded",
@@ -36,8 +37,8 @@ async def health_check(
 
         response = HealthResponse(
             status="healthy",
-            collection=stats["collection"],
-            indexed_items=stats["total_points"],
+            collection=stats.collection,
+            indexed_items=stats.total_points,
         )
         logger.info(
             "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
@@ -53,10 +54,7 @@ async def health_check(
 
 
 @router.get("/movies/{movie_id}", response_model=MovieResult)
-async def get_movie(
-    movie_id: int,
-    service: SearchService = Depends(get_search_service),
-) -> MovieResult:
+async def get_movie(movie_id: int, service: SearchServiceDependency) -> MovieResult:
     """Return detailed information about a movie by its ID."""
     started_at = perf_counter()
     logger.info("Movie info request received: movie_id=%d", movie_id)
@@ -79,25 +77,16 @@ async def get_movie(
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats(
-    service: SearchService = Depends(get_search_service),
-) -> StatsResponse:
+async def get_stats(service: SearchServiceDependency) -> StatsResponse:
     """Return vector collection statistics."""
     started_at = perf_counter()
     logger.info("Stats request started")
     try:
-        stats = service.get_stats()
+        response = service.get_stats()
     except Exception as exc:
         logger.exception("Stats request failed while accessing Qdrant")
         raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
 
-    response = StatsResponse(
-        collection=stats["collection"],
-        total_points=stats["total_points"],
-        status=stats["status"],
-        model=stats["model"],
-        embedding_dim=stats["embedding_dim"],
-    )
     logger.info(
         "Stats request completed: collection=%s points=%d duration_ms=%.1f",
         response.collection,

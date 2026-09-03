@@ -4,16 +4,22 @@ from pydantic import BaseModel, Field
 
 
 class YearFilter(BaseModel):
+    """Year range filter."""
+
     gte: int | None = Field(None, description="Год от")
     lte: int | None = Field(None, description="Год до")
 
 
 class RatingFilter(BaseModel):
+    """Rating range filter."""
+
     gte: float | None = Field(None, description="Рейтинг от")
     lte: float | None = Field(None, description="Рейтинг до")
 
 
 class SearchFilters(BaseModel):
+    """Optional metadata filters for movie search."""
+
     year: YearFilter | None = Field(None, description="Фильтр по году")
     rating: RatingFilter | None = Field(None, description="Фильтр по рейтингу")
     genre: list[str] | None = Field(None, description="Фильтр по жанрам")
@@ -21,18 +27,22 @@ class SearchFilters(BaseModel):
 
 
 class SearchRequest(BaseModel):
+    """Semantic movie search request."""
+
     query: str = Field(
         ...,
         min_length=1,
         max_length=500,
         description="Поисковый запрос",
-        examples=["интерстеллар"]
+        examples=["интерстеллар"],
     )
     top_k: int = Field(10, ge=1, le=100, description="Количество результатов", examples=[10])
     filters: SearchFilters | None = Field(None, description="Фильтры")
 
 
 class MovieResult(BaseModel):
+    """Movie returned by the search API."""
+
     id: int
     title: str
     year: int | None = None
@@ -47,6 +57,8 @@ class MovieResult(BaseModel):
 
 
 class SearchResponse(BaseModel):
+    """Semantic search API response."""
+
     success: bool = True
     query: str
     total: int
@@ -54,12 +66,16 @@ class SearchResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
+    """Health check response."""
+
     status: str
     collection: str
     indexed_items: int
 
 
 class StatsResponse(BaseModel):
+    """Vector collection statistics returned by the API."""
+
     collection: str
     total_points: int
     status: str

@@ -2,6 +2,7 @@
 
 import logging
 from time import perf_counter
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -12,12 +13,13 @@ from core.dependencies import get_search_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
+SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 
 
 @router.post("", response_model=SearchResponse)
 async def search(
     request: SearchRequest,
-    service: SearchService = Depends(get_search_service),
+    service: SearchServiceDependency,
 ) -> SearchResponse:
     """Run semantic movie search."""
     started_at = perf_counter()

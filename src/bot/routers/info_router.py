@@ -3,22 +3,21 @@
 import asyncio
 import html
 import logging
-from functools import lru_cache
 
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery
 
 from backend.schemas import MovieResult
+from backend.services.search_service import SearchService
 from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = Router(name="info")
 
 
-@lru_cache(maxsize=1)
-def get_service():
-    """Return the lazily initialized shared search service."""
+def get_service() -> SearchService:
+    """Return the shared search service instance."""
     return get_search_service()
 
 

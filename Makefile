@@ -29,13 +29,13 @@ test-quick:
 	uv run pytest tests/ -m "not slow" -v
 
 lint:
-	uv run ruff check .
+	uv run ruff check src scripts
 
 type-check:
 	uv run pyright
 
 format:
-	uv run ruff format .
+	uv run ruff format src scripts
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
