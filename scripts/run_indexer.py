@@ -1,16 +1,17 @@
-"""Script for running the Qdrant indexer"""
+"""Script for running the Qdrant indexer."""
 
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from core.config import settings
-from services.indexer import Indexer
+from core.config import settings  # noqa: E402
+from services.indexer import Indexer  # noqa: E402
 
 
-def main():
+def main() -> None:
+    """Run the indexer and print the resulting collection statistics."""
     print("=" * 60)
     print("🚀 ЗАПУСК ИНДЕКСАТОРА")
     print("=" * 60)
@@ -27,8 +28,8 @@ def main():
 
     stats = indexer.get_stats()
     print("\n📊 СТАТИСТИКА ПОСЛЕ ИНДЕКСАЦИИ:")
-    print(f"  Точки: {stats['points_count']}")
-    print(f"  Статус: {stats['status']}")
+    print(f"  Точки: {stats.points_count}")
+    print(f"  Статус: {stats.status}")
     print("\n✅ Индексация завершена успешно!")
 
 
