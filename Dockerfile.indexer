@@ -7,7 +7,6 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock README.md pyrightconfig.json ./
 COPY src ./src
 COPY scripts ./scripts
-COPY .env .env
 
 RUN uv sync --no-dev
 
