@@ -90,9 +90,9 @@ class Indexer:
         """Build the text used for movie embeddings."""
         parts: list[str] = []
 
-        if movie.title:
+        if movie.title and movie.title != Movie.model_fields["title"].default:
             has_details = any(
-                value is not None and value != ""
+                value not in (None, "", [], {})
                 for value in (
                     movie.description,
                     movie.director,

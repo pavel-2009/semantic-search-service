@@ -25,3 +25,7 @@ class IndexerStats(BaseModel):
     collection: str
     points_count: int
     status: str
+
+    def __getitem__(self, key: str) -> str | int:
+        """Support dictionary-style access for existing callers."""
+        return self.model_dump()[key]
