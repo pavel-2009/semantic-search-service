@@ -1,6 +1,6 @@
 """Contracts for scraped movie data and the PoiskKino API response."""
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel, field_validator
 
 
 class Movie(BaseModel):
@@ -24,6 +24,12 @@ class Movie(BaseModel):
     )
     rating: float | None = None
     poster_url: str | None = None
+
+    @field_validator("actors", "genres", mode="before")
+    @classmethod
+    def _default_lists(cls, value: object) -> object:
+        """Convert null list values from legacy JSON to empty lists."""
+        return [] if value is None else value
 
 
 class MoviesDocument(RootModel[list[Movie]]):
@@ -82,6 +88,18 @@ class PoiskKinoMovie(BaseModel):
     shortDescription: str | None = None
     poster: PoiskKinoPoster = Field(default_factory=PoiskKinoPoster)
 
+    @field_validator("countries", "persons", "genres", mode="before")
+    @classmethod
+    def _default_nested_lists(cls, value: object) -> object:
+        """Convert null nested list values to empty lists."""
+        return [] if value is None else value
+
+    @field_validator("rating", "poster", mode="before")
+    @classmethod
+    def _default_nested_models(cls, value: object) -> object:
+        """Convert null nested objects to empty objects."""
+        return {} if value is None else value
+
 
 class PoiskKinoResponse(BaseModel):
     """Paginated PoiskKino API response."""
@@ -89,3 +107,9 @@ class PoiskKinoResponse(BaseModel):
     docs: list[PoiskKinoMovie] = Field(default_factory=list)
     page: int = 1
     pages: int = 1
+
+    @field_validator("docs", mode="before")
+    @classmethod
+    def _default_docs(cls, value: object) -> object:
+        """Convert a null document list to an empty list."""
+        return [] if value is None else value
