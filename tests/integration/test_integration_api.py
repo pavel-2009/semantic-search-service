@@ -1,36 +1,40 @@
-"""Integration tests for FastAPI endpoints."""
+"""Integration tests for FastAPI against real Qdrant and embeddings."""
+
+import pytest
 
 
-def test_health_endpoint(api_client):
-    """Health check reports the indexed test collection."""
-    response = api_client.get("/api/v1/health")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert data["indexed_items"] == 3
-    assert "collection" in data
-
-
-def test_stats_endpoint(api_client):
-    """Stats expose the indexed collection and model configuration."""
-    response = api_client.get("/api/v1/stats")
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/api/v1/health", {"status": "healthy", "indexed_items": 3}),
+        ("/api/v1/stats", {"total_points": 3, "embedding_dim": 384}),
+    ],
+)
+def test_service_info(api_client, path, expected):
+    response = api_client.get(path)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["total_points"] == 3
-    assert "collection" in data
-    assert "model" in data
-    assert data["embedding_dim"] == 384
+    assert all(data[key] == value for key, value in expected.items())
+    assert data["collection"] == "test_movies"
 
 
-def test_search_endpoint_basic(api_client):
-    """Basic semantic search returns indexed movies."""
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"query": "", "top_k": 5},
+        {"query": "a" * 501, "top_k": 5},
+    ],
+)
+def test_search_validation(api_client, payload):
+    assert api_client.post("/api/v1/search", json=payload).status_code == 422
+
+
+def test_search_and_filters(api_client):
     response = api_client.post(
         "/api/v1/search",
         json={"query": "interstellar", "top_k": 5},
     )
-
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
@@ -38,9 +42,6 @@ def test_search_endpoint_basic(api_client):
     assert data["total"] > 0
     assert data["results"]
 
-
-def test_search_with_filters(api_client):
-    """Search endpoint applies metadata filters."""
     response = api_client.post(
         "/api/v1/search",
         json={
@@ -53,46 +54,36 @@ def test_search_with_filters(api_client):
             },
         },
     )
-
     assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
+    results = response.json()["results"]
     assert all(
         movie["year"] >= 2010
         and movie["rating"] >= 7.0
         and "drama" in movie["genres"]
-        for movie in data["results"]
+        for movie in results
     )
 
-
-def test_search_empty_query(api_client):
-    """Empty search queries are rejected by validation."""
     response = api_client.post(
         "/api/v1/search",
-        json={"query": "", "top_k": 5},
+        json={
+            "query": "anything",
+            "top_k": 5,
+            "filters": {"year": {"gte": 2030}},
+        },
     )
-
-    assert response.status_code == 422
-
-
-def test_search_too_long_query(api_client):
-    """Overlong search queries are rejected by validation."""
-    response = api_client.post(
-        "/api/v1/search",
-        json={"query": "a" * 501, "top_k": 5},
-    )
-
-    assert response.status_code == 422
-
-
-def test_movie_details(api_client):
-    """Movie details are available for indexed and missing IDs."""
-    response = api_client.get("/api/v1/movies/1")
-
     assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == 1
-    assert data["title"] == "Inception"
+    assert response.json()["results"] == []
+    assert response.json()["total"] == 0
 
-    response = api_client.get("/api/v1/movies/999")
-    assert response.status_code == 404
+
+@pytest.mark.parametrize(
+    ("movie_id", "status", "title"),
+    [(1, 200, "Inception"), (999, 404, None)],
+)
+def test_movie_details(api_client, movie_id, status, title):
+    response = api_client.get(f"/api/v1/movies/{movie_id}")
+
+    assert response.status_code == status
+    if title is not None:
+        assert response.json()["title"] == title
+        assert response.json()["id"] == movie_id
