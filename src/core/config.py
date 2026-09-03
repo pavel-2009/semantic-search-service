@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     MAX_TEXT_LENGTH: int = 2000
     BATCH_SIZE: int = 32
 
-    DATA_PATH: Path = Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
+    DATA_PATH: Path = (
+        Path(__file__).resolve().parents[1] / "scraper" / "data" / "movies.json"
+    )
     MAX_PAGES_SCRAPER: int = 100
     MAX_SCROLL_LIMIT: int = 10_000
 
