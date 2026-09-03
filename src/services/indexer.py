@@ -25,12 +25,10 @@ class Indexer:
             settings.QDRANT_COLLECTION,
             settings.EMBEDDING_MODEL,
         )
-
         self.qdrant = QdrantClientSingleton.get_client()
         self.collection_name = settings.QDRANT_COLLECTION
         self.model = ModelLoader.get_model()
         self.embedding_dim = settings.EMBEDDING_DIM
-
         logger.info("Indexer initialized: embedding_dim=%d", self.embedding_dim)
 
     def create_collection(self, force_recreate: bool = False) -> None:
@@ -185,12 +183,17 @@ class Indexer:
                     len(vector),
                     (perf_counter() - vector_started_at) * 1000,
                 )
+                countries = [
+                    country.strip()
+                    for country in (movie.country or "").split(",")
+                    if country.strip()
+                ]
                 payload = MoviePayload(
                     id=movie.id,
                     title=movie.title,
                     year=movie.year,
                     country=movie.country,
-                    countries=[country.strip() for country in (movie.country or "").split(",") if country.strip()],
+                    countries=countries,
                     director=movie.director,
                     description=movie.description,
                     actors=movie.actors,
