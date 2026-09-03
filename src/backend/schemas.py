@@ -26,9 +26,9 @@ class SearchRequest(BaseModel):
         min_length=1,
         max_length=500,
         description="Поисковый запрос",
-        example="интерстеллар",
+        examples=["интерстеллар"]
     )
-    top_k: int = Field(10, ge=1, le=100, description="Количество результатов", example=10)
+    top_k: int = Field(10, ge=1, le=100, description="Количество результатов", examples=[10])
     filters: SearchFilters | None = Field(None, description="Фильтры")
 
 

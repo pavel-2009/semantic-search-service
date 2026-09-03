@@ -6,6 +6,7 @@ from time import perf_counter
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Record, ScoredPoint
+from sentence_transformers import SentenceTransformer
 
 from backend.schemas import MovieResult, SearchFilters, SearchRequest
 from core.config import settings
@@ -27,7 +28,7 @@ class SearchService:
         )
         self.collection_name = settings.QDRANT_COLLECTION
         self.qdrant: QdrantClient = QdrantClientSingleton.get_client()
-        self.model = ModelLoader.get_model()
+        self.model: SentenceTransformer = ModelLoader.get_model()
         logger.info(
             "SearchService initialized: collection=%s embedding_dim=%d",
             self.collection_name,

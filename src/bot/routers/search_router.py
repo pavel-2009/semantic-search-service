@@ -25,8 +25,6 @@ def movie_card(movie: MovieResult, position: int) -> str:
         metadata.append(f"📅 {movie.year}")
     if movie.rating is not None:
         metadata.append(f"⭐ {movie.rating:.1f}")
-    if movie.score is not None:
-        metadata.append(f"🎯 {movie.score:.2f}")
     if metadata:
         lines.append("  ·  ".join(metadata))
     if movie.genres:
