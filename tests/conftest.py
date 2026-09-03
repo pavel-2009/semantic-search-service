@@ -3,7 +3,6 @@
 import json
 import os
 import subprocess
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -61,9 +60,7 @@ def temp_json_file(tmp_path, sample_movie_data):
 def mock_qdrant_client():
     with patch("core.qdrant_client.QdrantClientSingleton.get_client") as get_client:
         client = Mock()
-
-        collection = Mock(points_count=100, status="green")
-        client.get_collection.return_value = collection
+        client.get_collection.return_value = Mock(points_count=100, status="green")
 
         point = Mock(
             id=1,
@@ -100,7 +97,7 @@ def mock_embedding_model():
 
 @pytest.fixture(scope="session")
 def qdrant_container():
-    """Start the test Qdrant through the same Compose environment as the project."""
+    """Start isolated test Qdrant through the project's Compose definition."""
     env = os.environ.copy()
     env["QDRANT_PORT"] = "6334"
     project = "semantic-search-tests"
@@ -118,12 +115,13 @@ def qdrant_container():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def qdrant_test_client(qdrant_container):
     client = QdrantClient(host="localhost", port=6334)
     collection_name = "test_movies"
 
-    client.delete_collection(collection_name=collection_name, timeout=10) if client.collection_exists(collection_name) else None
+    if client.collection_exists(collection_name):
+        client.delete_collection(collection_name=collection_name, timeout=10)
     client.create_collection(
         collection_name=collection_name,
         vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
@@ -135,8 +133,7 @@ def qdrant_test_client(qdrant_container):
     client.close()
 
 
-@pytest.fixture
-scope="session"
+@pytest.fixture(scope="session")
 def integration_model():
     return ModelLoader.get_model()
 
