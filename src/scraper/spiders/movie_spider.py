@@ -38,7 +38,7 @@ class MovieSpider(scrapy.Spider):
 
     def parse(self, response: Response) -> Generator[Request | Movie, None, None]:
         """Parse one paginated PoiskKino response."""
-        data = PoiskKinoResponse.model_validate(response.json())
+        data = PoiskKinoResponse.model_validate_json(response.body)
         page = int(response.meta.get("page", 1))
 
         self.logger.info("Found %d movies on page %d", len(data.docs), page)
