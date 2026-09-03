@@ -22,7 +22,7 @@ test-cov:
 	uv run pytest tests --cov=src --cov-report=html --cov-report=term
 
 test-parallel:
-	uv run pytest tests/unit -n auto -v
+	uv run pytest tests/performance -n 0 -v
 
 test-quick:
 	uv run pytest tests -m "not slow" -v
