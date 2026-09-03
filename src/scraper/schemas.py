@@ -6,7 +6,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
 class Movie(BaseModel):
     """Normalized movie data shared by scraper and indexer."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     id: int
     title: str = Field(
