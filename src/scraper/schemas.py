@@ -1,6 +1,13 @@
 """Contracts for scraped movie data and the PoiskKino API response."""
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    field_validator,
+)
 
 
 class Movie(BaseModel):
