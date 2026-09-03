@@ -12,6 +12,7 @@ from core.dependencies import get_search_service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
 
+
 def get_info_service() -> SearchService:
     """Return the shared search service instance."""
     return get_search_service()
@@ -26,7 +27,7 @@ async def health_check(
     logger.info("Health check started")
     try:
         stats = service.get_stats()
-        if stats["total_points"] == 0:
+        if stats.total_points == 0:
             logger.warning("Qdrant collection exists but is empty")
             return HealthResponse(
                 status="degraded",
@@ -36,8 +37,8 @@ async def health_check(
 
         response = HealthResponse(
             status="healthy",
-            collection=stats["collection"],
-            indexed_items=stats["total_points"],
+            collection=stats.collection,
+            indexed_items=stats.total_points,
         )
         logger.info(
             "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
@@ -86,18 +87,11 @@ async def get_stats(
     started_at = perf_counter()
     logger.info("Stats request started")
     try:
-        stats = service.get_stats()
+        response = service.get_stats()
     except Exception as exc:
         logger.exception("Stats request failed while accessing Qdrant")
         raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
 
-    response = StatsResponse(
-        collection=stats["collection"],
-        total_points=stats["total_points"],
-        status=stats["status"],
-        model=stats["model"],
-        embedding_dim=stats["embedding_dim"],
-    )
     logger.info(
         "Stats request completed: collection=%s points=%d duration_ms=%.1f",
         response.collection,
