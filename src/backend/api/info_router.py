@@ -2,6 +2,7 @@
 
 import logging
 from time import perf_counter
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -11,6 +12,7 @@ from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
+SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 
 
 def get_info_service() -> SearchService:
@@ -19,9 +21,7 @@ def get_info_service() -> SearchService:
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check(
-    service: SearchService = Depends(get_search_service),
-) -> HealthResponse:
+async def health_check(service: SearchServiceDependency) -> HealthResponse:
     """Check API and vector database health."""
     started_at = perf_counter()
     logger.info("Health check started")
@@ -54,10 +54,7 @@ async def health_check(
 
 
 @router.get("/movies/{movie_id}", response_model=MovieResult)
-async def get_movie(
-    movie_id: int,
-    service: SearchService = Depends(get_search_service),
-) -> MovieResult:
+async def get_movie(movie_id: int, service: SearchServiceDependency) -> MovieResult:
     """Return detailed information about a movie by its ID."""
     started_at = perf_counter()
     logger.info("Movie info request received: movie_id=%d", movie_id)
@@ -80,9 +77,7 @@ async def get_movie(
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats(
-    service: SearchService = Depends(get_search_service),
-) -> StatsResponse:
+async def get_stats(service: SearchServiceDependency) -> StatsResponse:
     """Return vector collection statistics."""
     started_at = perf_counter()
     logger.info("Stats request started")
