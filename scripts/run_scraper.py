@@ -6,10 +6,10 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
+from scrapy.crawler import CrawlerProcess  # noqa: E402
+from scrapy.utils.project import get_project_settings  # noqa: E402
 
-from scraper.spiders.movie_spider import MovieSpider
+from scraper.spiders.movie_spider import MovieSpider  # noqa: E402
 
 
 def main() -> None:
