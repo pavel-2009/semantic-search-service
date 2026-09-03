@@ -1,4 +1,4 @@
-.PHONY: up down test test-unit test-integration test-all test-cov lint type-check format clean
+.PHONY: up down test test-unit test-integration test-all test-cov test-parallel test-quick lint type-check format clean check
 
 up:
 	docker compose up --build
@@ -8,7 +8,7 @@ down:
 
 # Tests
 test:
-	uv run pytest tests/ -v
+	uv run pytest tests -v
 
 test-unit:
 	uv run pytest tests/unit -v
@@ -16,17 +16,16 @@ test-unit:
 test-integration:
 	uv run pytest tests/integration -v
 
-test-e2e:
-	uv run pytest tests/e2e -v
+test-all: test-unit test-integration
 
 test-cov:
-	uv run pytest tests/ --cov=src --cov-report=html --cov-report=term
+	uv run pytest tests --cov=src --cov-report=html --cov-report=term
 
 test-parallel:
-	uv run pytest tests/ -n auto -v
+	uv run pytest tests -n auto -v
 
 test-quick:
-	uv run pytest tests/ -m "not slow" -v
+	uv run pytest tests -m "not slow" -v
 
 lint:
 	uv run ruff check src scripts
@@ -40,10 +39,7 @@ format:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".coverage" -exec rm -rf {} +
-	find . -type d -name "htmlcov" -exec rm -rf {} +
-	rm -rf .pytest_cache .coverage htmlcov
+	rm -rf .coverage htmlcov
 
-# All checks
 check: lint type-check test-unit
-	@echo "✅ All checks passed!"
+	@echo "All checks passed!"
