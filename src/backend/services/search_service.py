@@ -8,8 +8,9 @@ from qdrant_client.http import models
 from qdrant_client.http.models import Record, ScoredPoint
 from sentence_transformers import SentenceTransformer
 
-from backend.schemas import MovieResult, SearchFilters, SearchRequest
+from backend.schemas import MovieResult, SearchFilters, SearchRequest, StatsResponse
 from core.config import settings
+from core.contracts import MoviePayload
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
@@ -114,29 +115,26 @@ class SearchService:
     @staticmethod
     def _movie_from_payload(
         point_id: int | str,
-        payload: dict | None,
+        payload: object,
         score: float,
     ) -> MovieResult:
-        """Build a movie response from common Qdrant point data."""
-        payload = payload or {}
-        countries = payload.get("countries") or []
-        if isinstance(countries, str):
-            countries = [countries]
-
-        if not countries and payload.get("country"):
-            countries = [country.strip() for country in str(payload["country"]).split(",")]
+        """Build a movie response from validated Qdrant point data."""
+        movie = MoviePayload.model_validate(payload or {})
+        countries = movie.countries
+        if not countries and movie.country:
+            countries = [country.strip() for country in movie.country.split(",") if country.strip()]
 
         return MovieResult(
             id=int(point_id),
-            title=str(payload.get("title") or "Фильм без названия"),
-            year=payload.get("year"),
-            rating=payload.get("rating"),
-            genres=payload.get("genres", []),
-            countries=[str(country) for country in countries],
-            director=payload.get("director"),
-            actors=payload.get("actors", []),
-            description=payload.get("description") or None,
-            poster_url=payload.get("poster_url"),
+            title=movie.title,
+            year=movie.year,
+            rating=movie.rating,
+            genres=movie.genres,
+            countries=countries,
+            director=movie.director,
+            actors=movie.actors,
+            description=movie.description or None,
+            poster_url=movie.poster_url,
             score=score,
         )
 
@@ -144,63 +142,59 @@ class SearchService:
     def _build_filters(filters: SearchFilters) -> models.Filter | None:
         """Build Qdrant filters from API filter schemas."""
         conditions: list[models.Condition] = []
-        try:
-            if filters.year:
-                if filters.year.gte is not None:
-                    conditions.append(
-                        models.FieldCondition(
-                            key="year",
-                            range=models.Range(gte=filters.year.gte),
-                        )
-                    )
-                if filters.year.lte is not None:
-                    conditions.append(
-                        models.FieldCondition(
-                            key="year",
-                            range=models.Range(lte=filters.year.lte),
-                        )
-                    )
-            if filters.rating:
-                if filters.rating.gte is not None:
-                    conditions.append(
-                        models.FieldCondition(
-                            key="rating",
-                            range=models.Range(gte=filters.rating.gte),
-                        )
-                    )
-                if filters.rating.lte is not None:
-                    conditions.append(
-                        models.FieldCondition(
-                            key="rating",
-                            range=models.Range(lte=filters.rating.lte),
-                        )
-                    )
-            if filters.country:
+        if filters.year:
+            if filters.year.gte is not None:
                 conditions.append(
                     models.FieldCondition(
-                        key="countries",
-                        match=models.MatchAny(any=[filters.country]),
+                        key="year",
+                        range=models.Range(gte=filters.year.gte),
                     )
                 )
-            if filters.genre:
+            if filters.year.lte is not None:
                 conditions.append(
                     models.FieldCondition(
-                        key="genres",
-                        match=models.MatchAny(any=filters.genre),
+                        key="year",
+                        range=models.Range(lte=filters.year.lte),
                     )
                 )
-            return models.Filter(must=conditions) if conditions else None
-        except AttributeError:
-            return None
-        
+        if filters.rating:
+            if filters.rating.gte is not None:
+                conditions.append(
+                    models.FieldCondition(
+                        key="rating",
+                        range=models.Range(gte=filters.rating.gte),
+                    )
+                )
+            if filters.rating.lte is not None:
+                conditions.append(
+                    models.FieldCondition(
+                        key="rating",
+                        range=models.Range(lte=filters.rating.lte),
+                    )
+                )
+        if filters.country:
+            conditions.append(
+                models.FieldCondition(
+                    key="countries",
+                    match=models.MatchAny(any=[filters.country]),
+                )
+            )
+        if filters.genre:
+            conditions.append(
+                models.FieldCondition(
+                    key="genres",
+                    match=models.MatchAny(any=filters.genre),
+                )
+            )
+        return models.Filter(must=conditions) if conditions else None
 
-    def get_stats(self) -> dict[str, object]:
+    def get_stats(self) -> StatsResponse:
         """Return collection statistics."""
         info = self.qdrant.get_collection(self.collection_name)
-        return {
-            "collection": self.collection_name,
-            "total_points": info.points_count,
-            "status": info.status,
-            "model": settings.EMBEDDING_MODEL,
-            "embedding_dim": settings.EMBEDDING_DIM,
-        }
+        return StatsResponse(
+            collection=self.collection_name,
+            total_points=info.points_count or 0,
+            status=str(info.status),
+            model=settings.EMBEDDING_MODEL,
+            embedding_dim=settings.EMBEDDING_DIM,
+        )
