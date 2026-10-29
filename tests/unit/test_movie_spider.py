@@ -99,42 +99,6 @@ def test_parse_counts_successfully_validated_page() -> None:
     assert crawler.stats.get_value("scraper/pages_succeeded") == 1
 
 
-@pytest.mark.asyncio
-async def test_start_creates_ten_page_ranges() -> None:
-    crawler = Crawler(
-        MovieSpider,
-        settings={"SCRAPER_RUNS": 10, "SCRAPER_PAGES_PER_RUN": 10},
-    )
-    spider = crawler._create_spider()
-
-    requests = [request async for request in spider.start()]
-
-    assert [request.meta["page"] for request in requests] == [
-        1,
-        11,
-        21,
-        31,
-        41,
-        51,
-        61,
-        71,
-        81,
-        91,
-    ]
-    assert [request.meta["run_end_page"] for request in requests] == [
-        10,
-        20,
-        30,
-        40,
-        50,
-        60,
-        70,
-        80,
-        90,
-        100,
-    ]
-
-
 def test_parse_queues_next_page_from_requested_page() -> None:
     crawler = Crawler(MovieSpider)
     crawler.stats = MemoryStatsCollector(crawler)
@@ -144,7 +108,7 @@ def test_parse_queues_next_page_from_requested_page() -> None:
         body=b'{"docs":[],"page":4,"pages":5}',
         request=Request(
             url="https://api.poiskkino.dev/v1.4/movie?page=4",
-            meta={"page": 4, "run_end_page": 10},
+            meta={"page": 4},
         ),
     )
 
@@ -153,24 +117,7 @@ def test_parse_queues_next_page_from_requested_page() -> None:
     assert len(result) == 1
     assert isinstance(result[0], Request)
     assert result[0].meta["page"] == 5
-    assert result[0].meta["run_end_page"] == 10
     assert "page=5" in result[0].url
-
-
-def test_parse_stops_at_page_range_boundary() -> None:
-    crawler = Crawler(MovieSpider)
-    crawler.stats = MemoryStatsCollector(crawler)
-    spider = crawler._create_spider()
-    response = Response(
-        url="https://api.poiskkino.dev/v1.4/movie?page=10",
-        body=b'{"docs":[],"page":10,"pages":100}',
-        request=Request(
-            url="https://api.poiskkino.dev/v1.4/movie?page=10",
-            meta={"page": 10, "run_end_page": 10},
-        ),
-    )
-
-    assert list(spider.parse(response)) == []
 
 
 def test_parse_fails_when_api_page_does_not_match_requested_page(caplog) -> None:

@@ -1,6 +1,6 @@
 """Scrapy spider for collecting movies from the PoiskKino API."""
 
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from urllib.parse import urlencode
 
 import scrapy
@@ -29,20 +29,14 @@ class MovieSpider(scrapy.Spider):
     PAGE_SIZE = 50
     MAX_PAGES = settings.MAX_PAGES_SCRAPER
 
-    async def start(self) -> AsyncGenerator[Request, None]:
-        """Start ten page ranges, each covering up to ten pages."""
-        runs = self.settings.getint("SCRAPER_RUNS", 10)
-        pages_per_run = self.settings.getint("SCRAPER_PAGES_PER_RUN", 10)
-        for run in range(runs):
-            start_page = run * pages_per_run + 1
-            if start_page > self.MAX_PAGES:
-                break
-            end_page = min(start_page + pages_per_run - 1, self.MAX_PAGES)
-            yield Request(
-                url=self._movie_list_url(start_page),
-                callback=self.parse,
-                meta={"page": start_page, "run_end_page": end_page},
-            )
+    start_urls = [
+        f"{API_BASE}?{urlencode({
+            'page': 1,
+            'limit': PAGE_SIZE,
+            'sortField': 'rating.kp',
+            'sortType': '-1',
+        })}"
+    ]
 
     def parse(self, response: Response) -> Generator[Request | Movie, None, None]:
         """Parse one paginated PoiskKino response."""
@@ -82,9 +76,8 @@ class MovieSpider(scrapy.Spider):
 
         self.logger.info("Page %d of %d", page, data.pages)
 
-        run_end_page = int(response.meta.get("run_end_page", self.MAX_PAGES))
-        if page >= run_end_page:
-            self.logger.info("Reached run page limit (%d)", run_end_page)
+        if page >= self.MAX_PAGES:
+            self.logger.info("Reached max pages limit (%d)", self.MAX_PAGES)
             return
 
         if page >= data.pages:
@@ -95,7 +88,7 @@ class MovieSpider(scrapy.Spider):
         yield Request(
             url=self._movie_list_url(next_page),
             callback=self.parse,
-            meta={"page": next_page, "run_end_page": run_end_page},
+            meta={"page": next_page},
         )
 
     def _parse_movie(self, data: PoiskKinoMovie) -> Movie | None:
