@@ -54,6 +54,18 @@ class MovieSpider(scrapy.Spider):
             self.crawler.stats.inc_value("scraper/response_validation_errors")
             raise
 
+        if data.page != page:
+            self.logger.error(
+                "API response page does not match request: requested=%d received=%d",
+                page,
+                data.page,
+            )
+            self.crawler.stats.set_value("scraper/failed", True)
+            self.crawler.stats.inc_value("scraper/pagination_errors")
+            raise ValueError(
+                f"Requested page {page}, but API returned page {data.page}"
+            )
+
         self.crawler.stats.inc_value("scraper/pages_succeeded")
         self.logger.info("Found %d movies on page %d", len(data.docs), page)
 
@@ -62,17 +74,17 @@ class MovieSpider(scrapy.Spider):
             if movie is not None:
                 yield movie
 
-        self.logger.info("Page %d of %d", data.page, data.pages)
+        self.logger.info("Page %d of %d", page, data.pages)
 
         if page >= self.MAX_PAGES:
             self.logger.info("Reached max pages limit (%d)", self.MAX_PAGES)
             return
 
-        if data.page >= data.pages:
-            self.logger.info("Reached last page (%d of %d)", data.page, data.pages)
+        if page >= data.pages:
+            self.logger.info("Reached last page (%d of %d)", page, data.pages)
             return
 
-        next_page = data.page + 1
+        next_page = page + 1
         yield Request(
             url=self._movie_list_url(next_page),
             callback=self.parse,

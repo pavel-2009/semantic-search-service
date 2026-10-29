@@ -99,6 +99,50 @@ def test_parse_counts_successfully_validated_page() -> None:
     assert crawler.stats.get_value("scraper/pages_succeeded") == 1
 
 
+def test_parse_queues_next_page_from_requested_page() -> None:
+    crawler = Crawler(MovieSpider)
+    crawler.stats = MemoryStatsCollector(crawler)
+    spider = crawler._create_spider()
+    response = Response(
+        url="https://api.poiskkino.dev/v1.4/movie?page=4",
+        body=b'{"docs":[],"page":4,"pages":5}',
+        request=Request(
+            url="https://api.poiskkino.dev/v1.4/movie?page=4",
+            meta={"page": 4},
+        ),
+    )
+
+    result = list(spider.parse(response))
+
+    assert len(result) == 1
+    assert isinstance(result[0], Request)
+    assert result[0].meta["page"] == 5
+    assert "page=5" in result[0].url
+
+
+def test_parse_fails_when_api_page_does_not_match_requested_page(caplog) -> None:
+    crawler = Crawler(MovieSpider)
+    crawler.stats = MemoryStatsCollector(crawler)
+    spider = crawler._create_spider()
+    response = Response(
+        url="https://api.poiskkino.dev/v1.4/movie?page=2",
+        body=b'{"docs":[],"page":1,"pages":3}',
+        request=Request(
+            url="https://api.poiskkino.dev/v1.4/movie?page=2",
+            meta={"page": 2},
+        ),
+    )
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValueError, match="Requested page 2, but API returned page 1"):
+            list(spider.parse(response))
+
+    assert crawler.stats.get_value("scraper/failed") is True
+    assert crawler.stats.get_value("scraper/pagination_errors") == 1
+    assert crawler.stats.get_value("scraper/pages_succeeded", 0) == 0
+    assert "requested=2 received=1" in caplog.text
+
+
 def test_closed_logs_final_scraper_statistics(caplog) -> None:
     crawler = Crawler(MovieSpider)
     crawler.stats = MemoryStatsCollector(crawler)
