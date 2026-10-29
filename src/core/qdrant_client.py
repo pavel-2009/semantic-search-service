@@ -1,4 +1,4 @@
-"""Qdrant singleton client"""
+"""Qdrant client shared across the application."""
 
 import logging
 from time import perf_counter
@@ -7,17 +7,17 @@ from qdrant_client import QdrantClient
 
 from core.config import settings
 
-
 logger = logging.getLogger(__name__)
 
 
 class QdrantClientSingleton:
-    """Qdrant singleton client"""
+    """Provide a single Qdrant client instance."""
 
     _instance: QdrantClient | None = None
 
     @classmethod
     def get_client(cls) -> QdrantClient:
+        """Return the shared Qdrant client instance."""
         if cls._instance is not None:
             logger.debug("Reusing existing Qdrant client")
             return cls._instance
@@ -44,5 +44,8 @@ class QdrantClientSingleton:
             )
             raise
 
-        logger.info("Qdrant client created successfully: duration_ms=%.1f", (perf_counter() - started_at) * 1000)
+        logger.info(
+            "Qdrant client created successfully: duration_ms=%.1f",
+            (perf_counter() - started_at) * 1000,
+        )
         return cls._instance

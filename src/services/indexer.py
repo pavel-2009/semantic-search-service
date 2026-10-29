@@ -68,7 +68,9 @@ class Indexer:
 
         started_at = perf_counter()
         try:
-            movies = MoviesDocument.model_validate_json(filepath.read_text(encoding="utf-8")).root
+            movies = MoviesDocument.model_validate_json(
+                filepath.read_text(encoding="utf-8")
+            ).root
         except ValueError as exc:
             logger.error("Invalid movies JSON: path=%s", filepath)
             raise ValueError("Movies JSON must contain a valid list of movies") from exc
@@ -90,7 +92,8 @@ class Indexer:
         """Build the text used for movie embeddings."""
         parts: list[str] = []
 
-        if movie.title and movie.title != Movie.model_fields["title"].default:
+        title_field = Movie.model_fields.get("title")
+        if movie.title and title_field and movie.title != title_field.default:
             has_details = any(
                 value not in (None, "", [], {})
                 for value in (
