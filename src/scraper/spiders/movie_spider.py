@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 import scrapy
 from scrapy.addons import logger
 from scrapy.http import Request, Response
+from pydantic import ValidationError
 
 from core.config import settings
 from scraper.schemas import (
@@ -39,8 +40,19 @@ class MovieSpider(scrapy.Spider):
 
     def parse(self, response: Response) -> Generator[Request | Movie, None, None]:
         """Parse one paginated PoiskKino response."""
-        data = PoiskKinoResponse.model_validate_json(response.body)
         page = int(response.meta.get("page", 1))
+        try:
+            data = PoiskKinoResponse.model_validate_json(response.body)
+        except ValidationError as exc:
+            reason = str(exc)
+            self.logger.error(
+                "Failed to validate API response: page=%d reason=%s",
+                page,
+                reason,
+            )
+            self.crawler.stats.set_value("scraper/failed", True)
+            self.crawler.stats.inc_value("scraper/response_validation_errors")
+            raise
 
         self.logger.info("Found %d movies on page %d", len(data.docs), page)
 

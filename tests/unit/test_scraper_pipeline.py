@@ -68,6 +68,7 @@ def test_pipeline_commits_export_after_successful_crawl(pipeline_setup):
         ("finished", False, "retry/max_reached", 1),
         ("finished", False, "httperror/response_ignored_count", 1),
         ("finished", False, "scraper/parse_errors", 1),
+        ("finished", False, "scraper/failed", True),
     ],
 )
 def test_pipeline_preserves_previous_export_when_crawl_fails(

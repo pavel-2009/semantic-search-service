@@ -1,5 +1,11 @@
 """Unit tests for PoiskKino scraper contracts and conversion."""
 
+import pytest
+from pydantic import ValidationError
+from scrapy.crawler import Crawler
+from scrapy.http import Request, Response
+from scrapy.statscollectors import MemoryStatsCollector
+
 from scraper.schemas import (
     PoiskKinoCountry,
     PoiskKinoGenre,
@@ -53,3 +59,26 @@ def test_extract_helpers_use_concrete_contracts() -> None:
     assert MovieSpider._extract_director(persons) == "Nolan"
     assert MovieSpider._extract_actors(persons) == ["Actor"]
     assert MovieSpider._extract_genres(genres) == ["драма"]
+
+
+def test_parse_marks_response_validation_failure_and_logs_page(caplog) -> None:
+    crawler = Crawler(MovieSpider)
+    crawler.stats = MemoryStatsCollector(crawler)
+    spider = crawler._create_spider()
+    response = Response(
+        url="https://api.poiskkino.dev/v1.4/movie",
+        body=b'{"docs":[{}]}',
+        request=Request(
+            url="https://api.poiskkino.dev/v1.4/movie",
+            meta={"page": 7},
+        ),
+    )
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValidationError):
+            list(spider.parse(response))
+
+    assert crawler.stats.get_value("scraper/failed") is True
+    assert crawler.stats.get_value("scraper/response_validation_errors") == 1
+    assert "page=7" in caplog.text
+    assert "reason=" in caplog.text

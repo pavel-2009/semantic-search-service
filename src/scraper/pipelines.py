@@ -36,6 +36,7 @@ class JsonPipeline:
         self.temp_file_path = temp_file_path
         self.failed = False
         spider.crawler.stats.set_value("scraper/export_committed", False)
+        spider.crawler.stats.set_value("scraper/failed", False)
         spider.crawler.signals.connect(self._on_spider_error, signal=signals.spider_error)
         spider.crawler.signals.connect(self._on_spider_closed, signal=signals.spider_closed)
         try:
@@ -85,6 +86,7 @@ class JsonPipeline:
 
     def _on_spider_error(self, failure: object, response: object, spider: Spider) -> None:
         self.failed = True
+        spider.crawler.stats.set_value("scraper/failed", True)
 
     def _on_spider_closed(self, spider: Spider, reason: str) -> None:
         temp_file_path = self.temp_file_path
@@ -96,6 +98,7 @@ class JsonPipeline:
             reason == "finished"
             and self.file is None
             and not self.failed
+            and not stats.get_value("scraper/failed", False)
             and stats.get_value("retry/max_reached", 0) == 0
             and stats.get_value("httperror/response_ignored_count", 0) == 0
             and stats.get_value("scraper/parse_errors", 0) == 0
@@ -113,12 +116,14 @@ class JsonPipeline:
 
         logger.error(
             "Scraper export not committed: reason=%s spider_errors=%s "
-            "retry_exhausted=%s ignored_http_responses=%s parse_errors=%s",
+            "retry_exhausted=%s ignored_http_responses=%s parse_errors=%s "
+            "response_validation_errors=%s",
             reason,
             self.failed,
             stats.get_value("retry/max_reached", 0),
             stats.get_value("httperror/response_ignored_count", 0),
             stats.get_value("scraper/parse_errors", 0),
+            stats.get_value("scraper/response_validation_errors", 0),
         )
         self._remove_temp_file(temp_file_path)
 
