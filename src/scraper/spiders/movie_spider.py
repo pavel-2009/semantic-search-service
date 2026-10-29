@@ -4,6 +4,7 @@ from collections.abc import Generator
 from urllib.parse import urlencode
 
 import scrapy
+from scrapy.addons import logger
 from scrapy.http import Request, Response
 
 from core.config import settings
@@ -97,38 +98,58 @@ class MovieSpider(scrapy.Spider):
     @staticmethod
     def _extract_poster_url(poster: PoiskKinoPoster) -> str | None:
         """Extract a usable poster URL."""
-        url = poster.url or poster.previewUrl
-        return str(url) if url else None
+        try:
+            url = poster.url or poster.previewUrl
+            return str(url) if url else None
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract poster URL: %s", exc)
+            raise
 
     @staticmethod
     def _extract_countries(countries: list[PoiskKinoCountry]) -> str | None:
         """Extract country names from API objects."""
-        names = [str(country.name) for country in countries if country.name]
-        return ", ".join(names) if names else None
+        try:
+            names = [str(country.name) for country in countries if country.name]
+            return ", ".join(names) if names else None
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract countries: %s", exc)
+            raise
 
     @staticmethod
     def _extract_director(persons: list[PoiskKinoPerson]) -> str | None:
         """Extract the first director name."""
-        for person in persons:
-            if person.profession != "режиссеры":
-                continue
-            name = person.name or person.enName
-            if name:
-                return str(name)
-        return None
+        try:
+            for person in persons:
+                if person.profession != "режиссеры":
+                    continue
+                name = person.name or person.enName
+                if name:
+                    return str(name)
+            return None
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract director: %s", exc)
+            raise
 
     @staticmethod
     def _extract_actors(persons: list[PoiskKinoPerson]) -> list[str]:
         """Extract actor names."""
-        return [
-            str(name)
-            for person in persons
-            if person.profession == "актеры"
-            for name in [person.name or person.enName]
-            if name
-        ]
+        try:
+            return [
+                str(name)
+                for person in persons
+                if person.profession == "актеры"
+                for name in [person.name or person.enName]
+                if name
+            ]
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract actors: %s", exc)
+            raise
 
     @staticmethod
     def _extract_genres(genres: list[PoiskKinoGenre]) -> list[str]:
         """Extract genre names."""
-        return [str(genre.name) for genre in genres if genre.name]
+        try:
+            return [str(genre.name) for genre in genres if genre.name]
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract genres: %s", exc)
+            raise
