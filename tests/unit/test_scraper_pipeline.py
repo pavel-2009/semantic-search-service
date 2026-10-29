@@ -67,7 +67,7 @@ def test_pipeline_commits_export_after_successful_crawl(pipeline_setup):
         ("finished", True, None, None),
         ("finished", False, "retry/max_reached", 1),
         ("finished", False, "httperror/response_ignored_count", 1),
-        ("finished", False, "scraper/parse_errors", 1),
+        ("finished", False, "scraper/rejected_records", 1),
         ("finished", False, "scraper/failed", True),
     ],
 )

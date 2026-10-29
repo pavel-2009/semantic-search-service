@@ -54,6 +54,7 @@ class MovieSpider(scrapy.Spider):
             self.crawler.stats.inc_value("scraper/response_validation_errors")
             raise
 
+        self.crawler.stats.inc_value("scraper/pages_succeeded")
         self.logger.info("Found %d movies on page %d", len(data.docs), page)
 
         for movie_data in data.docs:
@@ -95,8 +96,35 @@ class MovieSpider(scrapy.Spider):
             )
         except (TypeError, ValueError) as exc:
             self.logger.error("Failed to parse movie %s: %s", data.id, exc)
-            self.crawler.stats.inc_value("scraper/parse_errors")
+            self.crawler.stats.inc_value("scraper/rejected_records")
             return None
+
+    def closed(self, reason: str) -> None:
+        """Log a final summary using Scrapy's standard request and item stats."""
+        stats = self.crawler.stats.get_stats()
+        response_status_prefix = "downloader/response_status_count/"
+        failed_http_responses = sum(
+            value
+            for key, value in stats.items()
+            if key.startswith(response_status_prefix)
+            and key.removeprefix(response_status_prefix).isdecimal()
+            and int(key.removeprefix(response_status_prefix)) >= 400
+        )
+        failed_requests = stats.get("downloader/exception_count", 0) + failed_http_responses
+        rejected_records = (
+            stats.get("scraper/rejected_records", 0)
+            + stats.get("item_dropped_count", 0)
+        )
+
+        self.logger.info(
+            "Scraper summary: successful_pages=%d failed_requests=%d "
+            "extracted_movies=%d rejected_records=%d finish_reason=%s",
+            stats.get("scraper/pages_succeeded", 0),
+            failed_requests,
+            stats.get("item_scraped_count", 0),
+            rejected_records,
+            reason,
+        )
 
     def _movie_list_url(self, page: int) -> str:
         """Build a URL for a specific API page."""

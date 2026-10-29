@@ -101,7 +101,7 @@ class JsonPipeline:
             and not stats.get_value("scraper/failed", False)
             and stats.get_value("retry/max_reached", 0) == 0
             and stats.get_value("httperror/response_ignored_count", 0) == 0
-            and stats.get_value("scraper/parse_errors", 0) == 0
+            and stats.get_value("scraper/rejected_records", 0) == 0
         )
         if successful:
             try:
@@ -116,13 +116,13 @@ class JsonPipeline:
 
         logger.error(
             "Scraper export not committed: reason=%s spider_errors=%s "
-            "retry_exhausted=%s ignored_http_responses=%s parse_errors=%s "
+            "retry_exhausted=%s ignored_http_responses=%s rejected_records=%s "
             "response_validation_errors=%s",
             reason,
             self.failed,
             stats.get_value("retry/max_reached", 0),
             stats.get_value("httperror/response_ignored_count", 0),
-            stats.get_value("scraper/parse_errors", 0),
+            stats.get_value("scraper/rejected_records", 0),
             stats.get_value("scraper/response_validation_errors", 0),
         )
         self._remove_temp_file(temp_file_path)
