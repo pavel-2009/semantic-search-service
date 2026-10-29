@@ -83,6 +83,7 @@ class MovieSpider(scrapy.Spider):
             )
         except (TypeError, ValueError) as exc:
             self.logger.error("Failed to parse movie %s: %s", data.id, exc)
+            self.crawler.stats.inc_value("scraper/parse_errors")
             return None
 
     def _movie_list_url(self, page: int) -> str:

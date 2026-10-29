@@ -18,8 +18,11 @@ def main() -> None:
     settings.setmodule("scraper.settings")
 
     process = CrawlerProcess(settings)
-    process.crawl(MovieSpider)
+    crawler = process.create_crawler(MovieSpider)
+    process.crawl(crawler)
     process.start()
+    if not crawler.stats.get_value("scraper/export_committed", False):
+        raise SystemExit("Scraper did not complete successfully; previous data was preserved.")
 
 
 if __name__ == "__main__":
