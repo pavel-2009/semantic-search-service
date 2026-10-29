@@ -8,25 +8,15 @@ from typing import List, Dict, Any
 
 import pytest
 import requests
-from fastapi.testclient import TestClient
-
-from backend.main import app
-from backend.schemas import SearchRequest
 
 
 class TestPerformance:
     """Performance tests for search endpoint."""
 
     @pytest.fixture
-    def client(self):
-        """Create test client."""
-        client = TestClient(app)
-        response = client.post(
-            "/api/v1/search",
-            json={"query": "warmup", "top_k": 1},
-        )
-        assert response.status_code == 200
-        return client
+    def client(self, api_client):
+        """Use the indexed Qdrant test service for performance requests."""
+        return api_client
 
     def test_search_latency(self, client):
         """Test search endpoint latency with multiple queries."""

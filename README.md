@@ -299,21 +299,21 @@ uv run python scripts/run_indexer.py
 
 ## 🧪 Testing & quality
 
-The test suite is split into fast unit tests and real integration tests. Integration tests start an isolated Qdrant instance automatically through the project's Docker Compose definition and use a single real embedding model for the whole test session. The API and indexer run in-process, so the full application stack does not need to be started just to run integration tests.
+The test suite is split into unit, integration and performance tests. Integration and performance tests require Docker and start an isolated Qdrant instance automatically through the project's Docker Compose definition. Integration tests use a single real embedding model for the whole test session; the API and indexer run in-process.
 
-Run everything:
+The default test command runs only unit tests and does not require Docker:
+
+```bash
+make test
+```
+
+Run all tests, including integration and performance:
 
 ```bash
 make test-all
 ```
 
-Or directly:
-
-```bash
-uv run pytest tests -v
-```
-
-Unit tests only:
+Unit tests only (same as `make test`):
 
 ```bash
 make test-unit
@@ -323,6 +323,12 @@ Integration tests only:
 
 ```bash
 make test-integration
+```
+
+Performance tests only:
+
+```bash
+make test-performance
 ```
 
 Coverage:
