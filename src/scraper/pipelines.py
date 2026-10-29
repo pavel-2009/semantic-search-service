@@ -20,6 +20,7 @@ class JsonPipeline:
     first_item: bool
     temp_file_path: Path | None = None
     failed: bool = False
+    item_count: int = 0
 
     def open_spider(self, spider: Spider) -> None:
         DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -35,6 +36,7 @@ class JsonPipeline:
         temp_file_path = Path(temp_file.name)
         self.temp_file_path = temp_file_path
         self.failed = False
+        self.item_count = 0
         spider.crawler.stats.set_value("scraper/export_committed", False)
         spider.crawler.stats.set_value("scraper/failed", False)
         spider.crawler.signals.connect(self._on_spider_error, signal=signals.spider_error)
@@ -57,6 +59,7 @@ class JsonPipeline:
                 self.file.write(",\n")
             json.dump(item.model_dump(), self.file, ensure_ascii=False, indent=2)
             self.first_item = False
+            self.item_count += 1
         except Exception:
             self.failed = True
             raise
@@ -102,6 +105,7 @@ class JsonPipeline:
             and stats.get_value("retry/max_reached", 0) == 0
             and stats.get_value("httperror/response_ignored_count", 0) == 0
             and stats.get_value("scraper/rejected_records", 0) == 0
+            and self.item_count > 0
         )
         if successful:
             try:
@@ -117,13 +121,14 @@ class JsonPipeline:
         logger.error(
             "Scraper export not committed: reason=%s spider_errors=%s "
             "retry_exhausted=%s ignored_http_responses=%s rejected_records=%s "
-            "response_validation_errors=%s",
+            "response_validation_errors=%s movies_written=%d",
             reason,
             self.failed,
             stats.get_value("retry/max_reached", 0),
             stats.get_value("httperror/response_ignored_count", 0),
             stats.get_value("scraper/rejected_records", 0),
             stats.get_value("scraper/response_validation_errors", 0),
+            self.item_count,
         )
         self._remove_temp_file(temp_file_path)
 

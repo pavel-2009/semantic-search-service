@@ -60,6 +60,18 @@ def test_pipeline_commits_export_after_successful_crawl(pipeline_setup):
     assert crawler.stats.get_value("scraper/export_committed") is True
 
 
+def test_pipeline_preserves_previous_export_when_no_movies_were_scraped(pipeline_setup):
+    data_file, crawler, spider, pipeline = pipeline_setup
+    original_data = data_file.read_text(encoding="utf-8")
+    temp_file = pipeline.temp_file_path
+
+    close_spider(crawler, spider, pipeline)
+
+    assert data_file.read_text(encoding="utf-8") == original_data
+    assert temp_file is not None and not temp_file.exists()
+    assert crawler.stats.get_value("scraper/export_committed") is False
+
+
 @pytest.mark.parametrize(
     ("reason", "failure", "stat", "stat_value"),
     [
