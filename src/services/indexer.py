@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 from time import perf_counter
+from typing import Iterable
 
 from qdrant_client.http import models
 
@@ -59,8 +60,8 @@ class Indexer:
         )
         logger.info("Qdrant collection created: collection=%s", self.collection_name)
 
-    def load_movies(self, filepath: Path) -> list[Movie]:
-        """Load and validate normalized movies from JSON."""
+    def load_movies(self, filepath: Path) -> Iterable[Movie]:
+        """Load and validate normalized movies from JSON. Return a generator of Movie objects."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
@@ -68,10 +69,13 @@ class Indexer:
             raise FileNotFoundError(f"File not found: {filepath}")
 
         started_at = perf_counter()
+
+        pointer = MoviesDocument.model_validate_json(filepath.read_text(encoding="utf-8"))
         try:
-            movies = MoviesDocument.model_validate_json(
-                filepath.read_text(encoding="utf-8")
-            ).root
+            extracted_movies = pointer.movies
+            movies = [self._normalize_movie(movie) for movie in extracted_movies]
+
+            yield from movies
         except ValueError as exc:
             logger.error("Invalid movies JSON: path=%s", filepath)
             raise ValueError("Movies JSON must contain a valid list of movies") from exc
