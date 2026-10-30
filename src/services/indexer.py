@@ -14,6 +14,7 @@ from core.text_normalizer import clean_text
 from scraper.schemas import Movie, MoviesDocument
 
 logger = logging.getLogger(__name__)
+MAX_BATCH_SIZE = 100
 
 
 class Indexer:
@@ -133,6 +134,7 @@ class Indexer:
         """Create embeddings and upsert movies into Qdrant."""
         if batch_size < 1:
             raise ValueError("batch_size must be greater than zero")
+        batch_size = min(batch_size, MAX_BATCH_SIZE)
 
         started_at = perf_counter()
         logger.info("Starting movie indexing: path=%s batch_size=%d", filepath, batch_size)
