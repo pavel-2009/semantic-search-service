@@ -1,12 +1,9 @@
 """Build and store movie embeddings in Qdrant."""
 
-import json
 import logging
-from collections.abc import Iterator
 from pathlib import Path
 from time import perf_counter
 
-from pydantic import ValidationError
 from qdrant_client.http import models
 
 from core.config import settings
@@ -14,7 +11,7 @@ from core.contracts import IndexerStats, MoviePayload
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
-from scraper.schemas import Movie
+from scraper.schemas import Movie, MoviesDocument
 
 logger = logging.getLogger(__name__)
 
@@ -61,88 +58,30 @@ class Indexer:
         )
         logger.info("Qdrant collection created: collection=%s", self.collection_name)
 
-    def load_movies(self, filepath: Path) -> Iterator[Movie]:
-        """Stream and validate movies from a JSON array."""
+    def load_movies(self, filepath: Path) -> list[Movie]:
+        """Load and validate normalized movies from JSON."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
             logger.error("Movies file not found: path=%s", filepath)
             raise FileNotFoundError(f"File not found: {filepath}")
 
-        return self._iter_movies(filepath)
+        started_at = perf_counter()
+        try:
+            movies = MoviesDocument.model_validate_json(
+                filepath.read_text(encoding="utf-8")
+            ).root
+        except ValueError as exc:
+            logger.error("Invalid movies JSON: path=%s", filepath)
+            raise ValueError("Movies JSON must contain a valid list of movies") from exc
 
-    @staticmethod
-    def _iter_movies(filepath: Path) -> Iterator[Movie]:
-        decoder = json.JSONDecoder()
-        buffer = ""
-        position = 0
-        eof = False
-
-        with filepath.open(encoding="utf-8") as file:
-            def read_more() -> None:
-                nonlocal buffer, position, eof
-                chunk = file.read(64 * 1024)
-                buffer = buffer[position:] + chunk
-                position = 0
-                eof = not chunk
-
-            def skip_whitespace() -> None:
-                nonlocal position
-                while True:
-                    while position < len(buffer) and buffer[position].isspace():
-                        position += 1
-                    if position < len(buffer) or eof:
-                        return
-                    read_more()
-
-            def read_value() -> object:
-                nonlocal position
-                while True:
-                    try:
-                        value, position = decoder.raw_decode(buffer, position)
-                        return value
-                    except json.JSONDecodeError as exc:
-                        if eof:
-                            raise ValueError("Movies JSON contains invalid data") from exc
-                        read_more()
-
-            skip_whitespace()
-            if position == len(buffer):
-                raise ValueError("Movies JSON must contain a list of movies")
-            if buffer[position] != "[":
-                raise ValueError("Movies JSON must contain a list of movies")
-            position += 1
-            first = True
-
-            while True:
-                skip_whitespace()
-                if position == len(buffer):
-                    raise ValueError("Movies JSON contains an unterminated list")
-                if buffer[position] == "]":
-                    position += 1
-                    break
-                if not first:
-                    if buffer[position] != ",":
-                        raise ValueError("Movies JSON must separate movies with commas")
-                    position += 1
-                    skip_whitespace()
-                    if position == len(buffer) or buffer[position] == "]":
-                        raise ValueError("Movies JSON contains a trailing comma")
-
-                try:
-                    yield Movie.model_validate(read_value())
-                except ValidationError as exc:
-                    logger.error("Invalid movie record in %s: %s", filepath, exc)
-                    raise ValueError("Movies JSON contains an invalid movie record") from exc
-                first = False
-
-            while True:
-                skip_whitespace()
-                if position < len(buffer):
-                    raise ValueError("Movies JSON contains data after the movie list")
-                if eof:
-                    break
-                read_more()
+        logger.info(
+            "Movies loaded: path=%s count=%d duration_ms=%.1f",
+            filepath,
+            len(movies),
+            (perf_counter() - started_at) * 1000,
+        )
+        return movies
 
     @staticmethod
     def _normalize_movie(movie: Movie) -> Movie:
