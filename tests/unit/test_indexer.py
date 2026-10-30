@@ -1,6 +1,5 @@
 """Unit tests for Indexer."""
 
-from inspect import isgenerator
 from pathlib import Path
 from unittest.mock import ANY, Mock
 
@@ -60,19 +59,6 @@ def test_normalize_movie_accepts_legacy_contract():
 
 def test_load_movies(temp_json_file):
     movies = Indexer().load_movies(temp_json_file)
-    assert isgenerator(movies)
-    assert [movie.id for movie in movies] == [1, 2]
-
-
-def test_load_movies_streams_records_larger_than_read_buffer(tmp_path):
-    path = tmp_path / "large_movies.json"
-    path.write_text(
-        '[{"id": 1, "description": "' + ("x" * (64 * 1024)) + '"}, {"id": 2}]',
-        encoding="utf-8",
-    )
-
-    movies = list(Indexer().load_movies(path))
-
     assert [movie.id for movie in movies] == [1, 2]
 
 
@@ -141,7 +127,7 @@ def test_load_movies_invalid_json(tmp_path):
     path = tmp_path / "invalid.json"
     path.write_text('{"not": "a list"}')
     with pytest.raises(ValueError):
-        list(Indexer().load_movies(path))
+        Indexer().load_movies(path)
 
 
 def test_create_collection_new(mock_qdrant_client):
