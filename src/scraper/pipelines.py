@@ -74,17 +74,28 @@ class JsonPipeline:
             return
 
         stats = spider.crawler.stats
+        ignored_http_responses = stats.get_value("httperror/response_ignored_count", 0)
+        rate_limited_responses = stats.get_value(
+            "httperror/response_ignored_status_count/403", 0
+        )
         successful = (
             reason == "finished"
             and self.file is None
             and not self.failed
             and not stats.get_value("scraper/failed", False)
             and stats.get_value("retry/max_reached", 0) == 0
-            and stats.get_value("httperror/response_ignored_count", 0) == 0
+            and ignored_http_responses == rate_limited_responses
             and stats.get_value("scraper/rejected_records", 0) == 0
             and self.item_count > 0
         )
         if successful:
+            if rate_limited_responses:
+                logger.warning(
+                    "API limit reached (HTTP 403); committing partial export: "
+                    "responses=%d movies=%d",
+                    rate_limited_responses,
+                    self.item_count,
+                )
             try:
                 temp_file_path.replace(DATA_FILE)
             except OSError:
@@ -102,7 +113,7 @@ class JsonPipeline:
             reason,
             self.failed,
             stats.get_value("retry/max_reached", 0),
-            stats.get_value("httperror/response_ignored_count", 0),
+            ignored_http_responses,
             stats.get_value("scraper/rejected_records", 0),
             stats.get_value("scraper/response_validation_errors", 0),
             self.item_count,

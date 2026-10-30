@@ -115,12 +115,14 @@ class MovieSpider(scrapy.Spider):
         """Log a final summary using Scrapy's standard request and item stats."""
         stats = self.crawler.stats.get_stats()
         response_status_prefix = "downloader/response_status_count/"
+        rate_limited_responses = stats.get("downloader/response_status_count/403", 0)
         failed_http_responses = sum(
             value
             for key, value in stats.items()
             if key.startswith(response_status_prefix)
             and key.removeprefix(response_status_prefix).isdecimal()
             and int(key.removeprefix(response_status_prefix)) >= 400
+            and key != "downloader/response_status_count/403"
         )
         failed_requests = stats.get("downloader/exception_count", 0) + failed_http_responses
         rejected_records = (
@@ -130,9 +132,11 @@ class MovieSpider(scrapy.Spider):
 
         self.logger.info(
             "Scraper summary: successful_pages=%d failed_requests=%d "
+            "rate_limited_responses=%d "
             "extracted_movies=%d rejected_records=%d finish_reason=%s",
             stats.get("scraper/pages_succeeded", 0),
             failed_requests,
+            rate_limited_responses,
             stats.get("item_scraped_count", 0),
             rejected_records,
             reason,
