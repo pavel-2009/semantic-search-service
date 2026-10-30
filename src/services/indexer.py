@@ -1,9 +1,12 @@
 """Build and store movie embeddings in Qdrant."""
 
+import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from time import perf_counter
 
+from pydantic import ValidationError
 from qdrant_client.http import models
 
 from core.config import settings
@@ -11,7 +14,7 @@ from core.contracts import IndexerStats, MoviePayload
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
-from scraper.schemas import Movie, MoviesDocument
+from scraper.schemas import Movie
 
 logger = logging.getLogger(__name__)
 
@@ -58,30 +61,88 @@ class Indexer:
         )
         logger.info("Qdrant collection created: collection=%s", self.collection_name)
 
-    def load_movies(self, filepath: Path) -> list[Movie]:
-        """Load and validate normalized movies from JSON."""
+    def load_movies(self, filepath: Path) -> Iterator[Movie]:
+        """Stream and validate movies from a JSON array."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
             logger.error("Movies file not found: path=%s", filepath)
             raise FileNotFoundError(f"File not found: {filepath}")
 
-        started_at = perf_counter()
-        try:
-            movies = MoviesDocument.model_validate_json(
-                filepath.read_text(encoding="utf-8")
-            ).root
-        except ValueError as exc:
-            logger.error("Invalid movies JSON: path=%s", filepath)
-            raise ValueError("Movies JSON must contain a valid list of movies") from exc
+        return self._iter_movies(filepath)
 
-        logger.info(
-            "Movies loaded: path=%s count=%d duration_ms=%.1f",
-            filepath,
-            len(movies),
-            (perf_counter() - started_at) * 1000,
-        )
-        return movies
+    @staticmethod
+    def _iter_movies(filepath: Path) -> Iterator[Movie]:
+        decoder = json.JSONDecoder()
+        buffer = ""
+        position = 0
+        eof = False
+
+        with filepath.open(encoding="utf-8") as file:
+            def read_more() -> None:
+                nonlocal buffer, position, eof
+                chunk = file.read(64 * 1024)
+                buffer = buffer[position:] + chunk
+                position = 0
+                eof = not chunk
+
+            def skip_whitespace() -> None:
+                nonlocal position
+                while True:
+                    while position < len(buffer) and buffer[position].isspace():
+                        position += 1
+                    if position < len(buffer) or eof:
+                        return
+                    read_more()
+
+            def read_value() -> object:
+                nonlocal position
+                while True:
+                    try:
+                        value, position = decoder.raw_decode(buffer, position)
+                        return value
+                    except json.JSONDecodeError as exc:
+                        if eof:
+                            raise ValueError("Movies JSON contains invalid data") from exc
+                        read_more()
+
+            skip_whitespace()
+            if position == len(buffer):
+                raise ValueError("Movies JSON must contain a list of movies")
+            if buffer[position] != "[":
+                raise ValueError("Movies JSON must contain a list of movies")
+            position += 1
+            first = True
+
+            while True:
+                skip_whitespace()
+                if position == len(buffer):
+                    raise ValueError("Movies JSON contains an unterminated list")
+                if buffer[position] == "]":
+                    position += 1
+                    break
+                if not first:
+                    if buffer[position] != ",":
+                        raise ValueError("Movies JSON must separate movies with commas")
+                    position += 1
+                    skip_whitespace()
+                    if position == len(buffer) or buffer[position] == "]":
+                        raise ValueError("Movies JSON contains a trailing comma")
+
+                try:
+                    yield Movie.model_validate(read_value())
+                except ValidationError as exc:
+                    logger.error("Invalid movie record in %s: %s", filepath, exc)
+                    raise ValueError("Movies JSON contains an invalid movie record") from exc
+                first = False
+
+            while True:
+                skip_whitespace()
+                if position < len(buffer):
+                    raise ValueError("Movies JSON contains data after the movie list")
+                if eof:
+                    break
+                read_more()
 
     @staticmethod
     def _normalize_movie(movie: Movie) -> Movie:
@@ -131,32 +192,21 @@ class Indexer:
 
     def index_movies(self, filepath: Path, batch_size: int = settings.BATCH_SIZE) -> None:
         """Create embeddings and upsert movies into Qdrant."""
+        if batch_size < 1:
+            raise ValueError("batch_size must be greater than zero")
+
         started_at = perf_counter()
         logger.info("Starting movie indexing: path=%s batch_size=%d", filepath, batch_size)
-        self.create_collection()
         movies = self.load_movies(filepath)
-
-        if not movies:
-            logger.warning("No movies available for indexing: path=%s", filepath)
-            return
-
-        total = len(movies)
+        self.create_collection()
+        batch: list[models.PointStruct] = []
+        total_processed = 0
         total_indexed = 0
-        logger.info("Indexing started: total_movies=%d batch_size=%d", total, batch_size)
+        total_failed = 0
 
-        for start in range(0, total, batch_size):
-            batch = movies[start : start + batch_size]
-            batch_started_at = perf_counter()
-            points: list[models.PointStruct] = []
-
-            logger.info(
-                "Processing batch: range=%d-%d size=%d",
-                start + 1,
-                min(start + len(batch), total),
-                len(batch),
-            )
-
-            for movie in batch:
+        for movie in movies:
+            total_processed += 1
+            try:
                 text = self.prepare_text(movie)
                 vector_started_at = perf_counter()
                 vector = self.model.encode(text).tolist()
@@ -185,51 +235,76 @@ class Indexer:
                     rating=movie.rating,
                     poster_url=movie.poster_url,
                 )
-                points.append(
-                    models.PointStruct(
-                        id=movie.id,
-                        vector=vector,
-                        payload=payload.model_dump(),
-                    )
+                point = models.PointStruct(
+                    id=movie.id,
+                    vector=vector,
+                    payload=payload.model_dump(),
                 )
+            except Exception:
+                total_failed += 1
+                logger.exception("Failed to prepare movie: movie_id=%d", movie.id)
+                continue
 
-            if points:
-                logger.info(
-                    "Uploading vectors to Qdrant: collection=%s points=%d",
-                    self.collection_name,
-                    len(points),
-                )
-                try:
-                    upsert_started_at = perf_counter()
-                    self.qdrant.upsert(collection_name=self.collection_name, points=points)
-                    logger.info(
-                        "Vectors uploaded: collection=%s points=%d duration_ms=%.1f",
-                        self.collection_name,
-                        len(points),
-                        (perf_counter() - upsert_started_at) * 1000,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed to upsert batch: collection=%s points=%d",
-                        self.collection_name,
-                        len(points),
-                    )
+            batch.append(point)
+            if len(batch) < batch_size:
+                continue
 
-            total_indexed += len(points)
-            logger.debug(
-                "Batch completed: processed=%d/%d indexed=%d duration_ms=%.1f",
-                min(start + len(batch), total),
-                total,
-                total_indexed,
-                (perf_counter() - batch_started_at) * 1000,
-            )
+            indexed, failed = self._upload_batch(batch)
+            total_indexed += indexed
+            total_failed += failed
+            batch = []
+
+        if batch:
+            indexed, failed = self._upload_batch(batch)
+            total_indexed += indexed
+            total_failed += failed
 
         logger.info(
-            "Indexing finished: indexed=%d total=%d duration_ms=%.1f",
+            "Indexing finished: processed=%d indexed=%d failed=%d duration_ms=%.1f",
+            total_processed,
             total_indexed,
-            total,
+            total_failed,
             (perf_counter() - started_at) * 1000,
         )
+        if total_processed == 0:
+            logger.warning("No movies available for indexing: path=%s", filepath)
+        if total_failed:
+            raise RuntimeError(f"Failed to index {total_failed} of {total_processed} movies")
+
+    def _upload_batch(self, points: list[models.PointStruct]) -> tuple[int, int]:
+        """Upload a batch, isolating failed points if the batch request fails."""
+        logger.info(
+            "Uploading vectors to Qdrant: collection=%s points=%d",
+            self.collection_name,
+            len(points),
+        )
+        try:
+            upsert_started_at = perf_counter()
+            self.qdrant.upsert(collection_name=self.collection_name, points=points)
+            logger.info(
+                "Vectors uploaded: collection=%s points=%d duration_ms=%.1f",
+                self.collection_name,
+                len(points),
+                (perf_counter() - upsert_started_at) * 1000,
+            )
+            return len(points), 0
+        except Exception:
+            logger.exception(
+                "Failed to upsert batch; retrying points individually: collection=%s points=%d",
+                self.collection_name,
+                len(points),
+            )
+
+        indexed = 0
+        failed = 0
+        for point in points:
+            try:
+                self.qdrant.upsert(collection_name=self.collection_name, points=[point])
+                indexed += 1
+            except Exception:
+                failed += 1
+                logger.exception("Failed to upsert movie: movie_id=%s", point.id)
+        return indexed, failed
 
     def get_stats(self) -> IndexerStats:
         """Return collection statistics."""
