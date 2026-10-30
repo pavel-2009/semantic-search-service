@@ -51,8 +51,14 @@ def sample_movie_data():
 
 @pytest.fixture
 def temp_json_file(tmp_path, sample_movie_data):
-    path = tmp_path / "movies.json"
-    path.write_text(json.dumps(sample_movie_data, ensure_ascii=False), encoding="utf-8")
+    path = tmp_path / "movies.jsonl"
+    path.write_text(
+        "".join(
+            json.dumps(movie, ensure_ascii=False) + "\n"
+            for movie in sample_movie_data
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -189,8 +195,14 @@ def test_movie_data():
 
 @pytest.fixture
 def test_movies_file(tmp_path, test_movie_data):
-    path = tmp_path / "movies.json"
-    path.write_text(json.dumps(test_movie_data, ensure_ascii=False), encoding="utf-8")
+    path = tmp_path / "movies.jsonl"
+    path.write_text(
+        "".join(
+            json.dumps(movie, ensure_ascii=False) + "\n"
+            for movie in test_movie_data
+        ),
+        encoding="utf-8",
+    )
     return path
 
 

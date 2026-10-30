@@ -195,7 +195,7 @@ The bot uses the shared search service and retrieves movie details by ID.
 
 ## 📦 Data & indexing
 
-The indexer reads movie data from JSON, builds a searchable text representation from fields such as title, description, director, country, year, rating, actors and genres, generates embeddings and upserts the resulting points into Qdrant.
+The scraper writes one movie per line as JSON Lines (`movies.jsonl`). The indexer reads and validates records line by line, builds a searchable text representation from fields such as title, description, director, country, year, rating, actors and genres, generates embeddings and upserts the resulting points into Qdrant. Invalid lines are logged and skipped.
 
 Each point contains:
 

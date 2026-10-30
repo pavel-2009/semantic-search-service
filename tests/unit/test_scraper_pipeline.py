@@ -14,8 +14,8 @@ from scraper.spiders.movie_spider import MovieSpider
 
 @pytest.fixture
 def pipeline_setup(tmp_path, monkeypatch):
-    data_file = tmp_path / "movies.json"
-    data_file.write_text('[{"id": 99}]', encoding="utf-8")
+    data_file = tmp_path / "movies.jsonl"
+    data_file.write_text('{"id": 99}\n', encoding="utf-8")
     monkeypatch.setattr("scraper.pipelines.DATA_FILE", data_file)
 
     crawler = Crawler(MovieSpider)
@@ -38,11 +38,15 @@ def close_spider(crawler, spider, pipeline, reason="finished"):
 def test_pipeline_commits_export_after_successful_crawl(pipeline_setup):
     data_file, crawler, spider, pipeline = pipeline_setup
     pipeline.process_item(Movie(id=1, title="Movie"), spider)
+    pipeline.process_item(Movie(id=2, title="Another movie"), spider)
     temp_file = pipeline.temp_file_path
 
     close_spider(crawler, spider, pipeline)
 
-    assert json.loads(data_file.read_text(encoding="utf-8")) == [
+    assert [
+        json.loads(line)
+        for line in data_file.read_text(encoding="utf-8").splitlines()
+    ] == [
         {
             "id": 1,
             "title": "Movie",
@@ -54,7 +58,19 @@ def test_pipeline_commits_export_after_successful_crawl(pipeline_setup):
             "genres": [],
             "rating": None,
             "poster_url": None,
-        }
+        },
+        {
+            "id": 2,
+            "title": "Another movie",
+            "year": None,
+            "country": None,
+            "director": None,
+            "description": "",
+            "actors": [],
+            "genres": [],
+            "rating": None,
+            "poster_url": None,
+        },
     ]
     assert temp_file is not None and not temp_file.exists()
     assert crawler.stats.get_value("scraper/export_committed") is True

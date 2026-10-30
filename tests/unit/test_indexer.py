@@ -62,12 +62,21 @@ def test_load_movies(temp_json_file):
     assert [movie.id for movie in movies] == [1, 2]
 
 
+def test_load_movies_falls_back_to_legacy_json_array(tmp_path):
+    legacy_file = tmp_path / "movies.json"
+    legacy_file.write_text('[\n  {"id": 1},\n  {"id": 2}\n]', encoding="utf-8")
+
+    movies = Indexer().load_movies(tmp_path / "movies.jsonl")
+
+    assert [movie.id for movie in movies] == [1, 2]
+
+
 def test_index_movies_upserts_existing_movie_with_updated_fields(
     tmp_path, mock_qdrant_client, mock_embedding_model
 ):
-    path = tmp_path / "movies.json"
+    path = tmp_path / "movies.jsonl"
     path.write_text(
-        '[{"id": 1, "title": "Inception", "description": "Updated description"}]',
+        '{"id": 1, "title": "Inception", "description": "Updated description"}\n',
         encoding="utf-8",
     )
 
@@ -84,8 +93,8 @@ def test_index_movies_upserts_existing_movie_with_updated_fields(
 def test_index_movies_continues_after_movie_processing_failure(
     tmp_path, mock_qdrant_client, mock_embedding_model
 ):
-    path = tmp_path / "movies.json"
-    path.write_text('[{"id": 1}, {"id": 2}]', encoding="utf-8")
+    path = tmp_path / "movies.jsonl"
+    path.write_text('{"id": 1}\n{"id": 2}\n', encoding="utf-8")
     mock_embedding_model.encode.side_effect = [
         RuntimeError("embedding failed"),
         mock_embedding_model.encode.return_value,
@@ -101,8 +110,8 @@ def test_index_movies_continues_after_movie_processing_failure(
 def test_index_movies_retries_failed_batch_per_movie(
     tmp_path, mock_qdrant_client
 ):
-    path = tmp_path / "movies.json"
-    path.write_text('[{"id": 1}, {"id": 2}]', encoding="utf-8")
+    path = tmp_path / "movies.jsonl"
+    path.write_text('{"id": 1}\n{"id": 2}\n', encoding="utf-8")
     mock_qdrant_client.upsert.side_effect = [
         RuntimeError("batch failed"),
         None,
@@ -119,9 +128,9 @@ def test_index_movies_retries_failed_batch_per_movie(
 
 
 def test_index_movies_caps_upload_batch_size(tmp_path, mock_qdrant_client):
-    path = tmp_path / "movies.json"
+    path = tmp_path / "movies.jsonl"
     path.write_text(
-        "[" + ",".join(f'{{"id": {movie_id}}}' for movie_id in range(101)) + "]",
+        "".join(f'{{"id": {movie_id}}}\n' for movie_id in range(101)),
         encoding="utf-8",
     )
 
@@ -139,10 +148,13 @@ def test_load_movies_file_not_found():
 
 
 def test_load_movies_invalid_json(tmp_path):
-    path = tmp_path / "invalid.json"
-    path.write_text('{"not": "a list"}')
-    with pytest.raises(ValueError):
-        Indexer().load_movies(path)
+    path = tmp_path / "movies.jsonl"
+    path.write_text(
+        '{"id": 1}\ninvalid json\n{"id": "not-an-int"}\n{"id": 2}\n',
+        encoding="utf-8",
+    )
+
+    assert [movie.id for movie in Indexer().load_movies(path)] == [1, 2]
 
 
 def test_create_collection_new(mock_qdrant_client):
