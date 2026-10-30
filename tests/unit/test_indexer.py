@@ -62,15 +62,6 @@ def test_load_movies(temp_json_file):
     assert [movie.id for movie in movies] == [1, 2]
 
 
-def test_load_movies_falls_back_to_legacy_json_array(tmp_path):
-    legacy_file = tmp_path / "movies.json"
-    legacy_file.write_text('[\n  {"id": 1},\n  {"id": 2}\n]', encoding="utf-8")
-
-    movies = Indexer().load_movies(tmp_path / "movies.jsonl")
-
-    assert [movie.id for movie in movies] == [1, 2]
-
-
 def test_index_movies_upserts_existing_movie_with_updated_fields(
     tmp_path, mock_qdrant_client, mock_embedding_model
 ):
@@ -144,7 +135,7 @@ def test_index_movies_caps_upload_batch_size(tmp_path, mock_qdrant_client):
 
 def test_load_movies_file_not_found():
     with pytest.raises(FileNotFoundError):
-        Indexer().load_movies(Path("/nonexistent/file.json"))
+        list(Indexer().load_movies(Path("/nonexistent/file.jsonl")))
 
 
 def test_load_movies_invalid_json(tmp_path):
