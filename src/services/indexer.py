@@ -1,10 +1,11 @@
 """Build and store movie embeddings in Qdrant."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from time import perf_counter
-from typing import Iterable
 
+from pydantic import ValidationError
 from qdrant_client.http import models
 
 from core.config import settings
@@ -60,33 +61,69 @@ class Indexer:
         )
         logger.info("Qdrant collection created: collection=%s", self.collection_name)
 
-    def load_movies(self, filepath: Path) -> Iterable[Movie]:
-        """Load and validate normalized movies from JSON. Return a generator of Movie objects."""
+    def load_movies(self, filepath: Path) -> Iterator[Movie]:
+        """Read and validate one JSON Lines movie record at a time."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
-            logger.error("Movies file not found: path=%s", filepath)
-            raise FileNotFoundError(f"File not found: {filepath}")
+            legacy_path = filepath.with_suffix(".json")
+            if filepath.suffix == ".jsonl" and legacy_path.exists():
+                logger.warning(
+                    "JSON Lines file not found; reading legacy JSON file: path=%s",
+                    legacy_path,
+                )
+                filepath = legacy_path
+            else:
+                logger.error("Movies file not found: path=%s", filepath)
+                raise FileNotFoundError(f"File not found: {filepath}")
 
-        started_at = perf_counter()
+        return self._iter_movies(filepath)
 
-        pointer = MoviesDocument.model_validate_json(filepath.read_text(encoding="utf-8"))
-        try:
-            extracted_movies = pointer.movies
-            movies = [self._normalize_movie(movie) for movie in extracted_movies]
+    @staticmethod
+    def _iter_movies(filepath: Path) -> Iterator[Movie]:
+        with filepath.open(encoding="utf-8") as file:
+            line_number = 0
+            for first_line in file:
+                line_number += 1
+                if first_line.strip():
+                    break
+            else:
+                return
 
-            yield from movies
-        except ValueError as exc:
-            logger.error("Invalid movies JSON: path=%s", filepath)
-            raise ValueError("Movies JSON must contain a valid list of movies") from exc
+            if first_line.lstrip().startswith("["):
+                logger.warning("Reading legacy JSON array: path=%s", filepath)
+                try:
+                    movies = MoviesDocument.model_validate_json(
+                        first_line + file.read()
+                    ).root
+                except ValidationError as exc:
+                    raise ValueError(
+                        "Movies JSON must contain a valid list of movies"
+                    ) from exc
+                yield from movies
+                return
 
-        logger.info(
-            "Movies loaded: path=%s count=%d duration_ms=%.1f",
-            filepath,
-            len(movies),
-            (perf_counter() - started_at) * 1000,
-        )
-        return movies
+            try:
+                yield Movie.model_validate_json(first_line)
+            except ValidationError:
+                logger.exception(
+                    "Skipping invalid movie record: path=%s line=%d",
+                    filepath,
+                    line_number,
+                )
+
+            for line in file:
+                line_number += 1
+                if not line.strip():
+                    continue
+                try:
+                    yield Movie.model_validate_json(line)
+                except ValidationError:
+                    logger.exception(
+                        "Skipping invalid movie record: path=%s line=%d",
+                        filepath,
+                        line_number,
+                    )
 
     @staticmethod
     def _normalize_movie(movie: Movie) -> Movie:

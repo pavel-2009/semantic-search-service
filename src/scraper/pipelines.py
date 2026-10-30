@@ -9,15 +9,14 @@ from scrapy.spiders import Spider
 
 from scraper.schemas import Movie
 
-DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.json"
+DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.jsonl"
 logger = logging.getLogger(__name__)
 
 
 class JsonPipeline:
-    """Write scraped movies to a temporary file and commit only successful crawls."""
+    """Write scraped movies as JSON Lines and commit only successful crawls."""
 
     file: TextIO | None = None
-    first_item: bool
     temp_file_path: Path | None = None
     failed: bool = False
     item_count: int = 0
@@ -41,24 +40,12 @@ class JsonPipeline:
         spider.crawler.stats.set_value("scraper/failed", False)
         spider.crawler.signals.connect(self._on_spider_error, signal=signals.spider_error)
         spider.crawler.signals.connect(self._on_spider_closed, signal=signals.spider_closed)
-        try:
-            temp_file.write("[\n")
-        except Exception:
-            self.failed = True
-            temp_file.close()
-            self.file = None
-            self._remove_temp_file(temp_file_path)
-            raise
-        self.first_item = True
 
     def process_item(self, item: Movie, spider: Spider) -> Movie:
         try:
             if self.file is None:
                 raise RuntimeError("JSON pipeline file is not open")
-            if not self.first_item:
-                self.file.write(",\n")
-            json.dump(item.model_dump(), self.file, ensure_ascii=False, indent=2)
-            self.first_item = False
+            self.file.write(json.dumps(item.model_dump(), ensure_ascii=False) + "\n")
             self.item_count += 1
         except Exception:
             self.failed = True
@@ -69,16 +56,6 @@ class JsonPipeline:
         if self.file is None:
             return
         file = self.file
-        try:
-            file.write("\n]\n")
-        except Exception:
-            self.failed = True
-            try:
-                file.close()
-            except OSError:
-                logger.exception("Failed to close temporary movie data file")
-            self.file = None
-            raise
         try:
             file.close()
         except Exception:
