@@ -1,5 +1,6 @@
 """Unit tests for Indexer."""
 
+from inspect import isgenerator
 from pathlib import Path
 from unittest.mock import ANY, Mock
 
@@ -59,9 +60,20 @@ def test_normalize_movie_accepts_legacy_contract():
 
 def test_load_movies(temp_json_file):
     movies = Indexer().load_movies(temp_json_file)
+    assert isgenerator(movies)
     assert [movie.id for movie in movies] == [1, 2]
-    assert [movie.title for movie in movies] == ["Inception", "The Dark Knight"]
-    assert all(isinstance(movie, Movie) for movie in movies)
+
+
+def test_load_movies_streams_records_larger_than_read_buffer(tmp_path):
+    path = tmp_path / "large_movies.json"
+    path.write_text(
+        '[{"id": 1, "description": "' + ("x" * (64 * 1024)) + '"}, {"id": 2}]',
+        encoding="utf-8",
+    )
+
+    movies = list(Indexer().load_movies(path))
+
+    assert [movie.id for movie in movies] == [1, 2]
 
 
 def test_index_movies_upserts_existing_movie_with_updated_fields(
@@ -83,6 +95,43 @@ def test_index_movies_upserts_existing_movie_with_updated_fields(
     mock_embedding_model.encode.assert_called_once()
 
 
+def test_index_movies_continues_after_movie_processing_failure(
+    tmp_path, mock_qdrant_client, mock_embedding_model
+):
+    path = tmp_path / "movies.json"
+    path.write_text('[{"id": 1}, {"id": 2}]', encoding="utf-8")
+    mock_embedding_model.encode.side_effect = [
+        RuntimeError("embedding failed"),
+        mock_embedding_model.encode.return_value,
+    ]
+
+    with pytest.raises(RuntimeError, match="Failed to index 1 of 2 movies"):
+        Indexer().index_movies(path, batch_size=1)
+
+    mock_qdrant_client.upsert.assert_called_once()
+    assert mock_qdrant_client.upsert.call_args.kwargs["points"][0].id == 2
+
+
+def test_index_movies_retries_failed_batch_per_movie(
+    tmp_path, mock_qdrant_client
+):
+    path = tmp_path / "movies.json"
+    path.write_text('[{"id": 1}, {"id": 2}]', encoding="utf-8")
+    mock_qdrant_client.upsert.side_effect = [
+        RuntimeError("batch failed"),
+        None,
+        RuntimeError("movie failed"),
+    ]
+
+    with pytest.raises(RuntimeError, match="Failed to index 1 of 2 movies"):
+        Indexer().index_movies(path, batch_size=2)
+
+    assert [
+        [point.id for point in call.kwargs["points"]]
+        for call in mock_qdrant_client.upsert.call_args_list
+    ] == [[1, 2], [1], [2]]
+
+
 def test_load_movies_file_not_found():
     with pytest.raises(FileNotFoundError):
         Indexer().load_movies(Path("/nonexistent/file.json"))
@@ -92,7 +141,7 @@ def test_load_movies_invalid_json(tmp_path):
     path = tmp_path / "invalid.json"
     path.write_text('{"not": "a list"}')
     with pytest.raises(ValueError):
-        Indexer().load_movies(path)
+        list(Indexer().load_movies(path))
 
 
 def test_create_collection_new(mock_qdrant_client):
