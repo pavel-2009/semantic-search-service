@@ -140,19 +140,6 @@ class Indexer:
             logger.warning("No movies available for indexing: path=%s", filepath)
             return
 
-        existing_points, _ = self.qdrant.scroll(
-            collection_name=self.collection_name,
-            limit=settings.MAX_SCROLL_LIMIT,
-            with_payload=False,
-            with_vectors=False,
-        )
-        existing_ids = {int(point.id) for point in existing_points}
-        logger.info(
-            "Existing Qdrant points loaded: collection=%s count=%d",
-            self.collection_name,
-            len(existing_ids),
-        )
-
         total = len(movies)
         total_indexed = 0
         logger.info("Indexing started: total_movies=%d batch_size=%d", total, batch_size)
@@ -161,7 +148,6 @@ class Indexer:
             batch = movies[start : start + batch_size]
             batch_started_at = perf_counter()
             points: list[models.PointStruct] = []
-            skipped = 0
 
             logger.info(
                 "Processing batch: range=%d-%d size=%d",
@@ -171,11 +157,6 @@ class Indexer:
             )
 
             for movie in batch:
-                if movie.id in existing_ids:
-                    skipped += 1
-                    logger.debug("Skipping existing movie: movie_id=%d", movie.id)
-                    continue
-
                 text = self.prepare_text(movie)
                 vector_started_at = perf_counter()
                 vector = self.model.encode(text).tolist()
@@ -211,7 +192,6 @@ class Indexer:
                         payload=payload.model_dump(),
                     )
                 )
-                existing_ids.add(movie.id)
 
             if points:
                 logger.info(
@@ -237,11 +217,10 @@ class Indexer:
 
             total_indexed += len(points)
             logger.debug(
-                "Batch completed: processed=%d/%d indexed=%d skipped=%d duration_ms=%.1f",
+                "Batch completed: processed=%d/%d indexed=%d duration_ms=%.1f",
                 min(start + len(batch), total),
                 total,
                 total_indexed,
-                skipped,
                 (perf_counter() - batch_started_at) * 1000,
             )
 

@@ -64,6 +64,25 @@ def test_load_movies(temp_json_file):
     assert all(isinstance(movie, Movie) for movie in movies)
 
 
+def test_index_movies_upserts_existing_movie_with_updated_fields(
+    tmp_path, mock_qdrant_client, mock_embedding_model
+):
+    path = tmp_path / "movies.json"
+    path.write_text(
+        '[{"id": 1, "title": "Inception", "description": "Updated description"}]',
+        encoding="utf-8",
+    )
+
+    Indexer().index_movies(path, batch_size=1)
+
+    points = mock_qdrant_client.upsert.call_args.kwargs["points"]
+    assert len(points) == 1
+    assert points[0].id == 1
+    assert points[0].payload["description"] == "Updated description"
+    mock_qdrant_client.scroll.assert_not_called()
+    mock_embedding_model.encode.assert_called_once()
+
+
 def test_load_movies_file_not_found():
     with pytest.raises(FileNotFoundError):
         Indexer().load_movies(Path("/nonexistent/file.json"))
