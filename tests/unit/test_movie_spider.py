@@ -160,6 +160,7 @@ def test_closed_logs_final_scraper_statistics(caplog) -> None:
         spider.closed("finished")
 
     assert (
-        "successful_pages=5 failed_requests=6 extracted_movies=30 "
+        "successful_pages=5 failed_requests=6 rate_limited_responses=0 "
+        "extracted_movies=30 "
         "rejected_records=7 finish_reason=finished"
     ) in caplog.text

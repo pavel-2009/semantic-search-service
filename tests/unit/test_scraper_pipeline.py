@@ -88,6 +88,33 @@ def test_pipeline_preserves_previous_export_when_no_movies_were_scraped(pipeline
     assert crawler.stats.get_value("scraper/export_committed") is False
 
 
+def test_pipeline_commits_partial_export_when_api_limit_returns_403(pipeline_setup):
+    data_file, crawler, spider, pipeline = pipeline_setup
+    pipeline.process_item(Movie(id=1, title="Collected movie"), spider)
+    crawler.stats.set_value("httperror/response_ignored_count", 1)
+    crawler.stats.set_value("httperror/response_ignored_status_count/403", 1)
+    temp_file = pipeline.temp_file_path
+
+    close_spider(crawler, spider, pipeline)
+
+    assert json.loads(data_file.read_text(encoding="utf-8"))["id"] == 1
+    assert temp_file is not None and not temp_file.exists()
+    assert crawler.stats.get_value("scraper/export_committed") is True
+
+
+def test_pipeline_does_not_commit_if_other_http_error_also_occurred(pipeline_setup):
+    data_file, crawler, spider, pipeline = pipeline_setup
+    original_data = data_file.read_text(encoding="utf-8")
+    pipeline.process_item(Movie(id=1, title="Collected movie"), spider)
+    crawler.stats.set_value("httperror/response_ignored_count", 2)
+    crawler.stats.set_value("httperror/response_ignored_status_count/403", 1)
+
+    close_spider(crawler, spider, pipeline)
+
+    assert data_file.read_text(encoding="utf-8") == original_data
+    assert crawler.stats.get_value("scraper/export_committed") is False
+
+
 @pytest.mark.parametrize(
     ("reason", "failure", "stat", "stat_value"),
     [
