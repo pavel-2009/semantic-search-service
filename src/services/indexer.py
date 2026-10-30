@@ -13,7 +13,7 @@ from core.contracts import IndexerStats, MoviePayload
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
-from scraper.schemas import Movie, MoviesDocument
+from scraper.schemas import Movie
 
 logger = logging.getLogger(__name__)
 MAX_BATCH_SIZE = 100
@@ -66,54 +66,11 @@ class Indexer:
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
-            legacy_path = filepath.with_suffix(".json")
-            if filepath.suffix == ".jsonl" and legacy_path.exists():
-                logger.warning(
-                    "JSON Lines file not found; reading legacy JSON file: path=%s",
-                    legacy_path,
-                )
-                filepath = legacy_path
-            else:
-                logger.error("Movies file not found: path=%s", filepath)
-                raise FileNotFoundError(f"File not found: {filepath}")
+            logger.error("Movies file not found: path=%s", filepath)
+            raise FileNotFoundError(f"File not found: {filepath}")
 
-        return self._iter_movies(filepath)
-
-    @staticmethod
-    def _iter_movies(filepath: Path) -> Iterator[Movie]:
         with filepath.open(encoding="utf-8") as file:
-            line_number = 0
-            for first_line in file:
-                line_number += 1
-                if first_line.strip():
-                    break
-            else:
-                return
-
-            if first_line.lstrip().startswith("["):
-                logger.warning("Reading legacy JSON array: path=%s", filepath)
-                try:
-                    movies = MoviesDocument.model_validate_json(
-                        first_line + file.read()
-                    ).root
-                except ValidationError as exc:
-                    raise ValueError(
-                        "Movies JSON must contain a valid list of movies"
-                    ) from exc
-                yield from movies
-                return
-
-            try:
-                yield Movie.model_validate_json(first_line)
-            except ValidationError:
-                logger.exception(
-                    "Skipping invalid movie record: path=%s line=%d",
-                    filepath,
-                    line_number,
-                )
-
-            for line in file:
-                line_number += 1
+            for line_number, line in enumerate(file, start=1):
                 if not line.strip():
                     continue
                 try:
