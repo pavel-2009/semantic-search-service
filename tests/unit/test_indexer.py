@@ -118,6 +118,21 @@ def test_index_movies_retries_failed_batch_per_movie(
     ] == [[1, 2], [1], [2]]
 
 
+def test_index_movies_caps_upload_batch_size(tmp_path, mock_qdrant_client):
+    path = tmp_path / "movies.json"
+    path.write_text(
+        "[" + ",".join(f'{{"id": {movie_id}}}' for movie_id in range(101)) + "]",
+        encoding="utf-8",
+    )
+
+    Indexer().index_movies(path, batch_size=1000)
+
+    assert [
+        len(call.kwargs["points"])
+        for call in mock_qdrant_client.upsert.call_args_list
+    ] == [100, 1]
+
+
 def test_load_movies_file_not_found():
     with pytest.raises(FileNotFoundError):
         Indexer().load_movies(Path("/nonexistent/file.json"))
