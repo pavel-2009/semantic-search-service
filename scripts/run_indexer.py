@@ -23,8 +23,11 @@ def main() -> None:
     print("=" * 60)
 
     indexer = Indexer()
-    indexer.create_collection(force_recreate=True)
-    indexer.index_movies(filepath=settings.DATA_PATH, batch_size=settings.BATCH_SIZE)
+    indexer.index_movies(
+        filepath=settings.DATA_PATH,
+        batch_size=settings.BATCH_SIZE,
+        force_recreate=True,
+    )
 
     stats = indexer.get_stats()
     print("\n📊 СТАТИСТИКА ПОСЛЕ ИНДЕКСАЦИИ:")
