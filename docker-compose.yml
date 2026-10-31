@@ -38,9 +38,11 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - HF_HOME=/cache/huggingface
     volumes:
       - ./src:/app/src
       - ./src/scraper/data:/app/src/scraper/data
+      - huggingface_cache:/cache/huggingface
     depends_on:
       scraper:
         condition: service_completed_successfully
@@ -63,8 +65,10 @@ services:
       - LOG_LEVEL=INFO
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
       - BOT_TOKEN=${BOT_TOKEN:-}
+      - HF_HOME=/cache/huggingface
     volumes:
       - ./src:/app/src
+      - huggingface_cache:/cache/huggingface
     depends_on:
       indexer:
         condition: service_completed_successfully
@@ -104,6 +108,7 @@ services:
 
 volumes:
   qdrant_storage:
+  huggingface_cache:
 
 networks:
   semantic-network:
