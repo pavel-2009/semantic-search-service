@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from backend.schemas import SearchRequest, SearchResponse
 from backend.services.search_service import SearchService
@@ -30,7 +31,7 @@ async def search(
         request.filters is not None,
     )
     try:
-        results = service.search(request)
+        results = await run_in_threadpool(service.search, request)
         response = SearchResponse(
             success=True,
             query=request.query,

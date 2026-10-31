@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from backend.schemas import HealthResponse, MovieResult, StatsResponse
 from backend.services.search_service import SearchService
@@ -26,7 +27,7 @@ async def health_check(service: SearchServiceDependency) -> HealthResponse:
     started_at = perf_counter()
     logger.info("Health check started")
     try:
-        stats = service.get_stats()
+        stats = await run_in_threadpool(service.get_stats)
         if stats.total_points == 0:
             logger.warning("Qdrant collection exists but is empty")
             return HealthResponse(
@@ -59,7 +60,7 @@ async def get_movie(movie_id: int, service: SearchServiceDependency) -> MovieRes
     started_at = perf_counter()
     logger.info("Movie info request received: movie_id=%d", movie_id)
     try:
-        movie = service.get_by_id(movie_id)
+        movie = await run_in_threadpool(service.get_by_id, movie_id)
     except Exception as exc:
         logger.exception("Movie info endpoint failed: movie_id=%d", movie_id)
         raise HTTPException(status_code=500, detail="Failed to load movie information") from exc
@@ -82,7 +83,7 @@ async def get_stats(service: SearchServiceDependency) -> StatsResponse:
     started_at = perf_counter()
     logger.info("Stats request started")
     try:
-        response = service.get_stats()
+        response = await run_in_threadpool(service.get_stats)
     except Exception as exc:
         logger.exception("Stats request failed while accessing Qdrant")
         raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc
