@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Iterator
+from itertools import chain
 from pathlib import Path
 from time import perf_counter
 
@@ -128,7 +129,12 @@ class Indexer:
             cleaned = "Фильм без описания."
         return cleaned[: settings.MAX_TEXT_LENGTH]
 
-    def index_movies(self, filepath: Path, batch_size: int = settings.BATCH_SIZE) -> None:
+    def index_movies(
+        self,
+        filepath: Path,
+        batch_size: int = settings.BATCH_SIZE,
+        force_recreate: bool = False,
+    ) -> None:
         """Create embeddings and upsert movies into Qdrant."""
         if batch_size < 1:
             raise ValueError("batch_size must be greater than zero")
@@ -137,13 +143,18 @@ class Indexer:
         started_at = perf_counter()
         logger.info("Starting movie indexing: path=%s batch_size=%d", filepath, batch_size)
         movies = self.load_movies(filepath)
-        self.create_collection()
+        first_movie = next(movies, None)
+        if first_movie is None:
+            logger.error("No valid movies available for indexing: path=%s", filepath)
+            raise RuntimeError(f"No movies available for indexing: {filepath}")
+
+        self.create_collection(force_recreate=force_recreate)
         batch: list[models.PointStruct] = []
         total_processed = 0
         total_indexed = 0
         total_failed = 0
 
-        for movie in movies:
+        for movie in chain((first_movie,), movies):
             total_processed += 1
             try:
                 text = self.prepare_text(movie)
@@ -205,8 +216,6 @@ class Indexer:
             total_failed,
             (perf_counter() - started_at) * 1000,
         )
-        if total_processed == 0:
-            logger.warning("No movies available for indexing: path=%s", filepath)
         if total_failed:
             raise RuntimeError(f"Failed to index {total_failed} of {total_processed} movies")
 
