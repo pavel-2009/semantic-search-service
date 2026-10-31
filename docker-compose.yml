@@ -10,7 +10,7 @@ services:
       test: ["CMD", "/usr/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333; printf 'GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 15
       start_period: 5s
     networks:
       - semantic-network
