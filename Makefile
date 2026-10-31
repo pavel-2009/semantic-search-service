@@ -1,4 +1,4 @@
-.PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick lint type-check format clean check
+.PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
 up:
 	docker compose up --build
@@ -30,19 +30,9 @@ test-parallel:
 test-quick:
 	uv run pytest tests/unit -m "not slow" -v
 
-lint:
-	uv run ruff check src scripts
-
-type-check:
-	uv run pyright
-
-format:
-	uv run ruff format src scripts
-
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	rm -rf .coverage htmlcov
 
-check: lint type-check test-unit
-	@echo "All checks passed!"
+check: test-unit

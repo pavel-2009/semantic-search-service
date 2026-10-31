@@ -5,7 +5,6 @@
 [![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-FF4F00?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)](https://docs.pytest.org/)
-[![Lint](https://img.shields.io/badge/lint-Ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![CI](https://img.shields.io/github/actions/workflow/status/pavel-2009/semantic-search-service/ci.yml?label=CI)](https://github.com/pavel-2009/semantic-search-service/actions)
 
 **Semantic movie search service built with Python, Sentence Transformers, Qdrant, FastAPI and Aiogram.**
@@ -25,7 +24,6 @@ Search is based on the meaning of a query rather than exact keyword matches. The
 - 🕷️ Data collection with [Scrapy](https://scrapy.org/) and [Playwright](https://playwright.dev/)
 - 🐳 Reproducible local environment with Docker Compose
 - 🧪 Automated tests with [pytest](https://docs.pytest.org/)
-- 🔍 Static analysis and formatting with [Ruff](https://docs.astral.sh/ruff/) and [Pyright](https://microsoft.github.io/pyright/)
 - 🔄 CI through GitHub Actions
 
 ## 🏗️ Architecture
@@ -337,7 +335,7 @@ Coverage:
 make test-cov
 ```
 
-Linting and type checking:
+Run the unit-test checks:
 
 ```bash
 make check
@@ -394,8 +392,6 @@ Qdrant data is persisted in the `qdrant_storage` Docker volume.
 | Runtime | Uvicorn |
 | Containers | Docker Compose |
 | Testing | pytest |
-| Linting / formatting | Ruff |
-| Type checking | Pyright |
 | Dependency management | uv |
 
 ## 📄 License
