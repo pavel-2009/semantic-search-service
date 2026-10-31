@@ -81,6 +81,20 @@ def test_index_movies_upserts_existing_movie_with_updated_fields(
     mock_embedding_model.encode.assert_called_once()
 
 
+@pytest.mark.parametrize("contents", ["", "invalid json\n"])
+def test_index_movies_with_no_valid_records_preserves_collection(
+    tmp_path, mock_qdrant_client, contents
+):
+    path = tmp_path / "movies.jsonl"
+    path.write_text(contents, encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="No movies available for indexing"):
+        Indexer().index_movies(path, force_recreate=True)
+
+    mock_qdrant_client.delete_collection.assert_not_called()
+    mock_qdrant_client.create_collection.assert_not_called()
+
+
 def test_index_movies_continues_after_movie_processing_failure(
     tmp_path, mock_qdrant_client, mock_embedding_model
 ):
