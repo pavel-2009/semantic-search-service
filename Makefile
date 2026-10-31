@@ -1,7 +1,7 @@
 .PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
 up:
-	docker compose up --build
+	docker compose up 
 
 down:
 	docker compose down
