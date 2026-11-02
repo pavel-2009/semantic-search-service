@@ -1,6 +1,9 @@
 """Tests for scraper module, API responses processing and data validation."""
 
 import pytest
+import json
+
+from scrapy.http import TextResponse, Request
 
 from src.scraper.schemas import (
     PoiskKinoCountry,
@@ -10,6 +13,7 @@ from src.scraper.schemas import (
     Movie,
     MoviesDocument
 )
+from src.scraper.spiders.movie_spider import MovieSpider
 
 
 class MockKinopoiskAPI:
@@ -84,3 +88,29 @@ class MockKinopoiskAPI:
             "page": 1,
             "pages": 1,
         }
+
+
+    def test_get_valid_response():
+        """Testing valid response processing"""
+
+        spider = MovieSpider()
+
+        payload = MockKinopoiskAPI.get_valid_movie_data()
+
+        request = Request(url="https://example.com/api/movies")
+
+        response = TextResponse(
+            url=request.url,
+            request=request,
+            body=json.dumps(payload).encode("utf-8"),
+            encoding="utf-8",
+        )
+
+        results = list(spider.parse(response))
+
+        assert len(results) == 3
+
+        assert results[0]["id"] == 1
+        assert results[0]["name"] == "Interstellar"
+        assert results[0]["rating"]["kp"] == 8.6
+        assert results[0]["year"] == 2014

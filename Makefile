@@ -22,7 +22,7 @@ test-all:
 	uv run pytest tests -v
 
 test-cov:
-	uv run pytest tests --cov=src --cov-report=html --cov-report=term
+	uv run pytest tests --cov=src --cov-report=term-missing
 
 test-parallel:
 	uv run pytest tests/performance -n 0 -v
