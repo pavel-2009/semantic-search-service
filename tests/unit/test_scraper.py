@@ -127,6 +127,28 @@ def test_get_valid_response():
     assert crawler.stats.get_value("scraper/pages_succeeded") == 1
 
 
+def test_get_invalid_response():
+    """Test that the spider correctly handles an invalid API response."""
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+
+    payload = MockKinopoiskAPI().get_invalid_movie_data()
+
+    request = Request(url="https://example.com/api/movies")
+
+    response = TextResponse(
+        url=request.url,
+        request=request,
+        body=json.dumps(payload).encode("utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(Exception):
+        list(spider.parse(response))
+
+    assert crawler.stats.get_value("scraper/response_validation_errors") == 1
+
+
 def test_parse_paginates_two_pages_with_matching_page_numbers():
     crawler = get_crawler(MovieSpider)
     spider = MovieSpider.from_crawler(crawler)
