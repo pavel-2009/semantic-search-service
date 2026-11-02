@@ -1,5 +1,7 @@
 """Tests for scraper module, API responses processing and data validation."""
 
+from collections.abc import Generator
+
 import pytest
 import json
 
@@ -90,6 +92,14 @@ class MockKinopoiskAPI:
             "pages": 1,
         }
 
+    def generate_paginated_movie_data(
+        self,
+    ) -> Generator[tuple[int, dict[str, object]], None, None]:
+        for requested_page, response_page in ((1, 1), (2, 2), (2, 3)):
+            payload = self.get_valid_movie_data()
+            payload.update({"page": response_page, "pages": 2})
+            yield requested_page, payload
+
 
 def test_get_valid_response():
     crawler = get_crawler(MovieSpider)
@@ -115,3 +125,62 @@ def test_get_valid_response():
     assert results[0].rating == 8.6
     assert results[0].year == 2014
     assert crawler.stats.get_value("scraper/pages_succeeded") == 1
+
+
+def test_parse_paginates_two_pages_with_matching_page_numbers():
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    spider.MAX_PAGES = 2
+    api = MockKinopoiskAPI()
+    pages = api.generate_paginated_movie_data()
+
+    for expected_page in (1, 2):
+        requested_page, payload = next(pages)
+        assert requested_page == expected_page
+
+        request = Request(
+            url="https://example.com/api/movies",
+            meta={"page": requested_page},
+        )
+        response = TextResponse(
+            url=request.url,
+            request=request,
+            body=json.dumps(payload).encode("utf-8"),
+            encoding="utf-8",
+        )
+
+        results = list(spider.parse(response))
+        movies = [result for result in results if not isinstance(result, Request)]
+        next_requests = [result for result in results if isinstance(result, Request)]
+        assert len(movies) == 3
+        assert len(next_requests) == (1 if expected_page == 1 else 0)
+        if expected_page == 1:
+            assert next_requests[0].meta["page"] == 2
+
+    assert crawler.stats.get_value("scraper/pages_succeeded") == 2
+
+
+def test_parse_rejects_response_with_mismatched_page_number():
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    api = MockKinopoiskAPI()
+    pages = api.generate_paginated_movie_data()
+    next(pages)
+    next(pages)
+    requested_page, payload = next(pages)
+
+    request = Request(
+        url="https://example.com/api/movies",
+        meta={"page": requested_page},
+    )
+    response = TextResponse(
+        url=request.url,
+        request=request,
+        body=json.dumps(payload).encode("utf-8"),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Requested page 2, but API returned page 3"):
+        list(spider.parse(response))
+
+    assert crawler.stats.get_value("scraper/pagination_errors") == 1
