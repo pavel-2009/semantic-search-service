@@ -1,6 +1,7 @@
 """Tests for scraper pipeline components."""
 
 from io import StringIO
+from pathlib import Path
 
 from src.scraper.pipelines import JsonPipeline
 from src.scraper.schemas import Movie
@@ -24,3 +25,30 @@ def test_process_item_returns_item() -> None:
 
     result = pipeline.process_item(item, spider=None)
     assert result == item
+
+
+def test_pipeline_writes_movies_to_json():
+    pipeline = JsonPipeline()
+
+    file = Path("test_movies.json")
+    pipeline.file = file.open("w", encoding="utf-8")
+
+    payload = {
+            "id": 1,
+            "title": "Интерстеллар",
+            "year": 2014,
+            "country": "США",
+            "genres": ["фантастика", "драма"],
+            "rating": 8.6,
+            "description": "Путешествие через космос и время.",
+        }
+    item = Movie.model_validate(payload)
+
+    pipeline.process_item(item, spider=None)
+    pipeline.close_spider(spider=None)
+
+    with file.open("r", encoding="utf-8") as f:
+        content = f.read()
+        assert content == (
+            '{"id": 1, "title": "Интерстеллар", "year": 2014, "country": "США", "director": null, "description": "Путешествие через космос и время.", "actors": [], "genres": ["фантастика", "драма"], "rating": 8.6, "poster_url": null}\n'
+        )
