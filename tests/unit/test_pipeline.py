@@ -1,5 +1,6 @@
 """Tests for scraper pipeline components."""
 
+import json
 from io import StringIO
 from pathlib import Path
 
@@ -52,3 +53,32 @@ def test_pipeline_writes_movies_to_json():
         assert content == (
             '{"id": 1, "title": "Интерстеллар", "year": 2014, "country": "США", "director": null, "description": "Путешествие через космос и время.", "actors": [], "genres": ["фантастика", "драма"], "rating": 8.6, "poster_url": null}\n'
         )
+
+
+def test_pipeline_writes_multiple_movies(tmp_path):
+    pipeline = JsonPipeline()
+    file = tmp_path / "test_movies.jsonl"
+    pipeline.file = file.open("w", encoding="utf-8")
+    movies = [
+        Movie(id=1, title="Интерстеллар"),
+        Movie(id=2, title="Начало"),
+    ]
+
+    for movie in movies:
+        pipeline.process_item(movie, spider=None)
+    pipeline.close_spider(spider=None)
+
+    written_movies = [
+        json.loads(line) for line in file.read_text(encoding="utf-8").splitlines()
+    ]
+    assert written_movies == [movie.model_dump() for movie in movies]
+
+
+def test_pipeline_writes_empty_list(tmp_path):
+    pipeline = JsonPipeline()
+    file = tmp_path / "test_movies.jsonl"
+    pipeline.file = file.open("w", encoding="utf-8")
+
+    pipeline.close_spider(spider=None)
+
+    assert file.read_text(encoding="utf-8") == ""
