@@ -240,6 +240,54 @@ def test_parse_movie_normalizes_movie_fields():
     assert movie.poster_url == "https://example.com/poster.jpg"
 
 
+def test_parse_movie_handles_missing_fields():
+    spider = MovieSpider()
+    data = PoiskKinoMovie.model_validate(
+        {
+            "id": 43,
+            "name": None,
+            "year": 2023,
+            "countries": [],
+            "persons": [],
+            "genres": [],
+            "rating": {"kp": None},
+            "poster": None,
+        }
+    )
+
+    movie = spider._parse_movie(data)
+
+    assert movie is not None
+    assert movie.id == 43
+    assert movie.title == "Без названия"
+    assert movie.country is None
+    assert movie.director is None
+    assert movie.actors == []
+    assert movie.genres == []
+    assert movie.rating is None
+    assert movie.poster_url is None
+
+
+def test_parse_movie_with_invalid_data_raises_exception():
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    data = PoiskKinoMovie.model_validate(
+        {
+            "id": 44,
+            "name": "Фильм",
+            "year": 2024,
+            "countries": [{"name": "Россия"}],
+            "persons": [],
+            "genres": [],
+            "rating": {"kp": 8.1},
+            "poster": None,
+        }
+    ).model_copy(update={"id": "invalid_id"})
+
+    assert spider._parse_movie(data) is None
+    assert crawler.stats.get_value("scraper/rejected_records") == 1
+
+
 def test_closed_logs_scraper_summary(caplog: pytest.LogCaptureFixture):
     crawler = get_crawler(MovieSpider)
     spider = MovieSpider.from_crawler(crawler)
