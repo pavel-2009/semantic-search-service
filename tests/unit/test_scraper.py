@@ -4,6 +4,7 @@ from collections.abc import Generator
 
 import pytest
 import json
+import logging
 
 from scrapy.http import TextResponse, Request
 from scrapy.utils.test import get_crawler
@@ -206,3 +207,54 @@ def test_parse_rejects_response_with_mismatched_page_number():
         list(spider.parse(response))
 
     assert crawler.stats.get_value("scraper/pagination_errors") == 1
+
+
+def test_parse_movie_normalizes_movie_fields():
+    spider = MovieSpider()
+    data = PoiskKinoMovie.model_validate(
+        {
+            "id": 42,
+            "name": "Фильм",
+            "year": 2024,
+            "countries": [{"name": "Россия"}, {"name": "Франция"}],
+            "persons": [
+                {"name": "Режиссёр", "profession": "режиссеры"},
+                {"enName": "Actor", "profession": "актеры"},
+            ],
+            "genres": [{"name": "драма"}],
+            "rating": {"kp": 8.1},
+            "poster": {"previewUrl": "https://example.com/poster.jpg"},
+        }
+    )
+
+    movie = spider._parse_movie(data)
+
+    assert movie is not None
+    assert movie.id == 42
+    assert movie.title == "Фильм"
+    assert movie.country == "Россия, Франция"
+    assert movie.director == "Режиссёр"
+    assert movie.actors == ["Actor"]
+    assert movie.genres == ["драма"]
+    assert movie.rating == 8.1
+    assert movie.poster_url == "https://example.com/poster.jpg"
+
+
+def test_closed_logs_scraper_summary(caplog: pytest.LogCaptureFixture):
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    crawler.stats.set_value("scraper/pages_succeeded", 2)
+    crawler.stats.set_value("scraper/rejected_records", 2)
+    crawler.stats.set_value("downloader/exception_count", 1)
+    crawler.stats.set_value("downloader/response_status_count/403", 3)
+    crawler.stats.set_value("downloader/response_status_count/500", 2)
+    crawler.stats.set_value("item_dropped_count", 1)
+    crawler.stats.set_value("item_scraped_count", 4)
+
+    with caplog.at_level(logging.INFO):
+        spider.closed("finished")
+
+    assert (
+        "successful_pages=2 failed_requests=3 rate_limited_responses=3 "
+        "extracted_movies=4 rejected_records=3 finish_reason=finished"
+    ) in caplog.text
