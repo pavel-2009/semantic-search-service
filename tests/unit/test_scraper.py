@@ -4,6 +4,7 @@ import pytest
 import json
 
 from scrapy.http import TextResponse, Request
+from scrapy.utils.test import get_crawler
 
 from src.scraper.schemas import (
     PoiskKinoCountry,
@@ -90,27 +91,27 @@ class MockKinopoiskAPI:
         }
 
 
-    def test_get_valid_response():
-        """Testing valid response processing"""
+def test_get_valid_response():
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
 
-        spider = MovieSpider()
+    payload = MockKinopoiskAPI().get_valid_movie_data()
 
-        payload = MockKinopoiskAPI.get_valid_movie_data()
+    request = Request(url="https://example.com/api/movies")
 
-        request = Request(url="https://example.com/api/movies")
+    response = TextResponse(
+        url=request.url,
+        request=request,
+        body=json.dumps(payload).encode("utf-8"),
+        encoding="utf-8",
+    )
 
-        response = TextResponse(
-            url=request.url,
-            request=request,
-            body=json.dumps(payload).encode("utf-8"),
-            encoding="utf-8",
-        )
+    results = list(spider.parse(response))
 
-        results = list(spider.parse(response))
+    assert len(results) == 3
 
-        assert len(results) == 3
-
-        assert results[0]["id"] == 1
-        assert results[0]["name"] == "Interstellar"
-        assert results[0]["rating"]["kp"] == 8.6
-        assert results[0]["year"] == 2014
+    assert results[0].id == 1
+    assert results[0].title == "Интерстеллар"
+    assert results[0].rating == 8.6
+    assert results[0].year == 2014
+    assert crawler.stats.get_value("scraper/pages_succeeded") == 1
