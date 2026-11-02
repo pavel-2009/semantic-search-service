@@ -4,8 +4,12 @@ import json
 from io import StringIO
 from pathlib import Path
 
+from scrapy.utils.test import get_crawler
+
+import src.scraper.pipelines as pipeline_module
 from src.scraper.pipelines import JsonPipeline
 from src.scraper.schemas import Movie
+from src.scraper.spiders.movie_spider import MovieSpider
 
 
 def test_process_item_returns_item() -> None:
@@ -82,3 +86,49 @@ def test_pipeline_writes_empty_list(tmp_path):
     pipeline.close_spider(spider=None)
 
     assert file.read_text(encoding="utf-8") == ""
+
+
+def test_pipeline_creates_output_directory(tmp_path, monkeypatch):
+    output_file = tmp_path / "missing" / "directory" / "movies.jsonl"
+    monkeypatch.setattr(pipeline_module, "DATA_FILE", output_file)
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    pipeline = JsonPipeline()
+
+    pipeline.open_spider(spider)
+
+    assert output_file.parent.is_dir()
+    assert pipeline.temp_file_path is not None
+    assert pipeline.temp_file_path.parent == output_file.parent
+    pipeline.close_spider(spider)
+    pipeline._on_spider_closed(spider, "cancelled")
+
+
+def test_pipeline_overwrites_existing_file(tmp_path, monkeypatch):
+    output_file = tmp_path / "movies.jsonl"
+    output_file.write_text("old contents\n", encoding="utf-8")
+    monkeypatch.setattr(pipeline_module, "DATA_FILE", output_file)
+    crawler = get_crawler(MovieSpider)
+    spider = MovieSpider.from_crawler(crawler)
+    pipeline = JsonPipeline()
+    movie = Movie(id=1, title="Новый фильм")
+
+    pipeline.open_spider(spider)
+    pipeline.process_item(movie, spider)
+    pipeline.close_spider(spider)
+    pipeline._on_spider_closed(spider, "finished")
+
+    assert output_file.read_text(encoding="utf-8") == (
+        json.dumps(movie.model_dump(), ensure_ascii=False) + "\n"
+    )
+    assert crawler.stats.get_value("scraper/export_committed") is True
+
+
+def test_pipeline_writes_valid_json():
+    pipeline = JsonPipeline()
+    pipeline.file = StringIO()
+    movie = Movie(id=1, title="Интерстеллар")
+
+    pipeline.process_item(movie, spider=None)
+
+    assert json.loads(pipeline.file.getvalue()) == movie.model_dump()
