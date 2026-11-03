@@ -112,3 +112,22 @@ def test_index_movies_stores_points_in_mock_qdrant(
     assert point.vector == expected_vector
     assert payload.id == movie.id
     assert payload.title == movie.title
+
+
+def test_index_movies_with_force_reindex_removes_existing_collection(
+    tmp_path: Path,
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    movie = Movie(id=1, title="Movie", description="Description")
+    filepath = tmp_path / "movies.jsonl"
+    filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
+
+    # First indexing
+    indexer.index_movies(filepath)
+    assert indexer.get_stats().points_count == 1
+
+    # Second indexing with force_reindex=True
+    indexer.index_movies(filepath, force_recreate=True)
+    stats: IndexerStats = indexer.get_stats()
+    assert stats.points_count == 1  # Should still be 1 after reindexing
