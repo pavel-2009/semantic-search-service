@@ -15,6 +15,17 @@ from scraper.schemas import Movie
 from services.indexer import Indexer
 
 
+@pytest.fixture
+def create_jsonl_file_with_200_movies_for_batching(tmp_path: Path) -> Path:
+    """Create a JSONL file with 200 movie entries for testing."""
+    filepath = tmp_path / "movies.jsonl"
+    with filepath.open("w", encoding="utf-8") as f:
+        for i in range(200):
+            movie = Movie(id=i, title=f"Movie {i}", description=f"Description {i}")
+            f.write(movie.model_dump_json() + "\n")
+    return filepath
+
+
 class MockQdrantClient:
     """Keep Qdrant collections and points in memory for unit tests."""
 
