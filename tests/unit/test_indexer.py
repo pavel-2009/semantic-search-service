@@ -175,3 +175,14 @@ def test_indexing_with_invalid_jsonl_file_raises_exception(
 
     with pytest.raises(RuntimeError):
         indexer.index_movies(invalid_jsonl_file)
+
+
+def test_batch_indexing_with_large_file(
+    create_jsonl_file_with_200_movies_for_batching: Path,
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    filepath = create_jsonl_file_with_200_movies_for_batching
+    indexer.index_movies(filepath)
+    stats: IndexerStats = indexer.get_stats()
+    assert stats.points_count == 200
