@@ -89,3 +89,26 @@ def indexer(
         staticmethod(lambda: MockEmbeddingModel()),
     )
     return Indexer()
+
+
+
+
+def test_index_movies_stores_points_in_mock_qdrant(
+    tmp_path: Path,
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    movie = Movie(id=42, title="Фильм", description="Описание")
+    filepath = tmp_path / "movies.jsonl"
+    filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
+
+    indexer.index_movies(filepath)
+    stats: IndexerStats = indexer.get_stats()
+    point = qdrant_client.collections[indexer.collection_name][movie.id]
+    payload = MoviePayload.model_validate(point.payload)
+
+    assert stats.points_count == 1
+    expected_vector = [float(len(indexer.prepare_text(movie)))] * settings.EMBEDDING_DIM
+    assert point.vector == expected_vector
+    assert payload.id == movie.id
+    assert payload.title == movie.title
