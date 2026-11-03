@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from pathlib import Path
 
+from pydantic import ValidationError
 import pytest
 from qdrant_client.http import models
 
@@ -131,3 +132,35 @@ def test_index_movies_with_force_reindex_removes_existing_collection(
     indexer.index_movies(filepath, force_recreate=True)
     stats: IndexerStats = indexer.get_stats()
     assert stats.points_count == 1  # Should still be 1 after reindexing
+
+
+def test_create_collection_with_existing_collection_does_not_fail(
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    # Create collection first time
+    indexer.create_collection()
+    assert indexer.get_stats().points_count == 0
+
+    # Create collection again, should not fail
+    indexer.create_collection()
+    assert indexer.get_stats().points_count == 0
+
+
+def test_indexing_with_unexisting_file_raises_exception(
+    indexer: Indexer,
+) -> None:
+    non_existent_file = Path("non_existent_file.jsonl")
+    with pytest.raises(FileNotFoundError):
+        indexer.index_movies(non_existent_file)
+
+
+def test_indexing_with_invalid_jsonl_file_raises_exception(
+    tmp_path: Path,
+    indexer: Indexer,
+) -> None:
+    invalid_jsonl_file = tmp_path / "invalid.jsonl"
+    invalid_jsonl_file.write_text("invalid json\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError):
+        indexer.index_movies(invalid_jsonl_file)
