@@ -1,5 +1,6 @@
 """Tests for the indexer module."""
 
+import random
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -35,6 +36,7 @@ class MockQdrantClient:
         self.collections: dict[str, dict[int | str, models.PointStruct]] = {}
         self.vector_configs: dict[str, models.VectorParams] = {}
         self.fail_upsert = False
+        self.fail_point_id: int | None = None
 
     def get_collections(self) -> SimpleNamespace:
         return SimpleNamespace(
@@ -66,6 +68,13 @@ class MockQdrantClient:
             )
         collection = self.collections[collection_name]
         for point in points:
+            if point.id == self.fail_point_id:
+                raise UnexpectedResponse(
+                    status_code=503,
+                    reason_phrase="Service Unavailable",
+                    content=b"Qdrant rejected this point",
+                    headers=Headers(),
+                )
             collection[point.id] = point
 
     def get_collection(self, collection_name: str) -> SimpleNamespace:
@@ -201,6 +210,32 @@ def test_indexing_raises_when_qdrant_returns_server_error(
         indexer.index_movies(filepath)
 
     assert qdrant_client.collections[indexer.collection_name] == {}
+
+
+def test_indexing_isolates_qdrant_error_for_random_point(
+    tmp_path: Path,
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    movies = [
+        Movie(id=movie_id, title=f"Movie {movie_id}", description="Description")
+        for movie_id in range(4)
+    ]
+    filepath = tmp_path / "movies.jsonl"
+    filepath.write_text(
+        "".join(movie.model_dump_json() + "\n" for movie in movies),
+        encoding="utf-8",
+    )
+    failed_point_id = random.randint(0, len(movies) - 1)
+    qdrant_client.fail_point_id = failed_point_id
+
+    with pytest.raises(RuntimeError, match="Failed to index 1 of 4 movies"):
+        indexer.index_movies(filepath, batch_size=len(movies))
+
+    stored_ids = set(qdrant_client.collections[indexer.collection_name])
+    assert stored_ids == {movie.id for movie in movies} - {
+        failed_point_id
+    }
 
 
 def test_batch_indexing_with_large_file(
