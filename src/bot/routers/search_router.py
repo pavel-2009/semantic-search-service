@@ -14,7 +14,6 @@ from core.dependencies import get_search_service
 
 logger = logging.getLogger(__name__)
 router = Router(name="search")
-search_service = get_search_service()
 
 
 def movie_card(movie: MovieResult, position: int) -> str:
@@ -66,6 +65,7 @@ async def _handle_search(message: Message, query: str) -> None:
         return
 
     try:
+        search_service = get_search_service()
         results = await asyncio.to_thread(
             search_service.search,
             SearchRequest(query=query, top_k=10, filters=None),
