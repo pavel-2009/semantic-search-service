@@ -8,6 +8,8 @@ from pydantic import ValidationError
 from core.config import PROJECT_ROOT, Settings
 from core.contracts import IndexerStats, MoviePayload
 from core.text_normalizer import clean_text
+from core.dependencies import get_search_service
+from backend.services.search_service import SearchService
 
 
 def test_clean_text_returns_empty_for_empty_or_whitespace_input() -> None:
@@ -131,3 +133,9 @@ def test_settings_reject_invalid_environment_value(
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_get_search_service_returns_instance() -> None:
+    service = get_search_service()
+    assert service is not None
+    assert isinstance(service, SearchService)  # Replace with actual type if known
