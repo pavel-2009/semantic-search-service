@@ -3,8 +3,10 @@
 from types import SimpleNamespace
 from pathlib import Path
 
+from httpx import Headers
 from pydantic import ValidationError
 import pytest
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http import models
 
 from core.config import settings
@@ -32,6 +34,7 @@ class MockQdrantClient:
     def __init__(self) -> None:
         self.collections: dict[str, dict[int | str, models.PointStruct]] = {}
         self.vector_configs: dict[str, models.VectorParams] = {}
+        self.fail_upsert = False
 
     def get_collections(self) -> SimpleNamespace:
         return SimpleNamespace(
@@ -54,6 +57,13 @@ class MockQdrantClient:
         collection_name: str,
         points: list[models.PointStruct],
     ) -> None:
+        if self.fail_upsert:
+            raise UnexpectedResponse(
+                status_code=503,
+                reason_phrase="Service Unavailable",
+                content=b"Qdrant is unavailable",
+                headers=Headers(),
+            )
         collection = self.collections[collection_name]
         for point in points:
             collection[point.id] = point
@@ -175,6 +185,22 @@ def test_indexing_with_invalid_jsonl_file_raises_exception(
 
     with pytest.raises(RuntimeError):
         indexer.index_movies(invalid_jsonl_file)
+
+
+def test_indexing_raises_when_qdrant_returns_server_error(
+    tmp_path: Path,
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    movie = Movie(id=1, title="Movie", description="Description")
+    filepath = tmp_path / "movies.jsonl"
+    filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
+    qdrant_client.fail_upsert = True
+
+    with pytest.raises(RuntimeError, match="Failed to index 1 of 1 movies"):
+        indexer.index_movies(filepath)
+
+    assert qdrant_client.collections[indexer.collection_name] == {}
 
 
 def test_batch_indexing_with_large_file(
