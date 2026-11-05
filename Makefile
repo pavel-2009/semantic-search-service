@@ -1,5 +1,7 @@
 .PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
+m ?= auto commit
+
 commit:
 	git add .
 	git commit -m "$(m)"
