@@ -6,6 +6,9 @@ commit:
 	git add .
 	git commit -m "$(m)"
 
+push:
+	git push
+
 up:
 	docker compose up 
 
