@@ -1,5 +1,9 @@
 .PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
+commit:
+	git add .
+	git commit -m "$(m)"
+
 up:
 	docker compose up 
 
