@@ -1,6 +1,7 @@
 """Build and store movie embeddings in Qdrant."""
 
 from collections.abc import Iterator
+from itertools import chain
 from pathlib import Path
 from time import perf_counter
 
@@ -26,6 +27,7 @@ class Indexer:
             config.collection_name,
             config.model_name,
         )
+        self.collection_name = config.collection_name
         self.repo = QdrantRepository(
             collection_name=config.collection_name,
             dense_dim=config.dense_dim,
@@ -39,6 +41,13 @@ class Indexer:
             min_plot_len=config.min_plot_length,
         )
         logger.info("Indexer initialized")
+
+    def create_collection(self, force_recreate: bool = False) -> None:
+        """Create or recreate the Qdrant collection."""
+        if force_recreate:
+            self.repo.recreate_collection()
+        else:
+            self.repo.create_collection()
 
     def recreate(self) -> None:
         """Recreate the Qdrant collection."""
@@ -89,31 +98,46 @@ class Indexer:
             force_recreate,
         )
 
-        if force_recreate:
-            self.repo.recreate_collection()
-        else:
-            self.repo.create_collection()
+        movies = self.load_movies(filepath)
+        first_movie = next(movies, None)
+        if first_movie is None:
+            logger.error("No valid movies available for indexing: path=%s", filepath)
+            raise RuntimeError(f"No movies available for indexing: {filepath}")
+
+        self.create_collection(force_recreate=force_recreate)
 
         batch: list[MovieCard] = []
+        total_processed = 0
         total_indexed = 0
-        for movie in self.load_movies(filepath):
+        total_failed = 0
+
+        for movie in chain((first_movie,), movies):
+            total_processed += 1
             batch.append(self._normalize_movie(movie))
-            if len(batch) >= batch_size:
-                points = self.embedder.embed_batch(batch)
-                self.repo.upsert_points(points)
-                total_indexed += len(points)
-                batch = []
+            if len(batch) < batch_size:
+                continue
+
+            points = self.embedder.embed_batch(batch)
+            indexed, failed = self.repo.upsert_points(points)
+            total_indexed += indexed
+            total_failed += failed
+            batch = []
 
         if batch:
             points = self.embedder.embed_batch(batch)
-            self.repo.upsert_points(points)
-            total_indexed += len(points)
+            indexed, failed = self.repo.upsert_points(points)
+            total_indexed += indexed
+            total_failed += failed
 
         logger.info(
-            "Indexing finished: indexed=%d duration_ms=%.1f",
+            "Indexing finished: processed=%d indexed=%d failed=%d duration_ms=%.1f",
+            total_processed,
             total_indexed,
+            total_failed,
             (perf_counter() - started_at) * 1000,
         )
+        if total_failed:
+            raise RuntimeError(f"Failed to index {total_failed} of {total_processed} movies")
 
     def get_stats(self) -> IndexerStats:
         """Return collection statistics."""

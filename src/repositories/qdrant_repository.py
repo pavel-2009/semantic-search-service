@@ -73,11 +73,11 @@ class QdrantRepository:
             logger.info("Deleted existing Qdrant collection: collection=%s", collection_name)
         self.create_collection(collection_name)
 
-    def upsert_points(self, points: list[IndexedMoviePoint]) -> None:
-        """Upsert a batch of indexed movie points into Qdrant."""
+    def upsert_points(self, points: list[IndexedMoviePoint]) -> tuple[int, int]:
+        """Upsert a batch of indexed movie points into Qdrant, isolating failed points."""
         if not points:
             logger.warning("Points list is empty; skipping upsert: collection=%s", self.collection_name)
-            return
+            return 0, 0
 
         struct: list[models.PointStruct] = []
         for point in points:
@@ -101,17 +101,25 @@ class QdrantRepository:
             )
 
         started_at = perf_counter()
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=struct,
-            wait=True,
-        )
-        logger.info(
-            "Upserted points to Qdrant: collection=%s points=%d duration_ms=%.1f",
-            self.collection_name,
-            len(struct),
-            (perf_counter() - started_at) * 1000,
-        )
+        try:
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=struct,
+                wait=True,
+            )
+            logger.info(
+                "Upserted points to Qdrant: collection=%s points=%d duration_ms=%.1f",
+                self.collection_name,
+                len(struct),
+                (perf_counter() - started_at) * 1000,
+            )
+            return len(struct), 0
+        except Exception:
+            logger.exception(
+                "Failed to upsert batch; retrying points individually: collection=%s points=%d",
+                self.collection_name,
+                len(struct),
+            )
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""

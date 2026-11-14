@@ -1,8 +1,7 @@
 """Embedder class for generating movie vectors."""
 
 from time import perf_counter
-
-from FlagEmbedding import BGEM3FlagModel
+from typing import Any
 
 from core.logger import get_logger
 from services.indexer.schemas import (
@@ -13,6 +12,7 @@ from services.indexer.schemas import (
 )
 
 logger = get_logger(__name__)
+BGEM3FlagModel: Any = None
 
 
 class MovieEmbedder:
@@ -34,7 +34,13 @@ class MovieEmbedder:
             use_fp16,
         )
         started_at = perf_counter()
-        self.model = BGEM3FlagModel(model_name, use_fp16=use_fp16, device=device)
+        model_cls = BGEM3FlagModel
+        if model_cls is None:
+            from FlagEmbedding import BGEM3FlagModel as _BGEM3FlagModel
+
+            model_cls = _BGEM3FlagModel
+
+        self.model = model_cls(model_name, use_fp16=use_fp16, device=device)
         self.batch_size = batch_size
         self.sparse_min_weight = sparse_min_weight
         self.min_plot_len = min_plot_len
