@@ -15,7 +15,7 @@ from core.contracts import IndexerStats, MoviePayload
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from scraper.schemas import Movie
-from services.indexer import Indexer
+from services.indexer.indexer import Indexer
 
 
 @pytest.fixture
