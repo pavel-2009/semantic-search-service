@@ -7,7 +7,7 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 from core.config import settings  # noqa: E402
-from services.indexer import Indexer  # noqa: E402
+from services.indexer.indexer import Indexer  # noqa: E402
 
 
 def main() -> None:
