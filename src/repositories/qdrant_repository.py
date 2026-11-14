@@ -42,7 +42,6 @@ class QdrantRepository:
             size=768,
             distance=models.Distance.COSINE
         )
-        ner_sparse_vector = 
 
         vectors_config["plot_vector"] = plot_vector
         vectors_config["vibe_vector"] = vibe_vector
