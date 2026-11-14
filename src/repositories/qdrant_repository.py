@@ -47,3 +47,12 @@ class QdrantRepository:
         vectors_config["vibe_vector"] = vibe_vector
 
         return vectors_config
+
+    def get_sparse_vectors_config(self):
+        sparse_vectors_config = {}
+
+        ner_sparse_vector = models.SparseVectorParams()
+
+        sparse_vectors_config["ner_sparse_vector"] = ner_sparse_vector
+
+        return sparse_vectors_config
