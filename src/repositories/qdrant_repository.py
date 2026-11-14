@@ -25,13 +25,13 @@ class QdrantRepository:
 
         self.client.create_collection(
             collection_name,
-            vectors_config=self.get_vectors_config(),
-            sparse_vectors_config=self.get_sparse_vectors_config()
+            vectors_config=self._get_vectors_config(),
+            sparse_vectors_config=self._get_sparse_vectors_config()
         )
         print(f"Collection {collection_name} created successfully")
     
 
-    def get_vectors_config(self):
+    def _get_vectors_config(self):
         vectors_config = {}
 
         plot_vector = models.VectorParams(
@@ -48,7 +48,7 @@ class QdrantRepository:
 
         return vectors_config
 
-    def get_sparse_vectors_config(self):
+    def _get_sparse_vectors_config(self):
         sparse_vectors_config = {}
 
         ner_sparse_vector = models.SparseVectorParams()
