@@ -1,5 +1,8 @@
 .PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
+indexer:
+	uv run python -m scripts.run_indexer
+
 m ?= auto commit
 
 commit:
