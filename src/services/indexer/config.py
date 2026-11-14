@@ -17,7 +17,7 @@ class IndexerConfig:
     sparse_min_weight: float = 0.08
     batch_size: int = 64
     min_plot_length: int = 15
-    dataset_path: Path = PROJECT_ROOT / "src" / "scraper" / "data" / "movies_dataset.jsonl"
+    dataset_path: Path = PROJECT_ROOT / "src" / "scraper" / "data" / "movies.jsonl"
 
 
 config = IndexerConfig()

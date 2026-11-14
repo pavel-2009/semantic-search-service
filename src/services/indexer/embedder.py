@@ -137,9 +137,11 @@ class MovieEmbedder:
         if card.keywords:
             parts.append(f"Атмосфера и теги: {', '.join(card.keywords)}.")
         era = [card.country] if card.country else []
-        era.append(f"{card.decade}-е годы")
-        parts.append(f"Страна и эпоха: {', '.join(era)}.")
-        return " ".join(parts)
+        if card.decade is not None:
+            era.append(f"{card.decade}-е годы")
+        if era:
+            parts.append(f"Страна и эпоха: {', '.join(era)}.")
+        return " ".join(parts) or card.title
 
     def _format_sparse(self, card: MovieCard) -> str:
         titles = f"{card.title} ({card.original_title})" if card.original_title else card.title

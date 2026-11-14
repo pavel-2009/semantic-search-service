@@ -1,16 +1,19 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class MovieCard(BaseModel):
-    """Input conract for movie card."""
+    """Input contract for movie card.
+
+    Also accepts the legacy scraper format (`id`, `description`, `director`).
+    """
     movie_id: int
     title: str
     original_title: Optional[str] = None
     synopsis: Optional[str] = None
-    year: int
-    rating: float = Field(ge=0.0, le=10.0)
-    duration_min: int = Field(gt=0)
+    year: Optional[int] = None
+    rating: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+    duration_min: Optional[int] = Field(default=None, gt=0)
     genres: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     directors: list[str] = Field(default_factory=list)
@@ -18,9 +21,31 @@ class MovieCard(BaseModel):
     country: Optional[str] = None
     poster_url: Optional[str] = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _from_legacy_format(cls, data: Any) -> Any:
+        """Map legacy scraper fields to the MovieCard contract."""
+        if not isinstance(data, dict) or "movie_id" in data:
+            return data
+
+        data = dict(data)
+        if "id" in data:
+            data["movie_id"] = data.pop("id")
+        if "description" in data and "synopsis" not in data:
+            data["synopsis"] = data.pop("description")
+        if "director" in data and "directors" not in data:
+            director = data.pop("director")
+            data["directors"] = [director] if director else []
+        return data
+
+    @field_validator("genres", "keywords", "directors", "actors", mode="before")
+    @classmethod
+    def _none_to_empty_list(cls, value: Any) -> Any:
+        return [] if value is None else value
+
     @property
-    def decade(self) -> int:
-        return (self.year // 10) * 10
+    def decade(self) -> Optional[int]:
+        return (self.year // 10) * 10 if self.year is not None else None
 
 
 class SparseVectorData(BaseModel):
@@ -32,15 +57,15 @@ class MoviePayload(BaseModel):
     """Payload contract for Qdrant."""
     movie_id: int
     title: str
-    original_title: Optional[str]
-    year: int
-    rating: float
-    duration_min: int
-    genres: list[str]
-    directors: list[str]
-    actors: list[str]
-    country: Optional[str]
-    poster_url: Optional[str]
+    original_title: Optional[str] = None
+    year: Optional[int] = None
+    rating: Optional[float] = None
+    duration_min: Optional[int] = None
+    genres: list[str] = Field(default_factory=list)
+    directors: list[str] = Field(default_factory=list)
+    actors: list[str] = Field(default_factory=list)
+    country: Optional[str] = None
+    poster_url: Optional[str] = None
 
 
 class IndexedMoviePoint(BaseModel):
