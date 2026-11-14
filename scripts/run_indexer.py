@@ -6,9 +6,9 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from core.logger import get_logger, setup_logging  # noqa: E402
-from services.indexer.config import config  # noqa: E402
-from services.indexer.indexer import Indexer  # noqa: E402
+from src.core.logger import get_logger, setup_logging  # noqa: E402
+from src.services.indexer.config import config  # noqa: E402
+from src.services.indexer.indexer import Indexer  # noqa: E402
 
 logger = get_logger(__name__)
 
