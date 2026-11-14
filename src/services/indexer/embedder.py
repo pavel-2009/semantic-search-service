@@ -1,0 +1,1 @@
+"""Embedder class for generation films vectors"""
