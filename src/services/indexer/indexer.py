@@ -39,7 +39,7 @@ class Indexer:
     def recreate(self):
         self.repo.recreate()
 
-    def load_movies(self, filepath: Path) -> Iterator[Movie]:
+    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[Movie]:
         """Read and validate one JSON Lines movie record at a time."""
         logger.info("Loading movies: path=%s", filepath)
 
@@ -77,84 +77,12 @@ class Indexer:
             raise ValueError("batch_size must be greater than zero")
         batch_size = min(batch_size, MAX_BATCH_SIZE)
 
-        started_at = perf_counter()
-        logger.info("Starting movie indexing: path=%s batch_size=%d", filepath, batch_size)
-        movies = self.load_movies(filepath)
-        first_movie = next(movies, None)
-        if first_movie is None:
-            logger.error("No valid movies available for indexing: path=%s", filepath)
-            raise RuntimeError(f"No movies available for indexing: {filepath}")
+        movies = self.load_movies()
 
-        self.create_collection(force_recreate=force_recreate)
-        batch: list[models.PointStruct] = []
-        total_processed = 0
-        total_indexed = 0
-        total_failed = 0
+        for movie in movies:
+            normalized_movie = self._normalize_movie(movie)
 
-        for movie in chain((first_movie,), movies):
-            total_processed += 1
-            try:
-                text = self.prepare_text(movie)
-                vector_started_at = perf_counter()
-                vector = self.model.encode(text).tolist()
-                logger.debug(
-                    "Vector created: movie_id=%d text_length=%d vector_dim=%d duration_ms=%.1f",
-                    movie.id,
-                    len(text),
-                    len(vector),
-                    (perf_counter() - vector_started_at) * 1000,
-                )
-                countries = [
-                    country.strip()
-                    for country in (movie.country or "").split(",")
-                    if country.strip()
-                ]
-                payload = MoviePayload(
-                    id=movie.id,
-                    title=movie.title,
-                    year=movie.year,
-                    country=movie.country,
-                    countries=countries,
-                    director=movie.director,
-                    description=movie.description,
-                    actors=movie.actors,
-                    genres=movie.genres,
-                    rating=movie.rating,
-                    poster_url=movie.poster_url,
-                )
-                point = models.PointStruct(
-                    id=movie.id,
-                    vector=vector,
-                    payload=payload.model_dump(),
-                )
-            except Exception:
-                total_failed += 1
-                logger.exception("Failed to prepare movie: movie_id=%d", movie.id)
-                continue
-
-            batch.append(point)
-            if len(batch) < batch_size:
-                continue
-
-            indexed, failed = self._upload_batch(batch)
-            total_indexed += indexed
-            total_failed += failed
-            batch = []
-
-        if batch:
-            indexed, failed = self._upload_batch(batch)
-            total_indexed += indexed
-            total_failed += failed
-
-        logger.info(
-            "Indexing finished: processed=%d indexed=%d failed=%d duration_ms=%.1f",
-            total_processed,
-            total_indexed,
-            total_failed,
-            (perf_counter() - started_at) * 1000,
-        )
-        if total_failed:
-            raise RuntimeError(f"Failed to index {total_failed} of {total_processed} movies")
+            self.repo.upsert_points(normalized_movie)
 
     def _upload_batch(self, points: list[models.PointStruct]) -> tuple[int, int]:
         """Upload a batch, isolating failed points if the batch request fails."""
