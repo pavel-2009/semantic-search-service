@@ -1,10 +1,20 @@
 """Embedder class for generating movie vectors."""
 
+import os
+from pathlib import Path
 from time import perf_counter
-from typing import Any
 
-from core.logger import get_logger
-from services.indexer.schemas import (
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+from FlagEmbedding import BGEM3FlagModel  # noqa: E402
+
+from core.logger import get_logger  # noqa: E402
+from services.indexer.config import config  # noqa: E402
+from services.indexer.schemas import (  # noqa: E402
     IndexedMoviePoint,
     MovieCard,
     MoviePayload,
@@ -12,41 +22,40 @@ from services.indexer.schemas import (
 )
 
 logger = get_logger(__name__)
-BGEM3FlagModel: Any = None
+LOCAL_BGE_MODEL_PATH = Path(__file__).resolve().parents[3] / "bge-m3"
 
 
 class MovieEmbedder:
-    """Embed movie card into vectors."""
+    """Embed movie card into vectors using the local BGE-M3 model."""
 
     def __init__(
         self,
-        model_name: str = "BAAI/bge-m3",
-        device: str = "cuda",
-        use_fp16: bool = True,
-        batch_size: int = 64,
-        sparse_min_weight: float = 0.08,
-        min_plot_len: int = 15,
+        model_name: str | Path = LOCAL_BGE_MODEL_PATH,
+        device: str = config.device,
+        use_fp16: bool = config.use_fp16,
+        batch_size: int = config.batch_size,
+        sparse_min_weight: float = config.sparse_min_weight,
+        min_plot_len: int = config.min_plot_length,
     ) -> None:
+        model_path = str(model_name)
         logger.info(
-            "Loading embedding model: model=%s device=%s fp16=%s",
-            model_name,
+            "Loading local BGE-M3 embedding model: path=%s device=%s fp16=%s",
+            model_path,
             device,
             use_fp16,
         )
         started_at = perf_counter()
-        model_cls = BGEM3FlagModel
-        if model_cls is None:
-            from FlagEmbedding import BGEM3FlagModel as _BGEM3FlagModel
-
-            model_cls = _BGEM3FlagModel
-
-        self.model = model_cls(model_name, use_fp16=use_fp16, device=device)
+        self.model = BGEM3FlagModel(
+            model_path,
+            use_fp16=use_fp16,
+            device=device,
+        )
         self.batch_size = batch_size
         self.sparse_min_weight = sparse_min_weight
         self.min_plot_len = min_plot_len
         logger.info(
-            "Embedding model loaded: model=%s duration_ms=%.1f",
-            model_name,
+            "Embedding model loaded: path=%s duration_ms=%.1f",
+            model_path,
             (perf_counter() - started_at) * 1000,
         )
 
