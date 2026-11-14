@@ -57,6 +57,18 @@ class QdrantRepository:
         self.create_collection(collection_name)
     
 
+    def upsert_points(self, points):
+        if not points:
+            print("Points list is empty")
+            return
+
+        self.client.upsert(
+            collection_name=self.collection_name,
+            points=points,
+            wait=True
+        )
+
+
     def _get_vectors_config(self):
         vectors_config = {}
 
