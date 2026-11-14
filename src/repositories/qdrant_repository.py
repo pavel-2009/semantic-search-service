@@ -23,9 +23,28 @@ class QdrantRepository:
             print(f"Collection {collection_name} already exists")
             return
 
-        self.client.create_collection(collection_name, vectors_config=self.get_vectors_config())
+        self.client.create_collection(
+            collection_name,
+            vectors_config=self.get_vectors_config(),
+            sparse_vectors_config=self.get_sparse_vectors_config()
+        )
         print(f"Collection {collection_name} created successfully")
     
 
     def get_vectors_config(self):
+        vectors_config = {}
 
+        plot_vector = models.VectorParams(
+            size=768,
+            distance=models.Distance.COSINE
+        )
+        vibe_vector = models.VectorParams(
+            size=768,
+            distance=models.Distance.COSINE
+        )
+        ner_sparse_vector = 
+
+        vectors_config["plot_vector"] = plot_vector
+        vectors_config["vibe_vector"] = vibe_vector
+
+        return vectors_config
