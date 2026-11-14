@@ -6,7 +6,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from core.config import settings  # noqa: E402
+from services.indexer.config import config  # noqa: E402
 from services.indexer.indexer import Indexer  # noqa: E402
 
 
@@ -15,17 +15,17 @@ def main() -> None:
     print("=" * 60)
     print("🚀 ЗАПУСК ИНДЕКСАТОРА")
     print("=" * 60)
-    print(f"📁 Данные: {settings.DATA_PATH}")
-    print(f"💾 Qdrant: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
-    print(f"📚 Коллекция: {settings.QDRANT_COLLECTION}")
-    print(f"🧠 Модель: {settings.EMBEDDING_MODEL}")
-    print(f"📦 Batch size: {settings.BATCH_SIZE}")
+    print(f"📁 Данные: {config.dataset_path}")
+    print(f"💾 Qdrant: {config.qdrant_url}")
+    print(f"📚 Коллекция: {config.collection_name}")
+    print(f"🧠 Модель: {config.model_name}")
+    print(f"📦 Batch size: {config.batch_size}")
     print("=" * 60)
 
     indexer = Indexer()
     indexer.index_movies(
-        filepath=settings.DATA_PATH,
-        batch_size=settings.BATCH_SIZE,
+        filepath=config.dataset_path,
+        batch_size=config.batch_size,
         force_recreate=True,
     )
 
