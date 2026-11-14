@@ -28,6 +28,23 @@ class QdrantRepository:
             vectors_config=self._get_vectors_config(),
             sparse_vectors_config=self._get_sparse_vectors_config()
         )
+
+        indexes = {
+            "year": models.PayloadSchemaType.INTEGER,
+            "rating": models.PayloadSchemaType.FLOAT,
+            "duration_min": models.PayloadSchemaType.INTEGER,
+            "genres": models.PayloadSchemaType.KEYWORD,
+            "directors": models.PayloadSchemaType.KEYWORD,
+            "actors": models.PayloadSchemaType.KEYWORD,
+        }
+
+        for field, schema in indexes.items():
+            self.client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field,
+                field_schema=schema
+            )
+
         print(f"Collection {collection_name} created successfully")
 
     
@@ -56,6 +73,7 @@ class QdrantRepository:
         vectors_config["vibe_vector"] = vibe_vector
 
         return vectors_config
+
 
     def _get_sparse_vectors_config(self):
         sparse_vectors_config = {}
