@@ -1,15 +1,14 @@
 """Shared embedding model loader."""
 
-import logging
 from time import perf_counter
 
 from sentence_transformers import SentenceTransformer
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from core.config import settings
+from core.logger import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ModelLoader:

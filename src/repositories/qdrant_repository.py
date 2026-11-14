@@ -1,11 +1,16 @@
 """Qdrant database repository for indexer and search service."""
 
+from time import perf_counter
+
 from qdrant_client import models
 
 from core.contracts import IndexerStats
+from core.logger import get_logger
 from core.qdrant_client import QdrantClientSingleton
 from services.indexer.config import config
 from services.indexer.schemas import IndexedMoviePoint
+
+logger = get_logger(__name__)
 
 
 class QdrantRepository:
@@ -23,11 +28,17 @@ class QdrantRepository:
     def create_collection(self, collection_name: str | None = None) -> None:
         """Create the collection and payload indexes if it does not exist."""
         collection_name = collection_name or self.collection_name
+        logger.info("Checking Qdrant collection: collection=%s", collection_name)
 
         if self.client.collection_exists(collection_name):
-            print(f"Collection {collection_name} already exists")
+            logger.info("Collection already exists: collection=%s", collection_name)
             return
 
+        logger.info(
+            "Creating Qdrant collection: collection=%s dense_dim=%d",
+            collection_name,
+            self.dense_dim,
+        )
         self.client.create_collection(
             collection_name=collection_name,
             vectors_config=self._get_vectors_config(),
@@ -50,20 +61,22 @@ class QdrantRepository:
                 field_schema=schema,
             )
 
-        print(f"Collection {collection_name} created successfully")
+        logger.info("Qdrant collection created successfully: collection=%s", collection_name)
 
     def recreate_collection(self, collection_name: str | None = None) -> None:
         """Delete and recreate the collection."""
         collection_name = collection_name or self.collection_name
+        logger.info("Recreating Qdrant collection: collection=%s", collection_name)
 
         if self.client.collection_exists(collection_name):
             self.client.delete_collection(collection_name)
+            logger.info("Deleted existing Qdrant collection: collection=%s", collection_name)
         self.create_collection(collection_name)
 
     def upsert_points(self, points: list[IndexedMoviePoint]) -> None:
         """Upsert a batch of indexed movie points into Qdrant."""
         if not points:
-            print("Points list is empty")
+            logger.warning("Points list is empty; skipping upsert: collection=%s", self.collection_name)
             return
 
         struct: list[models.PointStruct] = []
@@ -87,15 +100,23 @@ class QdrantRepository:
                 )
             )
 
+        started_at = perf_counter()
         self.client.upsert(
             collection_name=self.collection_name,
             points=struct,
             wait=True,
         )
+        logger.info(
+            "Upserted points to Qdrant: collection=%s points=%d duration_ms=%.1f",
+            self.collection_name,
+            len(struct),
+            (perf_counter() - started_at) * 1000,
+        )
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
         collection_name = collection_name or self.collection_name
+        logger.debug("Fetching Qdrant collection stats: collection=%s", collection_name)
         collection_info = self.client.get_collection(collection_name)
         return IndexerStats(
             collection=collection_name,

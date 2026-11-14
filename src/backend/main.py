@@ -1,6 +1,5 @@
 """Entry point for FastAPI application."""
 
-import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -12,12 +11,10 @@ from fastapi.responses import JSONResponse
 from backend.api.info_router import get_info_service, router as info_router
 from backend.api.search_router import router as search_router
 from core.config import settings
+from core.logger import get_logger, setup_logging
 
-logging.basicConfig(
-    level=settings.LOG_LEVEL.upper(),
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager

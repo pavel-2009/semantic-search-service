@@ -1,6 +1,5 @@
 """Service for semantic movie search in Qdrant."""
 
-import logging
 from time import perf_counter
 
 from qdrant_client import QdrantClient
@@ -11,11 +10,12 @@ from sentence_transformers import SentenceTransformer
 from backend.schemas import MovieResult, SearchFilters, SearchRequest, StatsResponse
 from core.config import settings
 from core.contracts import MoviePayload
+from core.logger import get_logger
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SearchService:

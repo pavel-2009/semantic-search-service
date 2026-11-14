@@ -1,5 +1,4 @@
 import json
-import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TextIO
@@ -7,10 +6,11 @@ from typing import TextIO
 from scrapy import signals
 from scrapy.spiders import Spider
 
+from core.logger import get_logger
 from scraper.schemas import Movie
 
 DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.jsonl"
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class JsonPipeline:

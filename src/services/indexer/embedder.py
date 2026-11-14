@@ -1,18 +1,22 @@
-"""Embedder class for generation films vectors"""
+"""Embedder class for generating movie vectors."""
 
+from time import perf_counter
 
 from FlagEmbedding import BGEM3FlagModel
 
+from core.logger import get_logger
 from services.indexer.schemas import (
-    MovieCard,
     IndexedMoviePoint,
+    MovieCard,
     MoviePayload,
     SparseVectorData,
 )
 
+logger = get_logger(__name__)
+
 
 class MovieEmbedder:
-    """Embed movie card into vectors"""
+    """Embed movie card into vectors."""
 
     def __init__(
         self,
@@ -22,28 +26,38 @@ class MovieEmbedder:
         batch_size: int = 64,
         sparse_min_weight: float = 0.08,
         min_plot_len: int = 15,
-    ):
+    ) -> None:
+        logger.info(
+            "Loading embedding model: model=%s device=%s fp16=%s",
+            model_name,
+            device,
+            use_fp16,
+        )
+        started_at = perf_counter()
         self.model = BGEM3FlagModel(model_name, use_fp16=use_fp16, device=device)
         self.batch_size = batch_size
         self.sparse_min_weight = sparse_min_weight
         self.min_plot_len = min_plot_len
-
+        logger.info(
+            "Embedding model loaded: model=%s duration_ms=%.1f",
+            model_name,
+            (perf_counter() - started_at) * 1000,
+        )
 
     def embed_batch(self, cards: list[MovieCard]) -> list[IndexedMoviePoint]:
-        """Embed movies into plot, vibe and NER vectors"""
-
+        """Embed movies into plot, vibe and NER vectors."""
         if not cards:
-            print("No movies to embed")
+            logger.warning("No movies to embed")
             return []
 
-        # Prepairing
+        started_at = perf_counter()
         plot_map: dict[int, int] = {}
         dense_texts: list[str] = []
         sparse_texts: list[str] = []
 
         for idx, card in enumerate(cards):
             plot_str = self._format_plot(card)
-            
+
             if plot_str:
                 plot_map[idx] = len(dense_texts)
                 dense_texts.append(plot_str)
@@ -86,6 +100,12 @@ class MovieEmbedder:
                 )
             )
 
+        logger.debug(
+            "Embedded movie batch: cards=%d with_plot=%d duration_ms=%.1f",
+            len(cards),
+            len(plot_map),
+            (perf_counter() - started_at) * 1000,
+        )
         return points
 
 

@@ -2,7 +2,6 @@
 
 import asyncio
 import html
-import logging
 
 from aiogram import F, Router
 from aiogram.enums import ParseMode
@@ -11,8 +10,9 @@ from aiogram.types import CallbackQuery
 from backend.schemas import MovieResult
 from backend.services.search_service import SearchService
 from core.dependencies import get_search_service
+from core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = Router(name="info")
 
 

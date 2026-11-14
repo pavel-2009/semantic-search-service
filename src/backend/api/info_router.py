@@ -1,6 +1,5 @@
 """Service and movie information API routes."""
 
-import logging
 from time import perf_counter
 from typing import Annotated
 
@@ -10,8 +9,9 @@ from starlette.concurrency import run_in_threadpool
 from backend.schemas import HealthResponse, MovieResult, StatsResponse
 from backend.services.search_service import SearchService
 from core.dependencies import get_search_service
+from core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])
 SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 

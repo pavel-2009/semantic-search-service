@@ -1,7 +1,6 @@
 """Telegram bot entry point."""
 
 import asyncio
-import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
@@ -10,8 +9,10 @@ from aiogram.types import Message
 
 from bot.routers import info_router, search_router
 from core.config import settings
+from core.logger import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher()
