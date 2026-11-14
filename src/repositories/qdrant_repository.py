@@ -29,6 +29,15 @@ class QdrantRepository:
             sparse_vectors_config=self._get_sparse_vectors_config()
         )
         print(f"Collection {collection_name} created successfully")
+
+    
+    def recreate_collection(self, collection_name):
+        """Collection recreation"""
+        if not collection_name:
+            collection_name = self.collection_name
+
+        self.client.delete_collection(collection_name)
+        self.create_collection(collection_name)
     
 
     def _get_vectors_config(self):
