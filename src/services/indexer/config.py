@@ -13,3 +13,5 @@ class IndexerConfig:
     sparse_min_weight: float = 0.08
     batch_size: int = 64
     min_plot_length: int = 15
+
+config = IndexerConfig()
