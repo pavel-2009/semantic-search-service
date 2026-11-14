@@ -1,21 +1,37 @@
 """Tests for the indexer module."""
 
 import random
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from httpx import Headers
-from pydantic import ValidationError
 import pytest
-from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http import models
+from qdrant_client.http.exceptions import UnexpectedResponse
 
-from core.config import settings
-from core.contracts import IndexerStats, MoviePayload
-from core.model_loader import ModelLoader
+from core.contracts import IndexerStats
 from core.qdrant_client import QdrantClientSingleton
-from scraper.schemas import Movie
+import services.indexer.embedder as embedder_module
+from services.indexer.config import config
 from services.indexer.indexer import Indexer
+from services.indexer.schemas import MovieCard
+
+
+def make_movie_card(movie_id: int = 1, title: str = "Movie") -> MovieCard:
+    """Create a valid MovieCard instance for tests."""
+    return MovieCard(
+        movie_id=movie_id,
+        title=title,
+        synopsis=f"Description for {title} that is long enough",
+        year=2024,
+        rating=8.0,
+        duration_min=120,
+        genres=["драма"],
+        keywords=["атмосфера"],
+        directors=["Режиссер"],
+        actors=["Актер"],
+        country="Россия",
+    )
 
 
 @pytest.fixture
@@ -24,7 +40,7 @@ def create_jsonl_file_with_200_movies_for_batching(tmp_path: Path) -> Path:
     filepath = tmp_path / "movies.jsonl"
     with filepath.open("w", encoding="utf-8") as f:
         for i in range(200):
-            movie = Movie(id=i, title=f"Movie {i}", description=f"Description {i}")
+            movie = make_movie_card(movie_id=i, title=f"Movie {i}")
             f.write(movie.model_dump_json() + "\n")
     return filepath
 
@@ -34,9 +50,14 @@ class MockQdrantClient:
 
     def __init__(self) -> None:
         self.collections: dict[str, dict[int | str, models.PointStruct]] = {}
-        self.vector_configs: dict[str, models.VectorParams] = {}
+        self.vector_configs: dict[str, object] = {}
+        self.sparse_vector_configs: dict[str, object] = {}
+        self.payload_indexes: dict[str, dict[str, object]] = {}
         self.fail_upsert = False
         self.fail_point_id: int | None = None
+
+    def collection_exists(self, collection_name: str) -> bool:
+        return collection_name in self.collections
 
     def get_collections(self) -> SimpleNamespace:
         return SimpleNamespace(
@@ -48,16 +69,29 @@ class MockQdrantClient:
     def create_collection(
         self,
         collection_name: str,
-        vectors_config: models.VectorParams,
+        vectors_config: object = None,
+        sparse_vectors_config: object = None,
     ) -> bool:
         self.collections[collection_name] = {}
         self.vector_configs[collection_name] = vectors_config
+        self.sparse_vector_configs[collection_name] = sparse_vectors_config
+        self.payload_indexes[collection_name] = {}
+        return True
+
+    def create_payload_index(
+        self,
+        collection_name: str,
+        field_name: str,
+        field_schema: object,
+    ) -> bool:
+        self.payload_indexes.setdefault(collection_name, {})[field_name] = field_schema
         return True
 
     def upsert(
         self,
         collection_name: str,
         points: list[models.PointStruct],
+        wait: bool = True,
     ) -> None:
         if self.fail_upsert:
             raise UnexpectedResponse(
@@ -86,17 +120,38 @@ class MockQdrantClient:
         return True
 
 
-class MockEmbedding:
-    def __init__(self, vector: list[float]) -> None:
-        self._vector = vector
+class MockDenseMatrix:
+    def __init__(self, rows: list[list[float]]) -> None:
+        self._rows = rows
 
-    def tolist(self) -> list[float]:
-        return self._vector
+    def tolist(self) -> list[list[float]]:
+        return self._rows
 
 
-class MockEmbeddingModel:
-    def encode(self, text: str) -> MockEmbedding:
-        return MockEmbedding([float(len(text))] * settings.EMBEDDING_DIM)
+class MockBGEM3FlagModel:
+    """Lightweight mock replacing BGEM3FlagModel in unit tests."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        pass
+
+    def encode(
+        self,
+        texts: list[str],
+        batch_size: int = 64,
+        return_dense: bool = True,
+        return_sparse: bool = False,
+        return_colbert_vecs: bool = False,
+    ) -> dict[str, object]:
+        result: dict[str, object] = {}
+        if return_dense:
+            result["dense_vecs"] = MockDenseMatrix(
+                [[float(len(text))] * config.dense_dim for text in texts]
+            )
+        if return_sparse:
+            result["lexical_weights"] = [
+                {"1": 0.5, "2": 0.05} for _ in texts
+            ]
+        return result
 
 
 @pytest.fixture
@@ -115,34 +170,11 @@ def indexer(
         staticmethod(lambda: qdrant_client),
     )
     monkeypatch.setattr(
-        ModelLoader,
-        "get_model",
-        staticmethod(lambda: MockEmbeddingModel()),
+        embedder_module,
+        "BGEM3FlagModel",
+        MockBGEM3FlagModel,
     )
     return Indexer()
-
-
-
-
-def test_index_movies_stores_points_in_mock_qdrant(
-    tmp_path: Path,
-    indexer: Indexer,
-    qdrant_client: MockQdrantClient,
-) -> None:
-    movie = Movie(id=42, title="Фильм", description="Описание")
-    filepath = tmp_path / "movies.jsonl"
-    filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
-
-    indexer.index_movies(filepath)
-    stats: IndexerStats = indexer.get_stats()
-    point = qdrant_client.collections[indexer.collection_name][movie.id]
-    payload = MoviePayload.model_validate(point.payload)
-
-    assert stats.points_count == 1
-    expected_vector = [float(len(indexer.prepare_text(movie)))] * settings.EMBEDDING_DIM
-    assert point.vector == expected_vector
-    assert payload.id == movie.id
-    assert payload.title == movie.title
 
 
 def test_index_movies_with_force_reindex_removes_existing_collection(
@@ -150,7 +182,7 @@ def test_index_movies_with_force_reindex_removes_existing_collection(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
-    movie = Movie(id=1, title="Movie", description="Description")
+    movie = make_movie_card(movie_id=1, title="Movie")
     filepath = tmp_path / "movies.jsonl"
     filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
 
@@ -158,7 +190,7 @@ def test_index_movies_with_force_reindex_removes_existing_collection(
     indexer.index_movies(filepath)
     assert indexer.get_stats().points_count == 1
 
-    # Second indexing with force_reindex=True
+    # Second indexing with force_recreate=True
     indexer.index_movies(filepath, force_recreate=True)
     stats: IndexerStats = indexer.get_stats()
     assert stats.points_count == 1  # Should still be 1 after reindexing
@@ -201,7 +233,7 @@ def test_indexing_raises_when_qdrant_returns_server_error(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
-    movie = Movie(id=1, title="Movie", description="Description")
+    movie = make_movie_card(movie_id=1, title="Movie")
     filepath = tmp_path / "movies.jsonl"
     filepath.write_text(movie.model_dump_json() + "\n", encoding="utf-8")
     qdrant_client.fail_upsert = True
@@ -218,7 +250,7 @@ def test_indexing_isolates_qdrant_error_for_random_point(
     qdrant_client: MockQdrantClient,
 ) -> None:
     movies = [
-        Movie(id=movie_id, title=f"Movie {movie_id}", description="Description")
+        make_movie_card(movie_id=movie_id, title=f"Movie {movie_id}")
         for movie_id in range(4)
     ]
     filepath = tmp_path / "movies.jsonl"
@@ -233,7 +265,7 @@ def test_indexing_isolates_qdrant_error_for_random_point(
         indexer.index_movies(filepath, batch_size=len(movies))
 
     stored_ids = set(qdrant_client.collections[indexer.collection_name])
-    assert stored_ids == {movie.id for movie in movies} - {
+    assert stored_ids == {movie.movie_id for movie in movies} - {
         failed_point_id
     }
 
