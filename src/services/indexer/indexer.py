@@ -2,22 +2,15 @@
 
 import logging
 from collections.abc import Iterator
-from itertools import chain
 from pathlib import Path
-from time import perf_counter
 
 from pydantic import ValidationError
-from qdrant_client.http import models
 
-from core.config import settings
-from core.contracts import IndexerStats, MoviePayload
-from core.model_loader import ModelLoader
-from core.qdrant_client import QdrantClientSingleton
-from core.text_normalizer import clean_text
-from scraper.schemas import Movie
-from services.indexer.embedder import MovieEmbedder
-from services.indexer.config import config
+from core.contracts import IndexerStats
 from repositories.qdrant_repository import QdrantRepository
+from services.indexer.config import config
+from services.indexer.embedder import MovieEmbedder
+from services.indexer.schemas import MovieCard
 
 logger = logging.getLogger(__name__)
 MAX_BATCH_SIZE = config.batch_size
@@ -29,18 +22,29 @@ class Indexer:
     def __init__(self) -> None:
         logger.info(
             "Initializing indexer: collection=%s model=%s",
-            settings.QDRANT_COLLECTION,
-            settings.EMBEDDING_MODEL,
+            config.collection_name,
+            config.model_name,
         )
-        self.repo = QdrantRepository()
-        self.embedder = MovieEmbedder()
+        self.repo = QdrantRepository(
+            collection_name=config.collection_name,
+            dense_dim=config.dense_dim,
+        )
+        self.embedder = MovieEmbedder(
+            model_name=config.model_name,
+            device=config.device,
+            use_fp16=config.use_fp16,
+            batch_size=config.batch_size,
+            sparse_min_weight=config.sparse_min_weight,
+            min_plot_len=config.min_plot_length,
+        )
         logger.info("Indexer initialized")
 
-    def recreate(self):
-        self.repo.recreate()
+    def recreate(self) -> None:
+        """Recreate the Qdrant collection."""
+        self.repo.recreate_collection()
 
-    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[Movie]:
-        """Read and validate one JSON Lines movie record at a time."""
+    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[MovieCard]:
+        """Read and validate one JSON Lines movie card record at a time."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
@@ -52,7 +56,7 @@ class Indexer:
                 if not line.strip():
                     continue
                 try:
-                    yield Movie.model_validate_json(line)
+                    yield MovieCard.model_validate_json(line)
                 except ValidationError:
                     logger.exception(
                         "Skipping invalid movie record: path=%s line=%d",
@@ -61,76 +65,46 @@ class Indexer:
                     )
 
     @staticmethod
-    def _normalize_movie(movie: Movie) -> Movie:
-        """Return a movie validated against the canonical movie contract."""
-        return Movie.model_validate(movie)
-
+    def _normalize_movie(movie: MovieCard) -> MovieCard:
+        """Return a movie validated against the canonical movie card contract."""
+        return MovieCard.model_validate(movie)
 
     def index_movies(
         self,
-        filepath: Path,
-        batch_size: int = settings.BATCH_SIZE,
+        filepath: Path = config.dataset_path,
+        batch_size: int = config.batch_size,
         force_recreate: bool = False,
     ) -> None:
-        """Create embeddings and upsert movies into Qdrant."""
+        """Create embeddings and upsert movies into Qdrant in batches."""
         if batch_size < 1:
             raise ValueError("batch_size must be greater than zero")
         batch_size = min(batch_size, MAX_BATCH_SIZE)
 
-        movies = self.load_movies()
+        if force_recreate:
+            self.repo.recreate_collection()
+        else:
+            self.repo.create_collection()
 
-        for movie in movies:
-            normalized_movie = self._normalize_movie(movie)
+        batch: list[MovieCard] = []
+        for movie in self.load_movies(filepath):
+            batch.append(self._normalize_movie(movie))
+            if len(batch) >= batch_size:
+                points = self.embedder.embed_batch(batch)
+                self.repo.upsert_points(points)
+                batch = []
 
-            self.repo.upsert_points(normalized_movie)
-
-    def _upload_batch(self, points: list[models.PointStruct]) -> tuple[int, int]:
-        """Upload a batch, isolating failed points if the batch request fails."""
-        logger.info(
-            "Uploading vectors to Qdrant: collection=%s points=%d",
-            self.collection_name,
-            len(points),
-        )
-        try:
-            upsert_started_at = perf_counter()
-            self.qdrant.upsert(collection_name=self.collection_name, points=points)
-            logger.info(
-                "Vectors uploaded: collection=%s points=%d duration_ms=%.1f",
-                self.collection_name,
-                len(points),
-                (perf_counter() - upsert_started_at) * 1000,
-            )
-            return len(points), 0
-        except Exception:
-            logger.exception(
-                "Failed to upsert batch; retrying points individually: collection=%s points=%d",
-                self.collection_name,
-                len(points),
-            )
-
-        indexed = 0
-        failed = 0
-        for point in points:
-            try:
-                self.qdrant.upsert(collection_name=self.collection_name, points=[point])
-                indexed += 1
-            except Exception:
-                failed += 1
-                logger.exception("Failed to upsert movie: movie_id=%s", point.id)
-        return indexed, failed
+        if batch:
+            points = self.embedder.embed_batch(batch)
+            self.repo.upsert_points(points)
 
     def get_stats(self) -> IndexerStats:
         """Return collection statistics."""
-        logger.info("Fetching Qdrant collection stats: collection=%s", self.collection_name)
-        collection_info = self.qdrant.get_collection(self.collection_name)
+        logger.info("Fetching Qdrant collection stats: collection=%s", self.repo.collection_name)
+        stats = self.repo.get_stats()
         logger.info(
             "Qdrant collection stats received: collection=%s points=%s status=%s",
-            self.collection_name,
-            collection_info.points_count,
-            collection_info.status,
+            stats.collection,
+            stats.points_count,
+            stats.status,
         )
-        return IndexerStats(
-            collection=self.collection_name,
-            points_count=collection_info.points_count or 0,
-            status=str(collection_info.status),
-        )
+        return stats
