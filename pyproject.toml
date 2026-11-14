@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings>=2.15.0",
     "tenacity>=9.1.4",
     "uvicorn>=0.52.4",
+    "pymorphy3>=2.0.6",
 ]
 
 [build-system]
