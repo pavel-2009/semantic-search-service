@@ -87,3 +87,43 @@ class MovieEmbedder:
             )
 
         return points
+
+
+    def _format_plot(self, card: MovieCard) -> str | None:
+        if not card.synopsis:
+            return None
+        clean = card.synopsis.strip()
+        return clean if len(clean) >= self.min_plot_len else None
+
+    def _format_vibe(self, card: MovieCard) -> str:
+        parts = []
+        if card.genres:
+            parts.append(f"Жанры: {', '.join(card.genres)}.")
+        if card.keywords:
+            parts.append(f"Атмосфера и теги: {', '.join(card.keywords)}.")
+        era = [card.country] if card.country else []
+        era.append(f"{card.decade}-е годы")
+        parts.append(f"Страна и эпоха: {', '.join(era)}.")
+        return " ".join(parts)
+
+    def _format_sparse(self, card: MovieCard) -> str:
+        titles = f"{card.title} ({card.original_title})" if card.original_title else card.title
+        parts = [titles]
+        if card.directors:
+            parts.append(", ".join(card.directors))
+        if card.actors:
+            parts.append(", ".join(card.actors))
+        if card.genres or card.keywords:
+            parts.append(", ".join(card.genres + card.keywords))
+        return ". ".join(parts)
+
+    def _filter_sparse(self, weights: dict) -> SparseVectorData:
+        filtered = {
+            int(k): float(v)
+            for k, v in weights.items()
+            if float(v) >= self.sparse_min_weight
+        }
+        return SparseVectorData(
+            indices=list(filtered.keys()),
+            values=list(filtered.values()),
+        )
