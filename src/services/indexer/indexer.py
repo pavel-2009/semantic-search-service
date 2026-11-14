@@ -15,9 +15,12 @@ from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
 from core.text_normalizer import clean_text
 from scraper.schemas import Movie
+from services.indexer.embedder import MovieEmbedder
+from services.indexer.config import config
+from repositories.qdrant_repository import QdrantRepository
 
 logger = logging.getLogger(__name__)
-MAX_BATCH_SIZE = 100
+MAX_BATCH_SIZE = config.batch_size
 
 
 class Indexer:
@@ -29,38 +32,12 @@ class Indexer:
             settings.QDRANT_COLLECTION,
             settings.EMBEDDING_MODEL,
         )
-        self.qdrant = QdrantClientSingleton.get_client()
-        self.collection_name = settings.QDRANT_COLLECTION
-        self.model = ModelLoader.get_model()
-        self.embedding_dim = settings.EMBEDDING_DIM
-        logger.info("Indexer initialized: embedding_dim=%d", self.embedding_dim)
+        self.repo = QdrantRepository()
+        self.embedder = MovieEmbedder()
+        logger.info("Indexer initialized")
 
-    def create_collection(self, force_recreate: bool = False) -> None:
-        """Create the collection if it does not exist."""
-        logger.info("Checking Qdrant collection: %s", self.collection_name)
-
-        if force_recreate:
-            self.recreate_collection()
-            return
-
-        collections = self.qdrant.get_collections().collections
-        if any(collection.name == self.collection_name for collection in collections):
-            logger.info("Collection already exists: %s", self.collection_name)
-            return
-
-        logger.info(
-            "Creating Qdrant collection: collection=%s vector_size=%d distance=cosine",
-            self.collection_name,
-            self.embedding_dim,
-        )
-        self.qdrant.create_collection(
-            collection_name=self.collection_name,
-            vectors_config=models.VectorParams(
-                size=self.embedding_dim,
-                distance=models.Distance.COSINE,
-            ),
-        )
-        logger.info("Qdrant collection created: collection=%s", self.collection_name)
+    def recreate(self):
+        self.repo.recreate()
 
     def load_movies(self, filepath: Path) -> Iterator[Movie]:
         """Read and validate one JSON Lines movie record at a time."""
@@ -88,46 +65,6 @@ class Indexer:
         """Return a movie validated against the canonical movie contract."""
         return Movie.model_validate(movie)
 
-    def prepare_text(self, movie: Movie) -> str:
-        """Build the text used for movie embeddings."""
-        parts: list[str] = []
-
-        title_field = Movie.model_fields.get("title")
-        if movie.title and title_field and movie.title != title_field.default:
-            has_details = any(
-                value not in (None, "", [], {})
-                for value in (
-                    movie.description,
-                    movie.director,
-                    movie.country,
-                    movie.year,
-                    movie.rating,
-                    movie.actors,
-                    movie.genres,
-                )
-            )
-            label = "Название:" if has_details else "Название"
-            parts.append(f"{label} {movie.title}")
-        if movie.description:
-            parts.append(f"Описание: {movie.description}")
-        if movie.director:
-            parts.append(f"Режиссёр: {movie.director}")
-        if movie.country:
-            parts.append(f"Страна: {movie.country}")
-        if movie.year is not None:
-            parts.append(f"Год: {movie.year}")
-        if movie.rating is not None:
-            parts.append(f"Рейтинг: {movie.rating}")
-        if movie.actors:
-            parts.append(f"Актёры: {', '.join(movie.actors)}")
-        if movie.genres:
-            parts.append(f"Жанры: {', '.join(movie.genres)}")
-
-        cleaned = clean_text(". ".join(parts), preserve_punctuation=True)
-        if not cleaned:
-            logger.warning("Empty text for movie %d", movie.id)
-            cleaned = "Фильм без описания."
-        return cleaned[: settings.MAX_TEXT_LENGTH]
 
     def index_movies(
         self,
@@ -269,22 +206,3 @@ class Indexer:
             points_count=collection_info.points_count or 0,
             status=str(collection_info.status),
         )
-
-    def clear_collection(self) -> None:
-        """Delete the collection."""
-        logger.info("Deleting Qdrant collection: collection=%s", self.collection_name)
-        self.qdrant.delete_collection(self.collection_name)
-        logger.info("Qdrant collection deleted: collection=%s", self.collection_name)
-
-    def recreate_collection(self) -> None:
-        """Delete and recreate the collection."""
-        logger.info("Recreating Qdrant collection: collection=%s", self.collection_name)
-        self.clear_collection()
-        self.qdrant.create_collection(
-            collection_name=self.collection_name,
-            vectors_config=models.VectorParams(
-                size=self.embedding_dim,
-                distance=models.Distance.COSINE,
-            ),
-        )
-        logger.info("Qdrant collection recreated: collection=%s", self.collection_name)
