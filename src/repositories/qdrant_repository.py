@@ -121,6 +121,22 @@ class QdrantRepository:
                 len(struct),
             )
 
+        indexed = 0
+        failed = 0
+        for point_struct in struct:
+            try:
+                self.client.upsert(
+                    collection_name=self.collection_name,
+                    points=[point_struct],
+                    wait=True,
+                )
+                indexed += 1
+            except Exception:
+                failed += 1
+                logger.exception("Failed to upsert movie: movie_id=%s", point_struct.id)
+
+        return indexed, failed
+
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
         collection_name = collection_name or self.collection_name
