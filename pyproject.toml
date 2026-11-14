@@ -18,6 +18,7 @@ dependencies = [
     "tenacity>=9.1.4",
     "uvicorn>=0.52.4",
     "pymorphy3>=2.0.6",
+    "flagembedding>=1.4.2",
 ]
 
 [build-system]
