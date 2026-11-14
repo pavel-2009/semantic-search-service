@@ -19,3 +19,4 @@ build/
 logs/
 *.log
 .env
+bge-m3
