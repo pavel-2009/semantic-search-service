@@ -61,3 +61,27 @@ def test_parse_returns_none_for_empty_optional_values(monkeypatch) -> None:
 
 def test_clean_plot_normalizes_whitespace_and_repeated_punctuation() -> None:
     assert text_parser.TextParser._clean_plot("  фильм , , сюжет! ") == "фильм, сюжет"
+
+
+def test_parse_removes_stop_words_from_plot(monkeypatch) -> None:
+    class StubFilterExtractor:
+        def extract(self, text: str) -> ExtractedFilters:
+            return ExtractedFilters(text=text)
+
+    class StubVibeExtractor:
+        def extract(self, text: str) -> ExtractedVibe:
+            return ExtractedVibe(text=text)
+
+    class StubEntityExtractor:
+        def extract(self, text: str) -> ExtractedEntities:
+            return ExtractedEntities(text=text)
+
+    monkeypatch.setattr(text_parser, "FilterExtractor", StubFilterExtractor)
+    monkeypatch.setattr(text_parser, "VibeExtractor", StubVibeExtractor)
+    monkeypatch.setattr(text_parser, "EntityExtractor", StubEntityExtractor)
+
+    parser = text_parser.TextParser()
+
+    assert parser.parse("посоветуй пожалуйста хороший фильм про космос").plot == "космос"
+    assert parser.parse("расскажи, какие фильмы посмотреть про сны").plot == "сны"
+    assert parser.parse("подскажи что-нибудь интересное").plot is None

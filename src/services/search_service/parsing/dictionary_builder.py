@@ -1,9 +1,11 @@
 """Build lookup structures for query parsing from static dictionaries."""
 
+from collections.abc import Iterable
+
 import pymorphy3
 from flashtext import KeywordProcessor
 
-from services.search_service.parsing.dictionaries import GENRE_TAGS
+from services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS
 from services.search_service.parsing.mood_dictionary import MOOD_TAGS
 
 CYRILLIC_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
@@ -56,3 +58,25 @@ class DictionaryBuilder:
     ) -> KeywordProcessor:
         """Map every form of each genre trigger to its canonical genre name."""
         return self._build_processor(tags)
+
+    def build_stop_processor(
+        self, lemmas: Iterable[str] = STOP_WORDS
+    ) -> KeywordProcessor:
+        """Build a flashtext processor matching all inflected forms of stop-word lemmas."""
+        processor = _make_processor()
+        for lemma in lemmas:
+            for form in self.word_forms(lemma):
+                processor.add_keyword(form)
+                processor.add_keyword(form.replace("ё", "е"))
+        return processor
+
+    @staticmethod
+    def remove_stop_words(text: str, processor: KeywordProcessor) -> str:
+        """Cut stop-word spans out of text and collapse whitespace."""
+        pieces: list[str] = []
+        last = 0
+        for _, start, end in processor.extract_keywords(text, span_info=True):
+            pieces.append(text[last:start])
+            last = end
+        pieces.append(text[last:])
+        return " ".join("".join(pieces).split())

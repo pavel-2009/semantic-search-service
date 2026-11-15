@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 
+from services.search_service.parsing.dictionary_builder import DictionaryBuilder
 from services.search_service.parsing.entity_extraction import EntityExtractor
 from services.search_service.parsing.filter_extractor import FilterExtractor
 from services.search_service.parsing.vibe_extractor import VibeExtractor
@@ -30,6 +31,7 @@ class TextParser:
         self.filter_extractor = FilterExtractor()
         self.vibe_extractor = VibeExtractor()
         self.entity_extractor = EntityExtractor()
+        self.stop_processor = DictionaryBuilder().build_stop_processor()
 
     def parse(self, text: str) -> ParsedText:
         """Parse a query and clean the remaining plot text."""
@@ -37,9 +39,10 @@ class TextParser:
         filters = self.filter_extractor.extract(entities.text)
         vibe = self.vibe_extractor.extract(filters.text)
 
+        plot_text = DictionaryBuilder.remove_stop_words(vibe.text, self.stop_processor)
         filter_values = filters.model_dump(exclude={"text"}, exclude_none=True)
         return ParsedText(
-            plot=self._clean_plot(vibe.text),
+            plot=self._clean_plot(plot_text),
             vibe=vibe.vibe,
             entities=entities.entities,
             filter=filter_values or None,
