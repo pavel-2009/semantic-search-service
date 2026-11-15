@@ -20,6 +20,7 @@ dependencies = [
     "pymorphy3>=2.0.6",
     "flagembedding>=1.4.2",
     "flashtext>=2.7",
+    "yargy>=0.16.0",
 ]
 
 [build-system]
