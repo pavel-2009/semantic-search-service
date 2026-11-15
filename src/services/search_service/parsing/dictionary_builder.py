@@ -9,6 +9,7 @@ from flashtext import KeywordProcessor
 from services.search_service.parsing.dictionaries import (
     ATMOSPHERE_TAGS,
     COUNTRY_ADJECTIVES,
+    GENRE_TAGS,
     STOP_WORDS,
     THEME_TAGS,
 )
@@ -71,6 +72,26 @@ class DictionaryBuilder:
     def build_theme_processor(self) -> KeywordProcessor:
         """Processor for thematic tags."""
         return self.build_tag_processor(THEME_TAGS)
+
+    def build_vibe_processor(self) -> KeywordProcessor:
+        """Map every form of genre, atmosphere, theme and country words to `(kind, name)`.
+
+        Forms are also added with "ё" replaced by "е": filter extraction normalizes the text.
+        """
+        processor = _make_processor()
+        tag_groups = (
+            ("genre", GENRE_TAGS),
+            ("atmosphere", ATMOSPHERE_TAGS),
+            ("theme", THEME_TAGS),
+            ("country", COUNTRY_ADJECTIVES),
+        )
+        for kind, tags in tag_groups:
+            for name, lemmas in tags.items():
+                for lemma in lemmas:
+                    for form in self.phrase_forms(lemma):
+                        processor.add_keyword(form, (kind, name))
+                        processor.add_keyword(form.replace("ё", "е"), (kind, name))
+        return processor
 
     def phrase_forms(self, phrase: str) -> set[str]:
         """Return forms of a phrase; only the last word is inflected for multi-word phrases."""

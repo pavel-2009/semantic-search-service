@@ -1,10 +1,10 @@
-"""Schemas for vibe extractor"""
+"""Contract of the vibe extractor."""
 
-from dataclasses import dataclass
-from typing import List
+from pydantic import BaseModel
 
 
-@dataclass
-class VibeExtracted:
-    vibe: str
+class ExtractedVibe(BaseModel):
+    """Vibe description for the vibe vector plus the query text without vibe words."""
+
     text: str
+    vibe: str | None = None

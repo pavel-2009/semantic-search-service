@@ -1,67 +1,53 @@
-"""Extractor for vibes from text"""
+"""Extract vibe (genres, atmosphere, themes, country, era) from a query.
 
+Example:
+    "мрачный триллер про космос, французский" -> vibe:
+        "Жанры: триллер. Атмосфера и теги: мрачный, космос. Страна и эпоха: Франция."
+    text: "про"
+"""
 
-from flashtext import KeywordProcessor
-from typing import List
-
-from .schemas import VibeExtracted
 from services.search_service.parsing.dictionary_builder import DictionaryBuilder
+from services.search_service.parsing.vibe_extractor.schemas import ExtractedVibe
 
 
 class VibeExtractor:
-    def __init__(self, dictionary: DictionaryBuilder):
-        self.vibe_processor = KeywordProcessor()
-        self.vibe_processor.add_keywords_from_dict(dictionary.vibes)
+    """Find vibe words in a query, build the vibe description and cut the words out."""
 
-    def extract(self, text: str, decades: list[str]) -> List[VibeExtracted]:
-        """Extract vibes from text"""
-        matches = self.vibe_processor.extract_keywords(text)
+    def __init__(self, builder: DictionaryBuilder | None = None) -> None:
+        self.processor = (builder or DictionaryBuilder()).build_vibe_processor()
 
-        genres: list[str] = []
-        tags: list[str] = []
-        countries: list[str] = []
+    def extract(self, text: str, decades: list[str] | None = None) -> ExtractedVibe:
+        """Return the vibe found in text and the text with those words removed."""
+        found: dict[str, list[str]] = {"genre": [], "atmosphere": [], "theme": [], "country": []}
+        pieces: list[str] = []
+        last = 0
 
-        for kind, canonical_val in matches:
-            if kind == "genre":
-                genres.append(canonical_val)
-            elif kind == "tag":
-                tags.append(canonical_val)
-            elif kind == "country":
-                countries.append(canonical_val)
+        for (kind, name), start, end in self.processor.extract_keywords(text, span_info=True):
+            if name not in found[kind]:
+                found[kind].append(name)
+            pieces.append(text[last:start])
+            last = end
+        pieces.append(text[last:])
 
-        genres = list(dict.fromkeys(genres))
-        tags = list(dict.fromkeys(tags))
-        countries = list(dict.fromkeys(countries))
-
-        vibe_text = self._build_template(
-            genres=genres,
-            tags=tags,
-            countries=countries,
-            decades=decades,
+        return ExtractedVibe(
+            text=self._clean("".join(pieces)),
+            vibe=self._build_vibe(found, decades or []),
         )
 
-        return VibeExtracted(
-            vibe=vibe_text,
-            
-        )
-
-
-    def _build_template(
-        self,
-        genres: list[str],
-        tags: list[str],
-        countries: list[str],
-        decades: list[str],
-    ) -> str | None:
+    @staticmethod
+    def _build_vibe(found: dict[str, list[str]], decades: list[str]) -> str | None:
         parts: list[str] = []
-
-        if genres:
-            parts.append(f"Жанры: {', '.join(genres)}.")
+        if found["genre"]:
+            parts.append(f"Жанры: {', '.join(found['genre'])}.")
+        tags = [*found["atmosphere"], *found["theme"]]
         if tags:
             parts.append(f"Атмосфера и теги: {', '.join(tags)}.")
-
-        era = list(dict.fromkeys(countries + decades))
+        era = list(dict.fromkeys([*found["country"], *decades]))
         if era:
             parts.append(f"Страна и эпоха: {', '.join(era)}.")
+        return " ".join(parts) or None
 
-        return " ".join(parts) if parts else None
+    @staticmethod
+    def _clean(text: str) -> str:
+        words = [word for word in text.split() if word.strip(",.;:-–—")]
+        return " ".join(words).strip(" ,.;:-")
