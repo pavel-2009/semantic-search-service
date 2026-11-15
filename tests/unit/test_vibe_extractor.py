@@ -9,29 +9,29 @@ from services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeEx
 extractor = VibeExtractor()
 
 
-def test_moods_in_order_of_appearance() -> None:
+def test_moods_are_extracted_and_removed_from_text() -> None:
     result = extractor.extract("мрачный фильм про петлю времени, чтобы было жутко")
-    assert result.moods == ["мрачный", "жуткий"]
     assert result.vibe == "Мрачный, жуткий."
+    assert result.text == "фильм про петлю времени, чтобы было"
 
 
 def test_inflected_forms_yo_and_phrases() -> None:
-    assert extractor.extract("уютное кино на тёплый вечер").moods == ["уютный"]
-    assert extractor.extract("хочу поплакать").moods == ["грустный"]
-    assert extractor.extract("что-нибудь с чёрным юмором").moods == ["остроумный"]
-    assert extractor.extract("мрачные и тяжелые драмы").moods == ["мрачный", "тяжёлый"]
+    assert extractor.extract("уютное кино на тёплый вечер").vibe == "Уютный."
+    assert extractor.extract("хочу поплакать").vibe == "Грустный."
+    assert extractor.extract("что-нибудь с чёрным юмором").vibe == "Остроумный."
+    assert extractor.extract("мрачные и тяжелые драмы").vibe == "Мрачный, тяжёлый."
 
 
 def test_duplicates_are_collapsed() -> None:
-    assert extractor.extract("мрачный, мрачная, мрачное").moods == ["мрачный"]
+    assert extractor.extract("мрачный, мрачная, мрачное").vibe == "Мрачный."
 
 
-def test_no_mood_gives_empty_vibe() -> None:
-    assert extractor.extract("фильм про Ивана") == ExtractedVibe()
+def test_no_mood_keeps_text() -> None:
+    assert extractor.extract("фильм про Ивана") == ExtractedVibe(text="фильм про Ивана")
 
 
 def test_plot_words_are_not_moods() -> None:
-    assert extractor.extract("фильм про войну и космос в 1990-х").moods == []
+    assert extractor.extract("фильм про войну и космос в 1990-х").vibe is None
 
 
 def test_vibe_format() -> None:
