@@ -37,8 +37,6 @@ def movie() -> MovieResult:
         rating=8.7,
         genres=["фантастика", "драма"],
         countries=["США", "Великобритания"],
-        director="Кристофер Нолан",
-        actors=["Мэттью Макконахи"],
         description="Путешествие через космос и время.",
         score=0.95,
     )

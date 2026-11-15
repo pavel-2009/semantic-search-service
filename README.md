@@ -18,7 +18,7 @@ Search is based on the meaning of a query rather than exact keyword matches. The
 - 🔎 Semantic search over movie data
 - 🧠 Multilingual text embeddings with [Sentence Transformers](https://www.sbert.net/)
 - 🗄️ Vector storage and similarity search with [Qdrant](https://qdrant.tech/)
-- 🎯 Metadata filtering by year, rating, genre and country
+- 🎯 Metadata filtering by year, rating, genres and countries
 - 🌐 Versioned REST API with [FastAPI](https://fastapi.tiangolo.com/)
 - 🤖 Telegram interface powered by [Aiogram 3](https://docs.aiogram.dev/)
 - 🕷️ Data collection with [Scrapy](https://scrapy.org/) and [Playwright](https://playwright.dev/)
@@ -133,7 +133,7 @@ curl http://localhost:8000/api/v1/stats
 
 ### `POST /api/v1/search`
 
-Performs semantic movie search. `top_k` accepts 1–100 results. Optional filters support year, rating, genre and country.
+Performs semantic movie search. `top_k` accepts 1–100 results. Optional filters support year, rating, genres and countries.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/search \
@@ -164,8 +164,6 @@ Example response shape:
       "rating": 8.1,
       "genres": ["триллер", "драма"],
       "countries": ["США"],
-      "director": "Director Name",
-      "actors": ["Actor Name"],
       "description": "...",
       "poster_url": null,
       "score": 0.89
@@ -193,13 +191,13 @@ The bot uses the shared search service and retrieves movie details by ID.
 
 ## 📦 Data & indexing
 
-The scraper writes one movie per line as JSON Lines (`movies.jsonl`). The indexer reads and validates records line by line, builds a searchable text representation from fields such as title, description, director, country, year, rating, actors and genres, generates embeddings and upserts the resulting points into Qdrant. Invalid lines are logged and skipped.
+The scraper writes one movie per line as JSON Lines (`movies.jsonl`). The indexer reads and validates records line by line, builds a searchable text representation from the title, description, genres, countries and year, generates embeddings and upserts the resulting points into Qdrant. Invalid lines are logged and skipped.
 
 Each point contains:
 
 - numeric movie ID;
 - 384-dimensional embedding;
-- payload with title, year, rating, genres, countries, director, actors, description and poster URL.
+- payload with title, year, rating, genres, countries, description and poster URL.
 
 The default Qdrant collection is `movies` and the default indexing batch size is `32`.
 

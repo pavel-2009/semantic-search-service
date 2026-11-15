@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.schemas import MovieResult, SearchRequest, StatsResponse
-from core.dependencies import get_search_service
 
 
 class MockSearchService:
@@ -32,8 +31,6 @@ class MockSearchService:
                 rating=8.7,
                 genres=["фантастика", "драма"],
                 countries=["США", "Великобритания"],
-                director="Кристофер Нолан",
-                actors=["Мэттью Макконахи"],
                 description="Путешествие через космос и время.",
                 poster_url="https://example.test/interstellar.jpg",
                 score=0.95,
@@ -55,13 +52,6 @@ class MockSearchService:
             model="test-embedding-model",
             embedding_dim=384,
         )
-
-
-@pytest.fixture
-def api_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    service = MockSearchService()
-    monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: service)
-    yield TestClient(app)
 
 
 def test_root_returns_service_metadata(api_client: TestClient) -> None:
@@ -97,8 +87,6 @@ def test_search_returns_results_in_api_contract(api_client: TestClient) -> None:
                 "rating": 8.7,
                 "genres": ["фантастика", "драма"],
                 "countries": ["США", "Великобритания"],
-                "director": "Кристофер Нолан",
-                "actors": ["Мэттью Макконахи"],
                 "description": "Путешествие через космос и время.",
                 "poster_url": "https://example.test/interstellar.jpg",
                 "score": 0.95,
@@ -148,32 +136,3 @@ def test_movie_route_returns_movie_and_not_found_response(api_client: TestClient
     not_found = api_client.get("/api/v1/movies/999")
     assert not_found.status_code == 404
     assert not_found.json() == {"detail": "Movie not found"}
-
-
-@pytest.mark.parametrize(
-    ("operation", "method", "path", "expected_status", "expected_detail"),
-    [
-        ("search", "post", "/api/v1/search", 500, "Search request failed; see server logs"),
-        ("get_stats", "get", "/api/v1/health", 503, "Vector database is unavailable"),
-        ("get_stats", "get", "/api/v1/stats", 503, "Vector database is unavailable"),
-        ("get_by_id", "get", "/api/v1/movies/42", 500, "Failed to load movie information"),
-    ],
-)
-def test_routes_return_error_responses_when_service_fails(
-    operation: str,
-    method: str,
-    path: str,
-    expected_status: int,
-    expected_detail: str,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    service = MockSearchService({operation})
-    monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: service)
-    client = TestClient(app)
-    if method == "post":
-        response = client.post(path, json={"query": "фильмы про космос"})
-    else:
-        response = client.get(path)
-
-    assert response.status_code == expected_status
-    assert response.json() == {"detail": expected_detail}

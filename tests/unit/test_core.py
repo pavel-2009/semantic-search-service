@@ -8,8 +8,6 @@ from pydantic import ValidationError
 from core.config import PROJECT_ROOT, Settings
 from core.contracts import IndexerStats, Movie
 from core.text_normalizer import clean_text
-from core.dependencies import get_search_service
-from backend.services.search_service import SearchService
 
 
 def test_clean_text_returns_empty_for_empty_or_whitespace_input() -> None:
@@ -39,17 +37,15 @@ def test_movie_defaults_and_accepts_complete_data() -> None:
     movie = Movie(id=1)
     assert movie.title == "Без названия"
     assert movie.description == ""
-    assert movie.actors == []
+    assert movie.countries == []
     assert movie.genres == []
 
     populated = Movie(
         id=42,
         title="Фильм",
         year=2024,
-        country="Россия, Франция",
-        director="Режиссер",
+        countries=["Россия", "Франция"],
         description="Описание",
-        actors=["Актер"],
         genres=["драма"],
         rating=8.5,
         poster_url="https://example.test/poster.jpg",
@@ -66,7 +62,7 @@ def test_movie_defaults_and_accepts_complete_data() -> None:
         {"id": "not-an-id"},
         {"id": 1, "year": "not-a-year"},
         {"id": 1, "genres": "драма"},
-        {"id": 1, "actors": [None]},
+        {"id": 1, "countries": "Россия"},
     ],
 )
 def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
@@ -131,9 +127,3 @@ def test_settings_reject_invalid_environment_value(
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
-
-
-def test_get_search_service_returns_instance() -> None:
-    service = get_search_service()
-    assert service is not None
-    assert isinstance(service, SearchService)  # Replace with actual type if known

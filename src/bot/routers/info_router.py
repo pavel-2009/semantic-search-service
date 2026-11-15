@@ -32,10 +32,6 @@ def movie_details(movie: MovieResult) -> str:
         lines.append(f"🎭 <b>Жанры:</b> {html.escape(', '.join(movie.genres))}")
     if movie.countries:
         lines.append(f"🌍 <b>Страны:</b> {html.escape(', '.join(movie.countries))}")
-    if movie.director:
-        lines.append(f"🎥 <b>Режиссёр:</b> {html.escape(movie.director)}")
-    if movie.actors:
-        lines.append(f"👥 <b>В ролях:</b> {html.escape(', '.join(movie.actors))}")
     if movie.description:
         lines.append(f"\n<b>Описание</b>\n{html.escape(movie.description)}")
     return "\n".join(lines)

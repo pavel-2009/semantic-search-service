@@ -25,9 +25,7 @@ def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:
         year=2024,
         rating=8.0,
         genres=["драма"],
-        director="Режиссер",
-        actors=["Актер"],
-        country="Россия",
+        countries=["Россия"],
     )
 
 

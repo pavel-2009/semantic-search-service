@@ -21,7 +21,7 @@ def test_process_item_returns_item() -> None:
         "id": 1,
         "title": "Интерстеллар",
         "year": 2014,
-        "country": "США",
+        "countries": ["США"],
         "genres": ["фантастика", "драма"],
         "rating": 8.6,
         "description": "Путешествие через космос и время.",
@@ -42,7 +42,7 @@ def test_pipeline_writes_movies_to_json():
             "id": 1,
             "title": "Интерстеллар",
             "year": 2014,
-            "country": "США",
+            "countries": ["США"],
             "genres": ["фантастика", "драма"],
             "rating": 8.6,
             "description": "Путешествие через космос и время.",
@@ -55,7 +55,7 @@ def test_pipeline_writes_movies_to_json():
     with file.open("r", encoding="utf-8") as f:
         content = f.read()
         assert content == (
-            '{"id": 1, "title": "Интерстеллар", "year": 2014, "country": "США", "director": null, "description": "Путешествие через космос и время.", "actors": [], "genres": ["фантастика", "драма"], "rating": 8.6, "poster_url": null}\n'
+            '{"id": 1, "title": "Интерстеллар", "year": 2014, "countries": ["США"], "description": "Путешествие через космос и время.", "genres": ["фантастика", "драма"], "moods": [], "rating": 8.6, "poster_url": null}\n'
         )
 
 
