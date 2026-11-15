@@ -1,46 +1,6 @@
-"""Contracts for scraped movie data and the PoiskKino API response."""
+"""PoiskKino API response contracts."""
 
-from pydantic import (
-    AliasChoices,
-    BaseModel,
-    ConfigDict,
-    Field,
-    RootModel,
-    field_validator,
-)
-
-
-class Movie(BaseModel):
-    """Normalized movie data shared by scraper and indexer."""
-
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
-
-    id: int
-    title: str = Field(
-        default="Без названия",
-        validation_alias=AliasChoices("title", "name", "alternativeName"),
-    )
-    year: int | None = None
-    country: str | None = None
-    director: str | None = None
-    description: str = ""
-    actors: list[str] = Field(default_factory=list)
-    genres: list[str] = Field(
-        default_factory=list,
-        validation_alias=AliasChoices("genres", "tags"),
-    )
-    rating: float | None = None
-    poster_url: str | None = None
-
-    @field_validator("actors", "genres", mode="before")
-    @classmethod
-    def _default_lists(cls, value: object) -> object:
-        """Convert null list values from legacy JSON to empty lists."""
-        return [] if value is None else value
-
-
-class MoviesDocument(RootModel[list[Movie]]):
-    """JSON document containing normalized movies."""
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PoiskKinoRating(BaseModel):

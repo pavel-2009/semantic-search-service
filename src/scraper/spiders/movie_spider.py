@@ -9,8 +9,8 @@ from scrapy.http import Request, Response
 from pydantic import ValidationError
 
 from core.config import settings
+from core.contracts import Movie
 from scraper.schemas import (
-    Movie,
     PoiskKinoCountry,
     PoiskKinoGenre,
     PoiskKinoMovie,

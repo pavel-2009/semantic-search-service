@@ -7,7 +7,7 @@ from scrapy import signals
 from scrapy.spiders import Spider
 
 from core.logger import get_logger
-from scraper.schemas import Movie
+from core.contracts import Movie
 
 DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.jsonl"
 logger = get_logger(__name__)
