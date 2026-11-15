@@ -3,14 +3,13 @@
 from pydantic import BaseModel, Field
 
 
-class MoviePayload(BaseModel):
-    """Canonical movie payload stored in Qdrant."""
+class Movie(BaseModel):
+    """Canonical movie contract: scraper output, JSONL dataset and Qdrant payload."""
 
-    id: int | None = None
+    id: int
     title: str = "Без названия"
     year: int | None = None
     country: str | None = None
-    countries: list[str] = Field(default_factory=list)
     director: str | None = None
     description: str = ""
     actors: list[str] = Field(default_factory=list)
