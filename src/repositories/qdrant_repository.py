@@ -48,9 +48,9 @@ class QdrantRepository:
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
-            "duration_min": models.PayloadSchemaType.INTEGER,
             "genres": models.PayloadSchemaType.KEYWORD,
-            "directors": models.PayloadSchemaType.KEYWORD,
+            "country": models.PayloadSchemaType.TEXT,
+            "director": models.PayloadSchemaType.KEYWORD,
             "actors": models.PayloadSchemaType.KEYWORD,
         }
 
