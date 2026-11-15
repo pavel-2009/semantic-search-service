@@ -14,6 +14,7 @@ from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
 from core.contracts import Movie  # noqa: E402
 from core.logger import get_logger  # noqa: E402
+from core.vibe import format_vibe  # noqa: E402
 from services.indexer.config import config  # noqa: E402
 from services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
 
@@ -56,27 +57,24 @@ class MovieEmbedder:
         )
 
     def embed_batch(self, cards: list[Movie]) -> list[IndexedMoviePoint]:
-        """Embed movies into plot, vibe and NER vectors."""
+        """Embed movies into plot, vibe and sparse vectors."""
         if not cards:
             logger.warning("No movies to embed")
             return []
 
         started_at = perf_counter()
         plot_map: dict[int, int] = {}
+        vibe_map: dict[int, int] = {}
         dense_texts: list[str] = []
-        sparse_texts: list[str] = []
 
         for idx, card in enumerate(cards):
-            plot_str = self._format_plot(card)
-
-            if plot_str:
+            if plot_str := self._format_plot(card):
                 plot_map[idx] = len(dense_texts)
                 dense_texts.append(plot_str)
-
-        vibe_offset = len(dense_texts)
-        for card in cards:
-            dense_texts.append(self._format_vibe(card))
-            sparse_texts.append(self._format_sparse(card))
+            if vibe_str := format_vibe(card.moods):
+                vibe_map[idx] = len(dense_texts)
+                dense_texts.append(vibe_str)
+        sparse_texts = [self._format_sparse(card) for card in cards]
 
         dense_out = self.model.encode(
             dense_texts,
@@ -84,7 +82,7 @@ class MovieEmbedder:
             return_dense=True,
             return_sparse=False,
             return_colbert_vecs=False,
-        )["dense_vecs"].tolist()
+        )["dense_vecs"].tolist() if dense_texts else []
 
         sparse_out = self.model.encode(
             sparse_texts,
@@ -98,7 +96,7 @@ class MovieEmbedder:
 
         for idx, card in enumerate(cards):
             plot_vec = dense_out[plot_map[idx]] if idx in plot_map else None
-            vibe_vec = dense_out[vibe_offset + idx]
+            vibe_vec = dense_out[vibe_map[idx]] if idx in vibe_map else None
             sparse_vec = self._filter_sparse(sparse_out[idx])
 
             points.append(
@@ -112,13 +110,13 @@ class MovieEmbedder:
             )
 
         logger.debug(
-            "Embedded movie batch: cards=%d with_plot=%d duration_ms=%.1f",
+            "Embedded movie batch: cards=%d with_plot=%d with_vibe=%d duration_ms=%.1f",
             len(cards),
             len(plot_map),
+            len(vibe_map),
             (perf_counter() - started_at) * 1000,
         )
         return points
-
 
     def _format_plot(self, card: Movie) -> str | None:
         if not card.description:
@@ -126,26 +124,8 @@ class MovieEmbedder:
         clean = card.description.strip()
         return clean if len(clean) >= self.min_plot_len else None
 
-    def _format_vibe(self, card: Movie) -> str:
-        parts = []
-        if card.genres:
-            parts.append(f"Жанры: {', '.join(card.genres)}.")
-        era = [card.country] if card.country else []
-        if card.year is not None:
-            era.append(f"{card.year // 10 * 10}-е годы")
-        if era:
-            parts.append(f"Страна и эпоха: {', '.join(era)}.")
-        return " ".join(parts) or card.title
-
     def _format_sparse(self, card: Movie) -> str:
-        parts = [card.title]
-        if card.director:
-            parts.append(card.director)
-        if card.actors:
-            parts.append(", ".join(card.actors))
-        if card.genres:
-            parts.append(", ".join(card.genres))
-        return ". ".join(parts)
+        return ". ".join([card.title, *card.genres])
 
     def _filter_sparse(self, weights: dict) -> SparseVectorData:
         filtered = {

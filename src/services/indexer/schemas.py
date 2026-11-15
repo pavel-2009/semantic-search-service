@@ -13,6 +13,6 @@ class IndexedMoviePoint(BaseModel):
 
     point_id: int
     plot_vector: list[float] | None = None
-    vibe_vector: list[float]
+    vibe_vector: list[float] | None = None
     sparse_vector: SparseVectorData
     payload: Movie

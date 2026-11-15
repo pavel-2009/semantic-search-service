@@ -20,8 +20,7 @@ class ParsedQuery(BaseModel):
     year_lte: int | None = None
     rating_gte: float | None = None
     genres: list[str] = Field(default_factory=list)
-    country: str | None = None
-    persons: list[str] = Field(default_factory=list)
+    countries: list[str] = Field(default_factory=list)
 
 
 class EncodedQuery(BaseModel):
