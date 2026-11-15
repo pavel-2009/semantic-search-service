@@ -21,8 +21,7 @@ class ParsedQuery(BaseModel):
     rating_gte: float | None = None
     genres: list[str] = Field(default_factory=list)
     country: str | None = None
-    director: str | None = None
-    actors: list[str] = Field(default_factory=list)
+    persons: list[str] = Field(default_factory=list)
 
 
 class EncodedQuery(BaseModel):
