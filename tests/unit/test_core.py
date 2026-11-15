@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.config import PROJECT_ROOT, Settings
-from core.contracts import IndexerStats, MoviePayload
+from core.contracts import IndexerStats, Movie
 from core.text_normalizer import clean_text
 from core.dependencies import get_search_service
 from backend.services.search_service import SearchService
@@ -35,21 +35,18 @@ def test_clean_text_can_preserve_supported_punctuation() -> None:
     )
 
 
-def test_movie_payload_defaults_and_accepts_complete_data() -> None:
-    payload = MoviePayload()
-    assert payload.id is None
-    assert payload.title == "Без названия"
-    assert payload.description == ""
-    assert payload.actors == []
-    assert payload.genres == []
-    assert payload.countries == []
+def test_movie_defaults_and_accepts_complete_data() -> None:
+    movie = Movie(id=1)
+    assert movie.title == "Без названия"
+    assert movie.description == ""
+    assert movie.actors == []
+    assert movie.genres == []
 
-    populated = MoviePayload(
+    populated = Movie(
         id=42,
         title="Фильм",
         year=2024,
-        country="Россия",
-        countries=["Россия"],
+        country="Россия, Франция",
         director="Режиссер",
         description="Описание",
         actors=["Актер"],
@@ -65,15 +62,16 @@ def test_movie_payload_defaults_and_accepts_complete_data() -> None:
 @pytest.mark.parametrize(
     "data",
     [
+        {},
         {"id": "not-an-id"},
-        {"year": "not-a-year"},
-        {"genres": "драма"},
-        {"actors": [None]},
+        {"id": 1, "year": "not-a-year"},
+        {"id": 1, "genres": "драма"},
+        {"id": 1, "actors": [None]},
     ],
 )
-def test_movie_payload_rejects_invalid_values(data: dict[str, object]) -> None:
+def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        MoviePayload.model_validate(data)
+        Movie.model_validate(data)
 
 
 def test_indexer_stats_supports_contract_and_mapping_access() -> None:

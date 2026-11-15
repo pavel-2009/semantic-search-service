@@ -12,14 +12,10 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
+from core.contracts import Movie  # noqa: E402
 from core.logger import get_logger  # noqa: E402
 from services.indexer.config import config  # noqa: E402
-from services.indexer.schemas import (  # noqa: E402
-    IndexedMoviePoint,
-    MovieCard,
-    MoviePayload,
-    SparseVectorData,
-)
+from services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
 
 logger = get_logger(__name__)
 LOCAL_BGE_MODEL_PATH = Path(__file__).resolve().parents[3] / "bge-m3"
@@ -59,7 +55,7 @@ class MovieEmbedder:
             (perf_counter() - started_at) * 1000,
         )
 
-    def embed_batch(self, cards: list[MovieCard]) -> list[IndexedMoviePoint]:
+    def embed_batch(self, cards: list[Movie]) -> list[IndexedMoviePoint]:
         """Embed movies into plot, vibe and NER vectors."""
         if not cards:
             logger.warning("No movies to embed")
@@ -107,11 +103,11 @@ class MovieEmbedder:
 
             points.append(
                 IndexedMoviePoint(
-                    point_id=card.movie_id,
+                    point_id=card.id,
                     plot_vector=plot_vec,
                     vibe_vector=vibe_vec,
                     sparse_vector=sparse_vec,
-                    payload=MoviePayload(**card.model_dump()),
+                    payload=card,
                 )
             )
 
@@ -124,34 +120,31 @@ class MovieEmbedder:
         return points
 
 
-    def _format_plot(self, card: MovieCard) -> str | None:
-        if not card.synopsis:
+    def _format_plot(self, card: Movie) -> str | None:
+        if not card.description:
             return None
-        clean = card.synopsis.strip()
+        clean = card.description.strip()
         return clean if len(clean) >= self.min_plot_len else None
 
-    def _format_vibe(self, card: MovieCard) -> str:
+    def _format_vibe(self, card: Movie) -> str:
         parts = []
         if card.genres:
             parts.append(f"Жанры: {', '.join(card.genres)}.")
-        if card.keywords:
-            parts.append(f"Атмосфера и теги: {', '.join(card.keywords)}.")
         era = [card.country] if card.country else []
-        if card.decade is not None:
-            era.append(f"{card.decade}-е годы")
+        if card.year is not None:
+            era.append(f"{card.year // 10 * 10}-е годы")
         if era:
             parts.append(f"Страна и эпоха: {', '.join(era)}.")
         return " ".join(parts) or card.title
 
-    def _format_sparse(self, card: MovieCard) -> str:
-        titles = f"{card.title} ({card.original_title})" if card.original_title else card.title
-        parts = [titles]
-        if card.directors:
-            parts.append(", ".join(card.directors))
+    def _format_sparse(self, card: Movie) -> str:
+        parts = [card.title]
+        if card.director:
+            parts.append(card.director)
         if card.actors:
             parts.append(", ".join(card.actors))
-        if card.genres or card.keywords:
-            parts.append(", ".join(card.genres + card.keywords))
+        if card.genres:
+            parts.append(", ".join(card.genres))
         return ". ".join(parts)
 
     def _filter_sparse(self, weights: dict) -> SparseVectorData:

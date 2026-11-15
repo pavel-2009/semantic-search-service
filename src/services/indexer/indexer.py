@@ -7,12 +7,11 @@ from time import perf_counter
 
 from pydantic import ValidationError
 
-from core.contracts import IndexerStats
+from core.contracts import IndexerStats, Movie
 from core.logger import get_logger
 from repositories.qdrant_repository import QdrantRepository
 from services.indexer.config import config
 from services.indexer.embedder import MovieEmbedder
-from services.indexer.schemas import MovieCard
 
 logger = get_logger(__name__)
 MAX_BATCH_SIZE = config.batch_size
@@ -53,8 +52,8 @@ class Indexer:
         """Recreate the Qdrant collection."""
         self.repo.recreate_collection()
 
-    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[MovieCard]:
-        """Read and validate one JSON Lines movie card record at a time."""
+    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[Movie]:
+        """Read and validate one JSON Lines movie record at a time."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
@@ -66,18 +65,13 @@ class Indexer:
                 if not line.strip():
                     continue
                 try:
-                    yield MovieCard.model_validate_json(line)
+                    yield Movie.model_validate_json(line)
                 except ValidationError:
                     logger.exception(
                         "Skipping invalid movie record: path=%s line=%d",
                         filepath,
                         line_number,
                     )
-
-    @staticmethod
-    def _normalize_movie(movie: MovieCard) -> MovieCard:
-        """Return a movie validated against the canonical movie card contract."""
-        return MovieCard.model_validate(movie)
 
     def index_movies(
         self,
@@ -106,14 +100,14 @@ class Indexer:
 
         self.create_collection(force_recreate=force_recreate)
 
-        batch: list[MovieCard] = []
+        batch: list[Movie] = []
         total_processed = 0
         total_indexed = 0
         total_failed = 0
 
         for movie in chain((first_movie,), movies):
             total_processed += 1
-            batch.append(self._normalize_movie(movie))
+            batch.append(movie)
             if len(batch) < batch_size:
                 continue
 

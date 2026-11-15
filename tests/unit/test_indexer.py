@@ -9,26 +9,23 @@ import pytest
 from qdrant_client.http import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
-from core.contracts import IndexerStats
+from core.contracts import IndexerStats, Movie
 from core.qdrant_client import QdrantClientSingleton
 import services.indexer.embedder as embedder_module
 from services.indexer.config import config
 from services.indexer.indexer import Indexer
-from services.indexer.schemas import MovieCard
 
 
-def make_movie_card(movie_id: int = 1, title: str = "Movie") -> MovieCard:
-    """Create a valid MovieCard instance for tests."""
-    return MovieCard(
-        movie_id=movie_id,
+def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:
+    """Create a valid Movie instance for tests."""
+    return Movie(
+        id=movie_id,
         title=title,
-        synopsis=f"Description for {title} that is long enough",
+        description=f"Description for {title} that is long enough",
         year=2024,
         rating=8.0,
-        duration_min=120,
         genres=["драма"],
-        keywords=["атмосфера"],
-        directors=["Режиссер"],
+        director="Режиссер",
         actors=["Актер"],
         country="Россия",
     )
@@ -265,7 +262,7 @@ def test_indexing_isolates_qdrant_error_for_random_point(
         indexer.index_movies(filepath, batch_size=len(movies))
 
     stored_ids = set(qdrant_client.collections[indexer.collection_name])
-    assert stored_ids == {movie.movie_id for movie in movies} - {
+    assert stored_ids == {movie.id for movie in movies} - {
         failed_point_id
     }
 

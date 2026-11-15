@@ -14,8 +14,6 @@ from src.scraper.schemas import (
     PoiskKinoGenre,
     PoiskKinoPerson,
     PoiskKinoMovie,
-    Movie,
-    MoviesDocument
 )
 from src.scraper.spiders.movie_spider import MovieSpider
 

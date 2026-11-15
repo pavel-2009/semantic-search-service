@@ -13,9 +13,8 @@ from backend.schemas import (
     StatsResponse,
     YearFilter,
 )
+from core.contracts import Movie
 from scraper.schemas import (
-    Movie,
-    MoviesDocument,
     PoiskKinoCountry,
     PoiskKinoGenre,
     PoiskKinoMovie,
@@ -208,47 +207,6 @@ def test_stats_response_accepts_valid_values() -> None:
 def test_stats_response_rejects_invalid_values(data: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         StatsResponse.model_validate(data)
-
-
-def test_movie_accepts_aliases_defaults_and_ignores_extra_fields() -> None:
-    movie = Movie.model_validate(
-        {
-            "id": 8,
-            "name": "Название",
-            "tags": ["драма"],
-            "actors": None,
-            "genres": None,
-            "unrecognized": "ignored",
-        }
-    )
-
-    assert movie.title == "Название"
-    assert movie.genres == []
-    assert movie.actors == []
-    assert Movie(id=9).title == "Без названия"
-    assert Movie(id=9).description == ""
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        {"id": "bad-id"},
-        {"id": 1, "year": "bad-year"},
-        {"id": 1, "genres": "драма"},
-        {"id": 1, "actors": [None]},
-    ],
-)
-def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
-    with pytest.raises(ValidationError):
-        Movie.model_validate(data)
-
-
-def test_movies_document_accepts_list_and_rejects_invalid_items() -> None:
-    document = MoviesDocument.model_validate([{"id": 1}, {"id": 2, "title": "Фильм"}])
-    assert [movie.id for movie in document.root] == [1, 2]
-
-    with pytest.raises(ValidationError):
-        MoviesDocument.model_validate([{"id": "bad-id"}])
 
 
 def test_poiskkino_rating_accepts_optional_rating() -> None:

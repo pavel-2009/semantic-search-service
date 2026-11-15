@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 
 from backend.schemas import MovieResult, SearchFilters, SearchRequest, StatsResponse
 from core.config import settings
-from core.contracts import MoviePayload
+from core.contracts import Movie
 from core.logger import get_logger
 from core.model_loader import ModelLoader
 from core.qdrant_client import QdrantClientSingleton
@@ -119,14 +119,12 @@ class SearchService:
         score: float,
     ) -> MovieResult:
         """Build a movie response from validated Qdrant point data."""
-        movie = MoviePayload.model_validate(payload or {})
-        countries = movie.countries
-        if not countries and movie.country:
-            countries = [
-                country.strip()
-                for country in movie.country.split(",")
-                if country.strip()
-            ]
+        movie = Movie.model_validate({"id": int(point_id), **(payload or {})})
+        countries = [
+            country.strip()
+            for country in (movie.country or "").split(",")
+            if country.strip()
+        ]
 
         return MovieResult(
             id=int(point_id),
@@ -189,8 +187,8 @@ class SearchService:
         if filters.country:
             conditions.append(
                 models.FieldCondition(
-                    key="countries",
-                    match=models.MatchAny(any=[filters.country]),
+                    key="country",
+                    match=models.MatchText(text=filters.country),
                 )
             )
         return models.Filter(must=conditions) if conditions else None
