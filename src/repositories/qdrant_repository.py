@@ -49,9 +49,7 @@ class QdrantRepository:
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
             "genres": models.PayloadSchemaType.KEYWORD,
-            "country": models.PayloadSchemaType.TEXT,
-            "director": models.PayloadSchemaType.KEYWORD,
-            "actors": models.PayloadSchemaType.KEYWORD,
+            "countries": models.PayloadSchemaType.KEYWORD,
         }
 
         for field, schema in indexes.items():
@@ -82,7 +80,6 @@ class QdrantRepository:
         struct: list[models.PointStruct] = []
         for point in points:
             vectors: dict = {
-                "vibe": point.vibe_vector,
                 "sparse": models.SparseVector(
                     indices=point.sparse_vector.indices,
                     values=point.sparse_vector.values,
@@ -91,6 +88,8 @@ class QdrantRepository:
 
             if point.plot_vector is not None:
                 vectors["plot"] = point.plot_vector
+            if point.vibe_vector is not None:
+                vectors["vibe"] = point.vibe_vector
 
             struct.append(
                 models.PointStruct(
