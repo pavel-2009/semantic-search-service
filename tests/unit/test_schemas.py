@@ -18,7 +18,6 @@ from scraper.schemas import (
     PoiskKinoCountry,
     PoiskKinoGenre,
     PoiskKinoMovie,
-    PoiskKinoPerson,
     PoiskKinoPoster,
     PoiskKinoRating,
     PoiskKinoResponse,
@@ -45,20 +44,21 @@ def test_search_filters_accept_nested_and_optional_values() -> None:
         year={"gte": 2000},
         rating={"gte": 7.5},
         genre=["драма", "фантастика"],
-        country="Россия",
+        countries=["Россия", "Франция"],
     )
 
     assert filters.year is not None and filters.year.gte == 2000
     assert filters.rating is not None and filters.rating.gte == 7.5
     assert filters.genre == ["драма", "фантастика"]
-    assert SearchFilters().country is None
+    assert filters.countries == ["Россия", "Франция"]
+    assert SearchFilters().countries is None
 
 
 @pytest.mark.parametrize(
     "data",
     [
         {"genre": "драма"},
-        {"country": ["Россия"]},
+        {"countries": "Россия"},
         {"year": {"gte": "unknown"}},
     ],
 )
@@ -102,7 +102,6 @@ def test_movie_result_accepts_required_and_optional_fields() -> None:
     minimal = MovieResult(id=1, title="Фильм", score=0.9)
     assert minimal.genres == []
     assert minimal.countries == []
-    assert minimal.actors == []
     assert minimal.year is None
 
     complete = MovieResult(
@@ -112,14 +111,12 @@ def test_movie_result_accepts_required_and_optional_fields() -> None:
         rating=8.2,
         genres=["драма"],
         countries=["Россия"],
-        director="Режиссер",
-        actors=["Актер"],
         description="Описание",
         poster_url="https://example.test/poster.jpg",
         score=0.9,
     )
     assert complete.rating == 8.2
-    assert complete.actors == ["Актер"]
+    assert complete.countries == ["Россия"]
 
 
 @pytest.mark.parametrize(
@@ -223,11 +220,6 @@ def test_poiskkino_rating_accepts_optional_rating() -> None:
         (PoiskKinoCountry, {"name": "Россия"}, {"name": ["Россия"]}),
         (PoiskKinoGenre, {"name": "драма"}, {"name": ["драма"]}),
         (
-            PoiskKinoPerson,
-            {"name": "Актер", "enName": "Actor", "profession": "актер"},
-            {"name": ["Актер"]},
-        ),
-        (
             PoiskKinoPoster,
             {"url": "https://example.test/poster.jpg"},
             {"url": ["not-a-url"]},
@@ -251,7 +243,6 @@ def test_poiskkino_movie_accepts_nested_data_and_null_defaults() -> None:
             "id": 123,
             "name": "Название",
             "countries": [{"name": "Россия"}],
-            "persons": [{"name": "Режиссер", "profession": "режиссеры"}],
             "genres": [{"name": "драма"}],
             "rating": {"kp": 8.2},
             "poster": {"url": "https://example.test/poster.jpg"},
@@ -259,7 +250,6 @@ def test_poiskkino_movie_accepts_nested_data_and_null_defaults() -> None:
         }
     )
     assert movie.countries[0].name == "Россия"
-    assert movie.persons[0].profession == "режиссеры"
     assert movie.genres[0].name == "драма"
     assert movie.rating.kp == 8.2
 
@@ -267,14 +257,12 @@ def test_poiskkino_movie_accepts_nested_data_and_null_defaults() -> None:
         {
             "id": 124,
             "countries": None,
-            "persons": None,
             "genres": None,
             "rating": None,
             "poster": None,
         }
     )
     assert legacy.countries == []
-    assert legacy.persons == []
     assert legacy.genres == []
     assert legacy.rating.kp is None
     assert legacy.poster.url is None
@@ -285,7 +273,6 @@ def test_poiskkino_movie_accepts_nested_data_and_null_defaults() -> None:
     [
         {"id": "bad-id"},
         {"id": 1, "countries": [{"name": ["Россия"]}]},
-        {"id": 1, "persons": "not-a-list"},
         {"id": 1, "rating": {"kp": "bad-rating"}},
         {"id": 1, "poster": {"url": ["not-a-url"]}},
     ],

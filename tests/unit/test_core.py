@@ -37,17 +37,15 @@ def test_movie_defaults_and_accepts_complete_data() -> None:
     movie = Movie(id=1)
     assert movie.title == "Без названия"
     assert movie.description == ""
-    assert movie.actors == []
+    assert movie.countries == []
     assert movie.genres == []
 
     populated = Movie(
         id=42,
         title="Фильм",
         year=2024,
-        country="Россия, Франция",
-        director="Режиссер",
+        countries=["Россия", "Франция"],
         description="Описание",
-        actors=["Актер"],
         genres=["драма"],
         rating=8.5,
         poster_url="https://example.test/poster.jpg",
@@ -64,7 +62,7 @@ def test_movie_defaults_and_accepts_complete_data() -> None:
         {"id": "not-an-id"},
         {"id": 1, "year": "not-a-year"},
         {"id": 1, "genres": "драма"},
-        {"id": 1, "actors": [None]},
+        {"id": 1, "countries": "Россия"},
     ],
 )
 def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:

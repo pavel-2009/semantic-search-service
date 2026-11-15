@@ -12,7 +12,6 @@ from scrapy.utils.test import get_crawler
 from src.scraper.schemas import (
     PoiskKinoCountry,
     PoiskKinoGenre,
-    PoiskKinoPerson,
     PoiskKinoMovie,
 )
 from src.scraper.spiders.movie_spider import MovieSpider
@@ -215,10 +214,6 @@ def test_parse_movie_normalizes_movie_fields():
             "name": "Фильм",
             "year": 2024,
             "countries": [{"name": "Россия"}, {"name": "Франция"}],
-            "persons": [
-                {"name": "Режиссёр", "profession": "режиссеры"},
-                {"enName": "Actor", "profession": "актеры"},
-            ],
             "genres": [{"name": "драма"}],
             "rating": {"kp": 8.1},
             "poster": {"previewUrl": "https://example.com/poster.jpg"},
@@ -230,9 +225,7 @@ def test_parse_movie_normalizes_movie_fields():
     assert movie is not None
     assert movie.id == 42
     assert movie.title == "Фильм"
-    assert movie.country == "Россия, Франция"
-    assert movie.director == "Режиссёр"
-    assert movie.actors == ["Actor"]
+    assert movie.countries == ["Россия", "Франция"]
     assert movie.genres == ["драма"]
     assert movie.rating == 8.1
     assert movie.poster_url == "https://example.com/poster.jpg"
@@ -246,7 +239,6 @@ def test_parse_movie_handles_missing_fields():
             "name": None,
             "year": 2023,
             "countries": [],
-            "persons": [],
             "genres": [],
             "rating": {"kp": None},
             "poster": None,
@@ -258,9 +250,7 @@ def test_parse_movie_handles_missing_fields():
     assert movie is not None
     assert movie.id == 43
     assert movie.title == "Без названия"
-    assert movie.country is None
-    assert movie.director is None
-    assert movie.actors == []
+    assert movie.countries == []
     assert movie.genres == []
     assert movie.rating is None
     assert movie.poster_url is None
@@ -275,7 +265,6 @@ def test_parse_movie_with_invalid_data_raises_exception():
             "name": "Фильм",
             "year": 2024,
             "countries": [{"name": "Россия"}],
-            "persons": [],
             "genres": [],
             "rating": {"kp": 8.1},
             "poster": None,
