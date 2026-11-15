@@ -1,10 +1,10 @@
 """Contract of the vibe extractor."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ExtractedVibe(BaseModel):
-    """Mood tags found in a query and the vibe text built from them."""
+    """Vibe description for the vibe vector plus the query text without vibe words."""
 
-    moods: list[str] = Field(default_factory=list)
+    text: str
     vibe: str | None = None

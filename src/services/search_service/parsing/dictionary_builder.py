@@ -1,11 +1,19 @@
-"""Build the mood lookup for query parsing from the mood dictionary."""
+"""Build lookup structures for query parsing from static dictionaries."""
 
 import pymorphy3
 from flashtext import KeywordProcessor
 
+from services.search_service.parsing.dictionaries import GENRE_TAGS
 from services.search_service.parsing.mood_dictionary import MOOD_TAGS
 
 CYRILLIC_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+
+
+def _make_processor() -> KeywordProcessor:
+    processor = KeywordProcessor(case_sensitive=False)
+    for char in CYRILLIC_LETTERS:
+        processor.add_non_word_boundary(char)
+    return processor
 
 
 class DictionaryBuilder:
@@ -28,16 +36,23 @@ class DictionaryBuilder:
         prefix = " ".join(head)
         return {f"{prefix} {form}".strip() for form in self.word_forms(last)}
 
-    def build_mood_processor(
-        self, tags: dict[str, tuple[str, ...]] = MOOD_TAGS
-    ) -> KeywordProcessor:
-        """Map every form of each trigger (also with "ё" -> "е") to its mood tag."""
-        processor = KeywordProcessor(case_sensitive=False)
-        for char in CYRILLIC_LETTERS:
-            processor.add_non_word_boundary(char)
+    def _build_processor(self, tags: dict[str, tuple[str, ...]]) -> KeywordProcessor:
+        processor = _make_processor()
         for tag, triggers in tags.items():
             for trigger in triggers:
                 for form in self.phrase_forms(trigger):
                     processor.add_keyword(form, tag)
                     processor.add_keyword(form.replace("ё", "е"), tag)
         return processor
+
+    def build_mood_processor(
+        self, tags: dict[str, tuple[str, ...]] = MOOD_TAGS
+    ) -> KeywordProcessor:
+        """Map every form of each trigger to its mood tag."""
+        return self._build_processor(tags)
+
+    def build_genre_processor(
+        self, tags: dict[str, tuple[str, ...]] = GENRE_TAGS
+    ) -> KeywordProcessor:
+        """Map every form of each genre trigger to its canonical genre name."""
+        return self._build_processor(tags)
