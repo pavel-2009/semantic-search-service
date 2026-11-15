@@ -720,6 +720,12 @@ wheels = [
 ]
 
 [[package]]
+name = "flashtext"
+version = "2.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/d8/2cd0656eae456d615c2f1efbcae8dfca2cb871a31f34ba8925aba47d5e09/flashtext-2.7.tar.gz", hash = "sha256:a1be2b93e09d4f0deee4aad72b91a7127b61fb8b8034ca9a9c78ea745d8b05cf", size = 14536, upload-time = "2018-02-16T05:24:17.232Z" }
+
+[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2362,6 +2368,7 @@ dependencies = [
     { name = "aiogram" },
     { name = "fastapi" },
     { name = "flagembedding" },
+    { name = "flashtext" },
     { name = "playwright" },
     { name = "playwright-stealth" },
     { name = "pydantic" },
@@ -2400,6 +2407,7 @@ requires-dist = [
     { name = "aiogram", specifier = ">=3.22.0" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "flagembedding", specifier = ">=1.4.2" },
+    { name = "flashtext", specifier = ">=2.7" },
     { name = "playwright", specifier = ">=1.62.0" },
     { name = "playwright-stealth", specifier = ">=2.0.3" },
     { name = "pydantic", specifier = ">=2.13.4" },
