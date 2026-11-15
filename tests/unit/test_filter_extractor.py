@@ -2,7 +2,7 @@
 
 import pytest
 
-from services.search_service.parsing.filter_extractor import FilterExtractor, is_year
+from services.search_service.parsing.filter_extractor import ExtractedFilters, FilterExtractor
 
 extractor = FilterExtractor(current_year=2026)
 
@@ -93,8 +93,6 @@ def test_year_and_rating_do_not_interfere() -> None:
     assert result.text == "триллер"
 
 
-def test_is_year() -> None:
-    assert is_year("1999")
-    assert is_year(2030)
-    assert not is_year("1899")
-    assert not is_year("abc")
+def test_no_filters_returns_normalized_text() -> None:
+    result = extractor.extract("Что-нибудь про Ёжика")
+    assert result == ExtractedFilters(text="что-нибудь про ежика")
