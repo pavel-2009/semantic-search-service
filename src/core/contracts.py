@@ -9,11 +9,10 @@ class Movie(BaseModel):
     id: int
     title: str = "Без названия"
     year: int | None = None
-    country: str | None = None
-    director: str | None = None
+    countries: list[str] = Field(default_factory=list)
     description: str = ""
-    actors: list[str] = Field(default_factory=list)
     genres: list[str] = Field(default_factory=list)
+    moods: list[str] = Field(default_factory=list)
     rating: float | None = None
     poster_url: str | None = None
 
