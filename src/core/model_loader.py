@@ -12,8 +12,8 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 from sentence_transformers import SentenceTransformer  # noqa: E402
 from tenacity import retry, stop_after_attempt, wait_exponential  # noqa: E402
 
-from core.config import PROJECT_ROOT, settings  # noqa: E402
-from core.logger import get_logger  # noqa: E402
+from src.core.config import PROJECT_ROOT, settings  # noqa: E402
+from src.core.logger import get_logger  # noqa: E402
 
 logger = get_logger(__name__)
 LOCAL_BGE_MODEL_PATH = PROJECT_ROOT / "bge-m3"

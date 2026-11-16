@@ -8,9 +8,9 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from backend.schemas import MovieResult, SearchRequest
-from core.dependencies import get_search_service
-from core.logger import get_logger
+from src.backend.schemas import MovieResult, SearchRequest
+from src.core.dependencies import get_search_service
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = Router(name="search")

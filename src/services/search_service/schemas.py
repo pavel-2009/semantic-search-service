@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from services.indexer.schemas import SparseVectorData
+from src.services.indexer.schemas import SparseVectorData
 
 
 class SearchQuery(BaseModel):

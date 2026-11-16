@@ -8,11 +8,11 @@ from aiogram import Bot
 from aiogram.filters import CommandObject
 from aiogram.types import CallbackQuery, Message
 
-from backend.schemas import MovieResult, SearchRequest
-from bot.main import start
+from src.backend.schemas import MovieResult, SearchRequest
+from src.bot.main import start
 
-info_router = import_module("bot.routers.info_router")
-search_router = import_module("bot.routers.search_router")
+info_router = import_module("src.bot.routers.info_router")
+search_router = import_module("src.bot.routers.search_router")
 
 
 @pytest.fixture

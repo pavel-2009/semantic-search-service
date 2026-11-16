@@ -4,11 +4,11 @@ from time import perf_counter
 
 from qdrant_client import models
 
-from core.contracts import IndexerStats
-from core.logger import get_logger
-from core.qdrant_client import QdrantClientSingleton
-from services.indexer.config import config
-from services.indexer.schemas import IndexedMoviePoint
+from src.core.contracts import IndexerStats
+from src.core.logger import get_logger
+from src.core.qdrant_client import QdrantClientSingleton
+from src.services.indexer.config import config
+from src.services.indexer.schemas import IndexedMoviePoint
 
 logger = get_logger(__name__)
 

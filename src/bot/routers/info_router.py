@@ -7,10 +7,10 @@ from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery
 
-from backend.schemas import MovieResult
-from backend.services.search_service import SearchService
-from core.dependencies import get_search_service
-from core.logger import get_logger
+from src.backend.schemas import MovieResult
+from src.backend.services.search_service import SearchService
+from src.core.dependencies import get_search_service
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = Router(name="info")

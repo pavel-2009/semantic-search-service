@@ -3,7 +3,7 @@
 import logging
 import sys
 
-from core.config import settings
+from src.core.config import settings
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

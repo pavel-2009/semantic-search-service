@@ -7,9 +7,9 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from bot.routers import info_router, search_router
-from core.config import settings
-from core.logger import get_logger, setup_logging
+from src.bot.routers import info_router, search_router
+from src.core.config import settings
+from src.core.logger import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)

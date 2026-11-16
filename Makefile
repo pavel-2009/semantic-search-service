@@ -1,5 +1,8 @@
 .PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
+test: 
+	uv run python -m test_script
+
 indexer:
 	uv run python -m scripts.run_indexer
 
@@ -19,7 +22,7 @@ down:
 	docker compose down
 
 # Tests (Docker-dependent suites run only when explicitly requested)
-test: test-unit
+tests: test-unit
 
 test-unit:
 	uv run pytest tests/unit -v

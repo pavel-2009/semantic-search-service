@@ -5,8 +5,8 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.main import app
-from backend.schemas import MovieResult, SearchRequest, StatsResponse
+from src.backend.main import app
+from src.backend.schemas import MovieResult, SearchRequest, StatsResponse
 
 
 class MockSearchService:

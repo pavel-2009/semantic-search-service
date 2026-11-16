@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.schemas import (
+from src.backend.schemas import (
     HealthResponse,
     MovieResult,
     RatingFilter,
@@ -13,8 +13,8 @@ from backend.schemas import (
     StatsResponse,
     YearFilter,
 )
-from core.contracts import Movie
-from scraper.schemas import (
+from src.core.contracts import Movie
+from src.scraper.schemas import (
     PoiskKinoCountry,
     PoiskKinoGenre,
     PoiskKinoMovie,

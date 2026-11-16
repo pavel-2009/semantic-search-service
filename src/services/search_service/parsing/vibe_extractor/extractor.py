@@ -1,8 +1,8 @@
 """Extract mood tags from a query, build the vibe text and remove those words from text."""
 
-from core.vibe import format_vibe
-from services.search_service.parsing.dictionary_builder import DictionaryBuilder
-from services.search_service.parsing.vibe_extractor.schemas import ExtractedVibe
+from src.core.vibe import format_vibe
+from src.services.search_service.parsing.dictionary_builder import DictionaryBuilder
+from src.services.search_service.parsing.vibe_extractor.schemas import ExtractedVibe
 
 
 class VibeExtractor:

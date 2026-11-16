@@ -2,9 +2,9 @@
 
 from collections import Counter
 
-from core.vibe import format_vibe
-from services.search_service.parsing.mood_dictionary import MOOD_TAGS
-from services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeExtractor
+from src.core.vibe import format_vibe
+from src.services.search_service.parsing_resources.mood_dictionary import MOOD_TAGS
+from src.services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeExtractor
 
 extractor = VibeExtractor()
 
@@ -46,3 +46,11 @@ def test_every_trigger_belongs_to_one_tag() -> None:
         for trigger in triggers
     )
     assert [trigger for trigger, count in counts.items() if count > 1] == []
+
+
+def test_participle_moods_and_think_phrases_are_inflected() -> None:
+    res = extractor.extract("захватывающая атмосфера с захватывающим духом, заставляют задуматься")
+    assert res.vibe == "Динамичный, атмосферный, философский."
+    assert "захватывающая" not in res.text
+    assert "захватывающим" not in res.text
+    assert "задуматься" not in res.text

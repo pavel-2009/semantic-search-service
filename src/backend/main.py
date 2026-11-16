@@ -8,10 +8,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.info_router import get_info_service, router as info_router
-from backend.api.search_router import router as search_router
-from core.config import settings
-from core.logger import get_logger, setup_logging
+from src.backend.api.info_router import get_info_service, router as info_router
+from src.backend.api.search_router import router as search_router
+from src.core.config import settings
+from src.core.logger import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)

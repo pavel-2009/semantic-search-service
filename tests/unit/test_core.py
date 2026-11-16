@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from core.config import PROJECT_ROOT, Settings
-from core.contracts import IndexerStats, Movie
-from core.text_normalizer import clean_text
+from src.core.config import PROJECT_ROOT, Settings
+from src.core.contracts import IndexerStats, Movie
+from src.core.text_normalizer import clean_text
 
 
 def test_clean_text_returns_empty_for_empty_or_whitespace_input() -> None:

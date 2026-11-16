@@ -8,7 +8,7 @@ from scrapy.utils.test import get_crawler
 
 import src.scraper.pipelines as pipeline_module
 from src.scraper.pipelines import JsonPipeline
-from core.contracts import Movie
+from src.core.contracts import Movie
 from src.scraper.spiders.movie_spider import MovieSpider
 
 
