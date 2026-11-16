@@ -1,3 +1,3 @@
-from text_parser import ParsedText
+from .text_parser import ParsedText
 
 __all__ = ["ParsedText"]

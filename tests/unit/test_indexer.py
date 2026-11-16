@@ -14,6 +14,7 @@ from core.qdrant_client import QdrantClientSingleton
 import services.indexer.embedder as embedder_module
 from services.indexer.config import config
 from services.indexer.indexer import Indexer
+from services.search_service.parsing import ParsedText
 
 
 def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:
@@ -189,6 +190,39 @@ def test_index_movies_with_force_reindex_removes_existing_collection(
     indexer.index_movies(filepath, force_recreate=True)
     stats: IndexerStats = indexer.get_stats()
     assert stats.points_count == 1  # Should still be 1 after reindexing
+
+
+def test_embed_request_generates_plot_vibe_and_sparse_embeddings(
+    indexer: Indexer,
+) -> None:
+    response = indexer.embedder.embed_request(
+        ParsedText(
+            plot="A detective investigates",
+            vibe="dark and tense",
+            entities="Sherlock Holmes",
+        )
+    )
+
+    assert response.embedding_names == ["plot", "vibe"]
+    assert response.embeddings == [
+        [float(len("A detective investigates"))] * config.dense_dim,
+        [float(len("dark and tense"))] * config.dense_dim,
+    ]
+    assert response.sparse_vector is not None
+    assert response.sparse_vector.indices == [1]
+    assert response.sparse_vector.values == [0.5]
+
+
+def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
+    response = indexer.embedder.embed_request(
+        ParsedText(plot=None, vibe=None, entities=None)
+    )
+
+    assert response.embeddings == []
+    assert response.embedding_names == []
+    assert response.sparse_vector is not None
+    assert response.sparse_vector.indices == []
+    assert response.sparse_vector.values == []
 
 
 def test_create_collection_with_existing_collection_does_not_fail(

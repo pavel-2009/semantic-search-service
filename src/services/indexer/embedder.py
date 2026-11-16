@@ -18,6 +18,7 @@ from core.vibe import format_vibe  # noqa: E402
 from services.indexer.config import config  # noqa: E402
 from services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
 from services.search_service.parsing import ParsedText  # noqa: E402
+from services.search_service.embedder.schemas import EmbedderResponse  # noqa: E402
 
 logger = get_logger(__name__)
 LOCAL_BGE_MODEL_PATH = Path(__file__).resolve().parents[3] / "bge-m3"
@@ -48,6 +49,7 @@ class MovieEmbedder:
             use_fp16=use_fp16,
             device=device,
         )
+        self.model_name = model_path
         self.batch_size = batch_size
         self.sparse_min_weight = sparse_min_weight
         self.min_plot_len = min_plot_len
@@ -119,10 +121,57 @@ class MovieEmbedder:
         )
         return points
 
-    def embed_request(self, request: ParsedText) -> list[IndexedMoviePoint]:
-        """Embed movies from a ParsedText request."""
-        cards = request.movies
-        
+    def embed_request(self, request: ParsedText) -> EmbedderResponse:
+        """Embed parsed plot and vibe text densely and entities sparsely."""
+        started_at = perf_counter()
+        dense_names: list[str] = []
+        dense_texts: list[str] = []
+
+        for name, text in (("plot", request.plot), ("vibe", request.vibe)):
+            if text and text.strip():
+                dense_names.append(name)
+                dense_texts.append(text.strip())
+
+        dense_embeddings = (
+            self.model.encode(
+                dense_texts,
+                batch_size=self.batch_size,
+                return_dense=True,
+                return_sparse=False,
+                return_colbert_vecs=False,
+            )["dense_vecs"].tolist()
+            if dense_texts
+            else []
+        )
+
+        sparse_text = request.entities.strip() if request.entities else ""
+        sparse_weights = (
+            self.model.encode(
+                [sparse_text],
+                batch_size=self.batch_size,
+                return_dense=False,
+                return_sparse=True,
+                return_colbert_vecs=False,
+            )["lexical_weights"][0]
+            if sparse_text
+            else {}
+        )
+
+        if not dense_texts and not sparse_text:
+            logger.warning("No text to embed in request")
+
+        logger.debug(
+            "Embedded search request: dense=%d sparse=%s duration_ms=%.1f",
+            len(dense_embeddings),
+            bool(sparse_text),
+            (perf_counter() - started_at) * 1000,
+        )
+        return EmbedderResponse(
+            embeddings=dense_embeddings,
+            embedding_names=dense_names,
+            sparse_vector=self._filter_sparse(sparse_weights),
+            model=self.model_name,
+        )
 
     def _format_plot(self, card: Movie) -> str | None:
         if not card.description:
