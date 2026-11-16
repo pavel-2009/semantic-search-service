@@ -7,11 +7,11 @@ from time import perf_counter
 
 from pydantic import ValidationError
 
-from core.contracts import IndexerStats, Movie
-from core.logger import get_logger
-from repositories.qdrant_repository import QdrantRepository
-from services.indexer.config import config
-from services.indexer.embedder import MovieEmbedder
+from src.core.contracts import IndexerStats, Movie
+from src.core.logger import get_logger
+from src.repositories.qdrant_repository import QdrantRepository
+from src.services.indexer.config import config
+from src.services.indexer.embedder import MovieEmbedder
 
 logger = get_logger(__name__)
 MAX_BATCH_SIZE = config.batch_size

@@ -2,7 +2,7 @@
 
 import pytest
 
-from services.search_service.parsing.filter_extractor import ExtractedFilters, FilterExtractor
+from src.services.search_service.parsing.filter_extractor import ExtractedFilters, FilterExtractor
 
 extractor = FilterExtractor(current_year=2026)
 

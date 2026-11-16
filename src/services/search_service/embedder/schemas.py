@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from services.indexer.schemas import SparseVectorData
+from src.services.indexer.schemas import SparseVectorData
 
 
 @dataclass

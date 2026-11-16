@@ -6,10 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
-from backend.schemas import SearchRequest, SearchResponse
-from backend.services.search_service import SearchService
-from core.dependencies import get_search_service
-from core.logger import get_logger
+from src.backend.schemas import SearchRequest, SearchResponse
+from src.backend.services.search_service import SearchService
+from src.core.dependencies import get_search_service
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 

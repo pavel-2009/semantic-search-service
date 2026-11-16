@@ -2,7 +2,7 @@
 
 import re
 
-from services.search_service.parsing.filter_extractor.rules import (
+from src.services.search_service.parsing.filter_extractor.rules import (
     DASH,
     MAX_RATING,
     Rule,

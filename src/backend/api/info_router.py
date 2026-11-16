@@ -6,10 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
-from backend.schemas import HealthResponse, MovieResult, StatsResponse
-from backend.services.search_service import SearchService
-from core.dependencies import get_search_service
-from core.logger import get_logger
+from src.backend.schemas import HealthResponse, MovieResult, StatsResponse
+from src.backend.services.search_service import SearchService
+from src.core.dependencies import get_search_service
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["info"])

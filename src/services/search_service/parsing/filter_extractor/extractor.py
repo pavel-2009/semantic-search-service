@@ -10,10 +10,10 @@ Examples:
 import re
 from datetime import date
 
-from services.search_service.parsing.filter_extractor.rating_rules import RATING_RULES
-from services.search_service.parsing.filter_extractor.rules import Rule
-from services.search_service.parsing.filter_extractor.schemas import ExtractedFilters
-from services.search_service.parsing.filter_extractor.year_rules import YEAR_RULES
+from src.services.search_service.parsing.filter_extractor.rating_rules import RATING_RULES
+from src.services.search_service.parsing.filter_extractor.rules import Rule
+from src.services.search_service.parsing.filter_extractor.schemas import ExtractedFilters
+from src.services.search_service.parsing.filter_extractor.year_rules import YEAR_RULES
 
 RULES: list[Rule] = [*RATING_RULES, *YEAR_RULES]
 

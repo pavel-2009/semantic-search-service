@@ -4,8 +4,8 @@ from time import perf_counter
 
 from qdrant_client import QdrantClient
 
-from core.config import settings
-from core.logger import get_logger
+from src.core.config import settings
+from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,9 +1,9 @@
 """Tests for the final parsed query."""
 
-from services.search_service.parsing import text_parser
-from services.search_service.parsing.entity_extraction import ExtractedEntities
-from services.search_service.parsing.filter_extractor import ExtractedFilters
-from services.search_service.parsing.vibe_extractor import ExtractedVibe
+from src.services.search_service.parsing import text_parser
+from src.services.search_service.parsing.entity_extraction import ExtractedEntities
+from src.services.search_service.parsing.filter_extractor import ExtractedFilters
+from src.services.search_service.parsing.vibe_extractor import ExtractedVibe
 
 
 def test_parse_cleans_remaining_text_and_collects_extractions(monkeypatch) -> None:

@@ -1,6 +1,6 @@
 """Tests for EntityExtractor."""
 
-from services.search_service.parsing.entity_extraction import (
+from src.services.search_service.parsing.entity_extraction import (
      EntityExtractor,
     ExtractedEntities,
 )

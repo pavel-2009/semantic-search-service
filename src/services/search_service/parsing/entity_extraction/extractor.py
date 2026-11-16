@@ -15,8 +15,8 @@ from natasha import (  # noqa: E402
     Segmenter,
 )
 
-from services.search_service.parsing.dictionary_builder import DictionaryBuilder  # noqa: E402
-from services.search_service.parsing.entity_extraction.schemas import (  # noqa: E402
+from src.services.search_service.parsing.dictionary_builder import DictionaryBuilder  # noqa: E402
+from src.services.search_service.parsing.entity_extraction.schemas import (  # noqa: E402
     ExtractedEntities,
 )
 

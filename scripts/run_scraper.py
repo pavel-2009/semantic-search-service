@@ -4,18 +4,18 @@ import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 
 from scrapy.crawler import CrawlerProcess  # noqa: E402
 from scrapy.utils.project import get_project_settings  # noqa: E402
 
-from scraper.spiders.movie_spider import MovieSpider  # noqa: E402
+from src.scraper.spiders.movie_spider import MovieSpider  # noqa: E402
 
 
 def main() -> None:
     """Run the configured movie spider and JSON pipeline."""
     settings = get_project_settings()
-    settings.setmodule("scraper.settings")
+    settings.setmodule("src.scraper.settings")
 
     process = CrawlerProcess(settings)
     crawler = process.create_crawler(MovieSpider)

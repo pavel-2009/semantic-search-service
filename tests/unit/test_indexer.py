@@ -9,12 +9,12 @@ import pytest
 from qdrant_client.http import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
-from core.contracts import IndexerStats, Movie
-from core.qdrant_client import QdrantClientSingleton
-import services.indexer.embedder as embedder_module
-from services.indexer.config import config
-from services.indexer.indexer import Indexer
-from services.search_service.parsing import ParsedText
+from src.core.contracts import IndexerStats, Movie
+from src.core.qdrant_client import QdrantClientSingleton
+import src.services.indexer.embedder as embedder_module
+from src.services.indexer.config import config
+from src.services.indexer.indexer import Indexer
+from src.services.search_service.parsing import ParsedText
 
 
 def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:

@@ -2,9 +2,9 @@
 
 from collections import Counter
 
-from core.vibe import format_vibe
-from services.search_service.parsing.mood_dictionary import MOOD_TAGS
-from services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeExtractor
+from src.core.vibe import format_vibe
+from src.services.search_service.parsing.mood_dictionary import MOOD_TAGS
+from src.services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeExtractor
 
 extractor = VibeExtractor()
 
