@@ -3,10 +3,10 @@
 import re
 from dataclasses import dataclass
 
-from services.search_service.parsing.dictionary_builder import DictionaryBuilder
-from services.search_service.parsing.entity_extraction import EntityExtractor
-from services.search_service.parsing.filter_extractor import FilterExtractor
-from services.search_service.parsing.vibe_extractor import VibeExtractor
+from src.services.search_service.parsing.dictionary_builder import DictionaryBuilder
+from src.services.search_service.parsing.entity_extraction import EntityExtractor
+from src.services.search_service.parsing.filter_extractor import FilterExtractor
+from src.services.search_service.parsing.vibe_extractor import VibeExtractor
 
 _DANGLING_WORDS = frozenset(
     "а без в во для до за и из к ко на над о об обо от по под при про с со у через".split()

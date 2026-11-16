@@ -5,8 +5,8 @@ from collections.abc import Iterable
 import pymorphy3
 from flashtext import KeywordProcessor
 
-from services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS
-from services.search_service.parsing.mood_dictionary import MOOD_TAGS
+from src.services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS
+from src.services.search_service.parsing.mood_dictionary import MOOD_TAGS
 
 CYRILLIC_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
 

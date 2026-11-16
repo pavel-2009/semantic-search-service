@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from core.contracts import Movie
+from src.core.contracts import Movie
 
 
 class SparseVectorData(BaseModel):

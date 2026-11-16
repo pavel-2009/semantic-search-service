@@ -12,13 +12,13 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
-from core.contracts import Movie  # noqa: E402
-from core.logger import get_logger  # noqa: E402
-from core.vibe import format_vibe  # noqa: E402
-from services.indexer.config import config  # noqa: E402
-from services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
-from services.search_service.parsing import ParsedText  # noqa: E402
-from services.search_service.embedder.schemas import EmbedderResponse  # noqa: E402
+from src.core.contracts import Movie
+from src.core.logger import get_logger  # noqa: E402
+from src.core.vibe import format_vibe  # noqa: E402
+from src.services.indexer.config import config  # noqa: E402
+from src.services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
+from src.services.search_service.parsing import ParsedText  # noqa: E402
+from src.services.search_service.embedder.schemas import EmbedderResponse  # noqa: E402
 
 logger = get_logger(__name__)
 LOCAL_BGE_MODEL_PATH = Path(__file__).resolve().parents[3] / "bge-m3"
