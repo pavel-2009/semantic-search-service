@@ -17,6 +17,7 @@ from core.logger import get_logger  # noqa: E402
 from core.vibe import format_vibe  # noqa: E402
 from services.indexer.config import config  # noqa: E402
 from services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
+from services.search_service.parsing import ParsedText  # noqa: E402
 
 logger = get_logger(__name__)
 LOCAL_BGE_MODEL_PATH = Path(__file__).resolve().parents[3] / "bge-m3"
@@ -56,7 +57,7 @@ class MovieEmbedder:
             (perf_counter() - started_at) * 1000,
         )
 
-    def embed_batch(self, cards: list[Movie]) -> list[IndexedMoviePoint]:
+    def embed_cards(self, cards: list[Movie]) -> list[IndexedMoviePoint]:
         """Embed movies into plot, vibe and sparse vectors."""
         if not cards:
             logger.warning("No movies to embed")
@@ -117,6 +118,11 @@ class MovieEmbedder:
             (perf_counter() - started_at) * 1000,
         )
         return points
+
+    def embed_request(self, request: ParsedText) -> list[IndexedMoviePoint]:
+        """Embed movies from a ParsedText request."""
+        cards = request.movies
+        
 
     def _format_plot(self, card: Movie) -> str | None:
         if not card.description:
