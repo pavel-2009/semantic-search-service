@@ -1,4 +1,4 @@
-"""Shared building blocks for extraction rules."""
+"""Shared definitions for year and rating extraction rules."""
 
 import re
 from collections.abc import Callable

@@ -2,7 +2,7 @@
 
 import re
 
-from src.services.search_service.parsing.filter_extractor.rules import (
+from src.services.search_service.parsing_resources.filter_rules.rules import (
     AVOID_PREFIX,
     DASH,
     MAX_RATING,

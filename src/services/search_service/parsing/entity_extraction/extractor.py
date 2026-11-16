@@ -20,45 +20,22 @@ from natasha import (  # noqa: E402
 )
 
 from src.core.config import settings  # noqa: E402
-from src.services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS  # noqa: E402
 from src.services.search_service.parsing.dictionary_builder import (  # noqa: E402
     DictionaryBuilder,
     get_morph_analyzer,
 )
+from src.services.search_service.parsing_resources.entity_patterns import (  # noqa: E402
+    HAS_LETTER_RE,
+    LIST_SEPARATORS_RE,
+    NEGATED_GENRE_RE,
+    NON_ENTITY_LEMMAS,
+    QUOTED_TITLE_RE,
+    SIMILARITY_TRIGGER_RE,
+    TITLE_CONNECTORS,
+    TOKEN_SPAN_RE,
+)
 from src.services.search_service.parsing.entity_extraction.schemas import (  # noqa: E402
     ExtractedEntities,
-)
-from src.services.search_service.parsing.mood_dictionary import MOOD_TAGS  # noqa: E402
-
-_QUOTED_TITLE_RE = re.compile(
-    r"«([^»\n]{2,80})»"
-    r"|„([^“\"\n]{2,80})[“\"]"
-    r"|\"([^\"\n]{2,80})\""
-    r"|(?<![а-яёa-z0-9])'([^'\n]{2,80})'(?![а-яёa-z0-9])"
-)
-_SIMILARITY_TRIGGER_RE = re.compile(
-    r"(?<![а-яёa-z0-9])(?:похож\w*\s+(?:на|с)|в\s+духе|наподобие|вроде|типа|"
-    r"такие\s+как|такой\s+как|как|аналог\w*|названи\w*(?:\s+которого)?)\s+",
-    re.IGNORECASE,
-)
-_NEGATED_GENRE_RE = re.compile(
-    r"(?:^|[.,;!?]\s*|\s)"
-    r"(?:без|кроме|исключая|помимо|избега\w*|никак\w*|только\s+не|не)"
-    r"(?:\s+(?:таких\s+жанр\w*\s+как|жанр\w*|фильм\w*))?"
-    r"\s*(?:[а-яё-]+\s*(?:и|или)\s*)*$",
-    re.IGNORECASE,
-)
-_TITLE_CONNECTORS = frozenset(
-    {"по", "из", "в", "во", "на", "с", "со", "к", "о", "об", "у", "для", "от", "под", "над"}
-)
-_LIST_SEPARATORS_RE = re.compile(r"^\s*(?:,|и|или)\s+", re.IGNORECASE)
-_TOKEN_SPAN_RE = re.compile(r"[а-яёa-z0-9-]+", re.IGNORECASE)
-_HAS_LETTER_RE = re.compile(r"[а-яёa-z]", re.IGNORECASE)
-
-_NON_PERSON_LEMMAS = frozenset(
-    {w.lower().replace("ё", "е") for w in STOP_WORDS}
-    | {t.lower().replace("ё", "е") for triggers in GENRE_TAGS.values() for t in triggers}
-    | {t.lower().replace("ё", "е") for triggers in MOOD_TAGS.values() for t in triggers}
 )
 
 
@@ -118,13 +95,13 @@ def _normalize_title(raw: str) -> str:
 
 def _is_valid_title_candidate(text: str) -> bool:
     stripped = text.strip()
-    if len(stripped) < 2 or not _HAS_LETTER_RE.search(stripped):
+    if len(stripped) < 2 or not HAS_LETTER_RE.search(stripped):
         return False
     words = stripped.split()
     if not (1 <= len(words) <= 7):
         return False
     lower_norm = stripped.lower().replace("ё", "е")
-    if len(words) == 1 and lower_norm in _NON_PERSON_LEMMAS:
+    if len(words) == 1 and lower_norm in NON_ENTITY_LEMMAS:
         return False
     return True
 
@@ -192,22 +169,22 @@ class EntityExtractor:
     def _is_negated_genre(text: str, start: int) -> bool:
         window_start = max(0, start - 60)
         prefix = text[window_start:start]
-        return bool(_NEGATED_GENRE_RE.search(prefix))
+        return bool(NEGATED_GENRE_RE.search(prefix))
 
     @staticmethod
     def _is_valid_person(span_text: str) -> bool:
         return any(ch.isupper() for ch in span_text)
 
     def _is_non_entity_phrase(self, phrase: str) -> bool:
-        tokens = _TOKEN_SPAN_RE.findall(phrase.lower())
+        tokens = TOKEN_SPAN_RE.findall(phrase.lower())
         if not tokens:
             return True
         lemmas = [self.morph.parse(t)[0].normal_form.replace("ё", "е") for t in tokens]
-        return all(lemma in _NON_PERSON_LEMMAS for lemma in lemmas)
+        return all(lemma in NON_ENTITY_LEMMAS for lemma in lemmas)
 
     def _extract_quoted_titles(self, text: str) -> list[tuple[int, int, str]]:
         titles: list[tuple[int, int, str]] = []
-        for match in _QUOTED_TITLE_RE.finditer(text):
+        for match in QUOTED_TITLE_RE.finditer(text):
             inner = next(group for group in match.groups() if group is not None).strip()
             if not _is_valid_title_candidate(inner):
                 continue
@@ -221,7 +198,7 @@ class EntityExtractor:
         titles: list[tuple[int, int, str]] = []
         known_titles = _load_known_titles(str(self.corpus_path))
 
-        for trigger in _SIMILARITY_TRIGGER_RE.finditer(text):
+        for trigger in SIMILARITY_TRIGGER_RE.finditer(text):
             pos = trigger.end()
             while pos < len(text):
                 matched_known = self._match_known_title_at(text, pos, known_titles)
@@ -238,7 +215,7 @@ class EntityExtractor:
                         titles.append((pos, end_pos, _normalize_title(raw_title)))
                     pos = end_pos
 
-                sep = _LIST_SEPARATORS_RE.match(text[pos:])
+                sep = LIST_SEPARATORS_RE.match(text[pos:])
                 if not sep:
                     break
                 pos += sep.end()
@@ -252,7 +229,7 @@ class EntityExtractor:
         if not known_titles:
             return None
         segment = text[pos : pos + 80]
-        tokens = list(_TOKEN_SPAN_RE.finditer(segment))
+        tokens = list(TOKEN_SPAN_RE.finditer(segment))
         for count in range(min(len(tokens), 6), 0, -1):
             candidate = segment[: tokens[count - 1].end()]
             if not candidate.strip():
@@ -273,7 +250,7 @@ class EntityExtractor:
             return None
         clause = clause_match.group(0)
 
-        tokens = list(_TOKEN_SPAN_RE.finditer(clause))
+        tokens = list(TOKEN_SPAN_RE.finditer(clause))
         if not tokens:
             return None
 
@@ -300,12 +277,12 @@ class EntityExtractor:
                 idx == 1
                 and first_pos in {"ADJF", "PRTF"}
                 and self.morph.parse(lower)[0].tag.POS == "NOUN"
-                and lower not in _NON_PERSON_LEMMAS
+                and lower not in NON_ENTITY_LEMMAS
                 and lower not in {"и", "или"}
             ):
                 last_idx = idx
                 idx += 1
-            elif lower in _TITLE_CONNECTORS and idx + 1 < len(tokens):
+            elif lower in TITLE_CONNECTORS and idx + 1 < len(tokens):
                 next_word = tokens[idx + 1].group(0)
                 next_between = clause[tokens[idx].end() : tokens[idx + 1].start()]
                 if next_between.strip() == "" and (
@@ -313,7 +290,7 @@ class EntityExtractor:
                     or next_word.isdigit()
                     or (
                         self.morph.parse(next_word.lower())[0].tag.POS == "NOUN"
-                        and next_word.lower() not in _NON_PERSON_LEMMAS
+                        and next_word.lower() not in NON_ENTITY_LEMMAS
                         and idx + 2 < len(tokens)
                         and tokens[idx + 2].group(0).isdigit()
                     )

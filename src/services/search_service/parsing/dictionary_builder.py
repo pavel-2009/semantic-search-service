@@ -6,10 +6,9 @@ from functools import lru_cache
 import pymorphy3
 from flashtext import KeywordProcessor
 
-from src.services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS
-from src.services.search_service.parsing.mood_dictionary import MOOD_TAGS
-
-CYRILLIC_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+from src.services.search_service.parsing_resources.dictionaries import GENRE_TAGS, STOP_WORDS
+from src.services.search_service.parsing_resources.entity_patterns import CYRILLIC_LETTERS
+from src.services.search_service.parsing_resources.mood_dictionary import MOOD_TAGS
 
 
 @lru_cache(maxsize=1)

@@ -11,8 +11,8 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from src.core.config import settings
-from src.services.search_service.parsing.dictionaries import GENRE_TAGS, STOP_WORDS
 from src.services.search_service.parsing.dictionary_builder import get_morph_analyzer
+from src.services.search_service.parsing_resources.dictionaries import GENRE_TAGS, STOP_WORDS
 
 _TOKEN_RE = re.compile(r"[а-яёa-z0-9-]+", re.IGNORECASE)
 _CONTENT_POS = frozenset({"NOUN", "ADJF", "PRTF"})

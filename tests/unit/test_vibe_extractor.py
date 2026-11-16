@@ -3,7 +3,7 @@
 from collections import Counter
 
 from src.core.vibe import format_vibe
-from src.services.search_service.parsing.mood_dictionary import MOOD_TAGS
+from src.services.search_service.parsing_resources.mood_dictionary import MOOD_TAGS
 from src.services.search_service.parsing.vibe_extractor import ExtractedVibe, VibeExtractor
 
 extractor = VibeExtractor()
