@@ -85,3 +85,46 @@ def test_parse_removes_stop_words_from_plot(monkeypatch) -> None:
     assert parser.parse("посоветуй пожалуйста хороший фильм про космос").plot == "космос"
     assert parser.parse("расскажи, какие фильмы посмотреть про сны").plot == "сны"
     assert parser.parse("подскажи что-нибудь интересное").plot is None
+
+
+def test_parse_full_space_query_extracts_filters_titles_vibe_and_tfidf_entities() -> None:
+    parser = text_parser.TextParser()
+    query = (
+        'Посоветуй интересные приключенческие фильмы про космос, похожие на "Интерстеллар" '
+        "и \"Гравитацию\". Годов 90-х и позже. Фильмы должны быть с высоким рейтингом и "
+        "хорошими отзывами. Пожалуйста, избегай фильмов с низким рейтингом и негативными "
+        "отзывами. Атмосфера - захватывающая, напряжённая, с элементами научной фантастики. "
+        "Жанры: приключения, научная фантастика, драма. Заставляют задуматься о будущем "
+        "человечества и космоса, избегай фильмов с предсказуемым сюжетом и клишированными "
+        "персонажами."
+    )
+
+    parsed = parser.parse(query)
+
+    assert parsed.filter == {"year_gte": 1990, "rating_gte": 7.0}
+    assert parsed.vibe is not None
+    vibe_lower = parsed.vibe.lower()
+    assert "атмосферный" in vibe_lower
+    assert "динамичный" in vibe_lower
+    assert "напряжённый" in vibe_lower
+    assert "философский" in vibe_lower
+    assert parsed.entities is not None
+    for expected in ("приключения", "Интерстеллар", "Гравитация", "фантастика", "драма", "космос", "человечество"):
+        assert expected in parsed.entities
+    assert parsed.plot is not None
+    assert "космос" in parsed.plot
+    for leaked in ("годо", "отзыв", "сюжет", "персонаж", "научной", "предсказуем", "клиширован"):
+        assert leaked not in parsed.plot
+
+
+def test_keyword_extractor_falls_back_gracefully_when_corpus_missing(tmp_path) -> None:
+    from src.services.search_service.parsing.entity_extraction import KeywordExtractor
+
+    extractor = KeywordExtractor(corpus_path=tmp_path / "missing.jsonl")
+    keywords = extractor.extract(
+        "космос будущем человечества космоса космических научных космоса человечества",
+        exclude=["приключения"],
+    )
+    assert keywords[0] == "космос"
+    assert "человечество" in keywords
+    assert extractor.extract("космос") == []

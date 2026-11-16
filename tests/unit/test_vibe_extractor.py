@@ -46,3 +46,11 @@ def test_every_trigger_belongs_to_one_tag() -> None:
         for trigger in triggers
     )
     assert [trigger for trigger, count in counts.items() if count > 1] == []
+
+
+def test_participle_moods_and_think_phrases_are_inflected() -> None:
+    res = extractor.extract("захватывающая атмосфера с захватывающим духом, заставляют задуматься")
+    assert res.vibe == "Динамичный, атмосферный, философский."
+    assert "захватывающая" not in res.text
+    assert "захватывающим" not in res.text
+    assert "задуматься" not in res.text
