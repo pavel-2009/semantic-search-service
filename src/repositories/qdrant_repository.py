@@ -166,7 +166,7 @@ class QdrantRepository:
             prefetch.append(
                 models.Prefetch(
                     query_vector=embedings.embeddings[0],
-                    top=embedings.top_k,
+                    top=50,
                     vector_name="plot",
                     filter=filter,
                     with_payload=True,
@@ -177,7 +177,7 @@ class QdrantRepository:
             prefetch.append(
                 models.Prefetch(
                     query_vector=embedings.embeddings[1],
-                    top=embedings.top_k,
+                    top=50,
                     vector_name="vibe",
                     filter=filter,
                     with_payload=True,
@@ -188,7 +188,7 @@ class QdrantRepository:
             prefetch.append(
                 models.Prefetch(
                     query_vector=embedings.sparse_vector.model_dump(),
-                    top=embedings.top_k,
+                    top=50,
                     vector_name="sparse",
                     filter=filter,
                     with_payload=True,
