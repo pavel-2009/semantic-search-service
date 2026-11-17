@@ -195,6 +195,27 @@ class QdrantRepository:
                 )
             )
 
+        if not prefetch:
+            logger.warning("No embeddings provided for retrieval; returning empty response.")
+            return RetrievalResponse(request=embedings, response=models.PointsList(points=[]))
+
+        try:
+
+            response = self.client.query_points(
+                collection_name=self.collection_name,
+                prefetch=prefetch,
+                query=models.FusionQuery(fusion=models.Fusion.RRF),
+                query_filter=filter,
+                limit=30,
+                with_payload=True,
+            )
+
+        except Exception as e:
+            logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
+            raise e
+
+        return RetrievalResponse(request=embedings, response=response.points)
+
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
