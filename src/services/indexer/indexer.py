@@ -118,7 +118,7 @@ class Indexer:
             batch = []
 
         if batch:
-            points = self.embedder.embed_batch(batch)
+            points = self.embedder.embed_cards(batch)
             indexed, failed = self.repo.upsert_points(points)
             total_indexed += indexed
             total_failed += failed
