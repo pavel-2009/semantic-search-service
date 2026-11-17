@@ -9,6 +9,7 @@ from src.core.logger import get_logger
 from src.core.qdrant_client import QdrantClientSingleton
 from src.services.indexer.config import config
 from src.services.indexer.schemas import IndexedMoviePoint
+from src.services.search_service.embedder.schemas import EmbedderResponse
 
 logger = get_logger(__name__)
 
@@ -135,6 +136,8 @@ class QdrantRepository:
                 logger.exception("Failed to upsert movie: movie_id=%s", point_struct.id)
 
         return indexed, failed
+
+    def get_points(self, )
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
