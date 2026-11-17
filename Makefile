@@ -3,6 +3,9 @@
 test: 
 	uv run python -m test_script
 
+recall:
+	uv run python -m test_recall
+
 indexer:
 	uv run python -m scripts.run_indexer
 
