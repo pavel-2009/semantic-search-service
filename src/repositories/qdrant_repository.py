@@ -216,7 +216,6 @@ class QdrantRepository:
 
         return RetrievalResponse(request=embeddings, response=response.points)
 
-
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
         collection_name = collection_name or self.collection_name
