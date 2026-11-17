@@ -9,6 +9,8 @@ from src.core.logger import get_logger
 from src.core.qdrant_client import QdrantClientSingleton
 from src.services.indexer.config import config
 from src.services.indexer.schemas import IndexedMoviePoint
+from src.services.search_service.embedder.schemas import EmbedderResponse
+from src.repositories.schemas import RetrievalResponse
 
 logger = get_logger(__name__)
 
@@ -48,8 +50,6 @@ class QdrantRepository:
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
-            "genres": models.PayloadSchemaType.KEYWORD,
-            "countries": models.PayloadSchemaType.KEYWORD,
         }
 
         for field, schema in indexes.items():
@@ -135,6 +135,87 @@ class QdrantRepository:
                 logger.exception("Failed to upsert movie: movie_id=%s", point_struct.id)
 
         return indexed, failed
+
+    def get_points(self, embeddings: EmbedderResponse) -> RetrievalResponse:
+        """Retrieve points from Qdrant based on embeddings."""
+        logger.debug("Retrieving points from Qdrant: collection=%s", self.collection_name)
+
+        year_gte, year_lte = embeddings.year_range
+        rating_gte, rating_lte = embeddings.rating_range
+        conditions: list[models.FieldCondition] = []
+
+        if year_gte or year_lte:
+            conditions.append(
+                models.FieldCondition(
+                    key="year",
+                    range=models.Range(
+                        gte=year_gte or None,
+                        lte=year_lte or None,
+                    ),
+                ),
+            )
+        if rating_gte or rating_lte:
+            conditions.append(
+                models.FieldCondition(
+                    key="rating",
+                    range=models.Range(
+                        gte=rating_gte or None,
+                        lte=rating_lte or None,
+                    ),
+                ),
+            )
+        query_filter = models.Filter(must=conditions) if conditions else None
+
+        prefetch: list[models.Prefetch] = []
+        for vector_name, vector in zip(
+            embeddings.embedding_names,
+            embeddings.embeddings,
+            strict=True,
+        ):
+            if vector:
+                prefetch.append(
+                    models.Prefetch(
+                        query=vector,
+                        limit=50,
+                        using=vector_name,
+                        filter=query_filter,
+                    )
+                )
+
+        if embeddings.sparse_vector:
+            prefetch.append(
+                models.Prefetch(
+                    query=models.SparseVector(
+                        indices=embeddings.sparse_vector.indices,
+                        values=embeddings.sparse_vector.values,
+                    ),
+                    limit=50,
+                    using="sparse",
+                    filter=query_filter,
+                )
+            )
+
+        if not prefetch:
+            logger.warning("No embeddings provided for retrieval; returning empty response.")
+            return RetrievalResponse(request=embeddings, response=models.PointsList(points=[]))
+
+        try:
+
+            response = self.client.query_points(
+                collection_name=self.collection_name,
+                prefetch=prefetch,
+                query=models.FusionQuery(fusion=models.Fusion.RRF),
+                query_filter=query_filter,
+                limit=30,
+                with_payload=True,
+            )
+
+        except Exception as e:
+            logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
+            raise e
+
+        return RetrievalResponse(request=embeddings, response=response.points)
+
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""

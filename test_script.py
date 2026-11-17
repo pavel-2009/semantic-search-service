@@ -2,6 +2,9 @@
 
 from src.services.indexer.embedder import MovieEmbedder
 from src.services.search_service.parsing.text_parser import TextParser
+from src.repositories.qdrant_repository import QdrantRepository
+from src.repositories.schemas import RetrievalResponse
+from src.services.search_service.embedder.schemas import EmbedderResponse
 
 
 movie_request = """
@@ -28,3 +31,17 @@ print("\nPlot:", parsed_text.plot)
 print("\nVibe:", parsed_text.vibe)
 print("\nEntities:", parsed_text.entities)
 print("\nFilters:", parsed_text.filter)
+
+repo = QdrantRepository()
+embedder = MovieEmbedder()
+
+request = embedder.embed_request(parsed_text)
+
+search_result = repo.get_points(embeddings=request)
+
+points = search_result.response[0:5]
+
+for point in points:
+    print("\nPoint ID:", point.id)
+    print("Score:", point.score)
+    print("Payload:", point.payload)

@@ -166,11 +166,20 @@ class MovieEmbedder:
             bool(sparse_text),
             (perf_counter() - started_at) * 1000,
         )
+        filters = request.filter or {}
         return EmbedderResponse(
             embeddings=dense_embeddings,
             embedding_names=dense_names,
             sparse_vector=self._filter_sparse(sparse_weights),
             model=self.model_name,
+            year_range=(
+                int(filters.get("year_gte", 0)),
+                int(filters.get("year_lte", 0)),
+            ),
+            rating_range=(
+                float(filters.get("rating_gte", 0)),
+                float(filters.get("rating_lte", 0)),
+            ),
         )
 
     def _format_plot(self, card: Movie) -> str | None:
