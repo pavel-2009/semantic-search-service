@@ -161,6 +161,41 @@ class QdrantRepository:
             ]
         )
 
+        prefetch: list[models.Prefetch] = []
+        if embedings.embeddings[0]:
+            prefetch.append(
+                models.Prefetch(
+                    query_vector=embedings.embeddings[0],
+                    top=embedings.top_k,
+                    vector_name="plot",
+                    filter=filter,
+                    with_payload=True,
+                )
+            )
+
+        if embedings.embeddings[1]:
+            prefetch.append(
+                models.Prefetch(
+                    query_vector=embedings.embeddings[1],
+                    top=embedings.top_k,
+                    vector_name="vibe",
+                    filter=filter,
+                    with_payload=True,
+                )
+            )
+
+        if embedings.sparse_vector:
+            prefetch.append(
+                models.Prefetch(
+                    query_vector=embedings.sparse_vector.model_dump(),
+                    top=embedings.top_k,
+                    vector_name="sparse",
+                    filter=filter,
+                    with_payload=True,
+                )
+            )
+
+
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
         collection_name = collection_name or self.collection_name
