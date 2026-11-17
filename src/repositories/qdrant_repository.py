@@ -138,7 +138,7 @@ class QdrantRepository:
 
         return indexed, failed
 
-    def get_points(self, embedings: EmbedderResponse) -> RetrievalResponse:
+    def get_points(self, embeddings: EmbedderResponse) -> RetrievalResponse:
         """Retrieve points from Qdrant based on embeddings."""
         logger.debug("Retrieving points from Qdrant: collection=%s", self.collection_name)
 
@@ -147,25 +147,25 @@ class QdrantRepository:
                 models.FieldCondition(
                     key="year",
                     range=models.Range(
-                        gte=embedings.year_range[0],
-                        lte=embedings.year_range[1],
+                        gte=embeddings.year_range[0],
+                        lte=embeddings.year_range[1],
                     ),
                 ),
                 models.FieldCondition(
                     key="rating",
                     range=models.Range(
-                        gte=embedings.rating_range[0],
-                        lte=embedings.rating_range[1],
+                        gte=embeddings.rating_range[0],
+                        lte=embeddings.rating_range[1],
                     )
                 )
             ]
         )
 
         prefetch: list[models.Prefetch] = []
-        if embedings.embeddings[0]:
+        if embeddings.embeddings[0]:
             prefetch.append(
                 models.Prefetch(
-                    query_vector=embedings.embeddings[0],
+                    query_vector=embeddings.embeddings[0],
                     top=50,
                     vector_name="plot",
                     filter=filter,
@@ -173,10 +173,10 @@ class QdrantRepository:
                 )
             )
 
-        if embedings.embeddings[1]:
+        if embeddings.embeddings[1]:
             prefetch.append(
                 models.Prefetch(
-                    query_vector=embedings.embeddings[1],
+                    query_vector=embeddings.embeddings[1],
                     top=50,
                     vector_name="vibe",
                     filter=filter,
@@ -184,10 +184,10 @@ class QdrantRepository:
                 )
             )
 
-        if embedings.sparse_vector:
+        if embeddings.sparse_vector:
             prefetch.append(
                 models.Prefetch(
-                    query_vector=embedings.sparse_vector.model_dump(),
+                    query_vector=embeddings.sparse_vector.model_dump(),
                     top=50,
                     vector_name="sparse",
                     filter=filter,
@@ -197,7 +197,7 @@ class QdrantRepository:
 
         if not prefetch:
             logger.warning("No embeddings provided for retrieval; returning empty response.")
-            return RetrievalResponse(request=embedings, response=models.PointsList(points=[]))
+            return RetrievalResponse(request=embeddings, response=models.PointsList(points=[]))
 
         try:
 
@@ -214,7 +214,7 @@ class QdrantRepository:
             logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
             raise e
 
-        return RetrievalResponse(request=embedings, response=response.points)
+        return RetrievalResponse(request=embeddings, response=response.points)
 
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:

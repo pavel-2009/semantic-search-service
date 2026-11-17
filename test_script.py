@@ -2,6 +2,7 @@
 
 from src.services.indexer.embedder import MovieEmbedder
 from src.services.search_service.parsing.text_parser import TextParser
+from src.repositories.qdrant_repository import QdrantRepository
 
 
 movie_request = """
@@ -28,3 +29,8 @@ print("\nPlot:", parsed_text.plot)
 print("\nVibe:", parsed_text.vibe)
 print("\nEntities:", parsed_text.entities)
 print("\nFilters:", parsed_text.filter)
+
+repo = QdrantRepository()
+embedder = MovieEmbedder()
+
+embeddings = embedder.embed_request(parsed_text)
