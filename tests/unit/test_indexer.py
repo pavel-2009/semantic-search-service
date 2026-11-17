@@ -14,6 +14,8 @@ from src.core.qdrant_client import QdrantClientSingleton
 import src.services.indexer.embedder as embedder_module
 from src.services.indexer.config import config
 from src.services.indexer.indexer import Indexer
+from src.services.indexer.schemas import SparseVectorData
+from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.services.search_service.parsing import ParsedText
 
 
@@ -51,6 +53,7 @@ class MockQdrantClient:
         self.payload_indexes: dict[str, dict[str, object]] = {}
         self.fail_upsert = False
         self.fail_point_id: int | None = None
+        self.last_query: dict[str, object] | None = None
 
     def collection_exists(self, collection_name: str) -> bool:
         return collection_name in self.collections
@@ -110,6 +113,10 @@ class MockQdrantClient:
     def get_collection(self, collection_name: str) -> SimpleNamespace:
         points = self.collections[collection_name]
         return SimpleNamespace(points_count=len(points), status="green")
+
+    def query_points(self, **kwargs: object) -> SimpleNamespace:
+        self.last_query = kwargs
+        return SimpleNamespace(points=[])
 
     def delete_collection(self, collection_name: str) -> bool:
         self.collections.pop(collection_name, None)
@@ -211,6 +218,66 @@ def test_embed_request_generates_plot_vibe_and_sparse_embeddings(
     assert response.sparse_vector is not None
     assert response.sparse_vector.indices == [1]
     assert response.sparse_vector.values == [0.5]
+    assert response.year_range == (0, 0)
+    assert response.rating_range == (0.0, 0.0)
+
+
+def test_embed_request_passes_year_and_rating_filters(indexer: Indexer) -> None:
+    response = indexer.embedder.embed_request(
+        ParsedText(
+            plot="A detective investigates",
+            vibe=None,
+            entities=None,
+            filter={
+                "year_gte": 1990,
+                "rating_gte": 7.5,
+                "rating_lte": 9.0,
+            },
+        )
+    )
+
+    assert response.year_range == (1990, 0)
+    assert response.rating_range == (7.5, 9.0)
+
+
+def test_get_points_does_not_apply_unset_filters(
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    response = EmbedderResponse(
+        embeddings=[],
+        model="test",
+        sparse_vector=SparseVectorData(indices=[1], values=[0.5]),
+    )
+
+    indexer.repo.get_points(response)
+
+    assert qdrant_client.last_query is not None
+    assert qdrant_client.last_query["query_filter"] is None
+
+
+def test_get_points_applies_only_year_and_rating_bounds(
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    response = EmbedderResponse(
+        embeddings=[],
+        model="test",
+        sparse_vector=SparseVectorData(indices=[1], values=[0.5]),
+        year_range=(1990, 0),
+        rating_range=(0.0, 8.5),
+    )
+
+    indexer.repo.get_points(response)
+
+    assert qdrant_client.last_query is not None
+    query_filter = qdrant_client.last_query["query_filter"]
+    assert isinstance(query_filter, models.Filter)
+    assert query_filter.must is not None
+    assert [
+        (condition.key, condition.range.gte, condition.range.lte)
+        for condition in query_filter.must
+    ] == [("year", 1990, None), ("rating", None, 8.5)]
 
 
 def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
@@ -232,6 +299,7 @@ def test_create_collection_with_existing_collection_does_not_fail(
     # Create collection first time
     indexer.create_collection()
     assert indexer.get_stats().points_count == 0
+    assert set(qdrant_client.payload_indexes["movies"]) == {"year", "rating"}
 
     # Create collection again, should not fail
     indexer.create_collection()

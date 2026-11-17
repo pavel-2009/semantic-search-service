@@ -50,8 +50,6 @@ class QdrantRepository:
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
-            "genres": models.PayloadSchemaType.KEYWORD,
-            "countries": models.PayloadSchemaType.KEYWORD,
         }
 
         for field, schema in indexes.items():
@@ -142,56 +140,58 @@ class QdrantRepository:
         """Retrieve points from Qdrant based on embeddings."""
         logger.debug("Retrieving points from Qdrant: collection=%s", self.collection_name)
 
-        filter = models.Filter(
-            must=[
+        year_gte, year_lte = embeddings.year_range
+        rating_gte, rating_lte = embeddings.rating_range
+        conditions: list[models.FieldCondition] = []
+
+        if year_gte or year_lte:
+            conditions.append(
                 models.FieldCondition(
                     key="year",
                     range=models.Range(
-                        gte=embeddings.year_range[0],
-                        lte=embeddings.year_range[1],
+                        gte=year_gte or None,
+                        lte=year_lte or None,
                     ),
                 ),
+            )
+        if rating_gte or rating_lte:
+            conditions.append(
                 models.FieldCondition(
                     key="rating",
                     range=models.Range(
-                        gte=embeddings.rating_range[0],
-                        lte=embeddings.rating_range[1],
-                    )
-                )
-            ]
-        )
+                        gte=rating_gte or None,
+                        lte=rating_lte or None,
+                    ),
+                ),
+            )
+        query_filter = models.Filter(must=conditions) if conditions else None
 
         prefetch: list[models.Prefetch] = []
-        if embeddings.embeddings[0]:
-            prefetch.append(
-                models.Prefetch(
-                    query_vector=embeddings.embeddings[0],
-                    top=50,
-                    vector_name="plot",
-                    filter=filter,
-                    with_payload=True,
+        for vector_name, vector in zip(
+            embeddings.embedding_names,
+            embeddings.embeddings,
+            strict=True,
+        ):
+            if vector:
+                prefetch.append(
+                    models.Prefetch(
+                        query=vector,
+                        limit=50,
+                        using=vector_name,
+                        filter=query_filter,
+                    )
                 )
-            )
-
-        if embeddings.embeddings[1]:
-            prefetch.append(
-                models.Prefetch(
-                    query_vector=embeddings.embeddings[1],
-                    top=50,
-                    vector_name="vibe",
-                    filter=filter,
-                    with_payload=True,
-                )
-            )
 
         if embeddings.sparse_vector:
             prefetch.append(
                 models.Prefetch(
-                    query_vector=embeddings.sparse_vector.model_dump(),
-                    top=50,
-                    vector_name="sparse",
-                    filter=filter,
-                    with_payload=True,
+                    query=models.SparseVector(
+                        indices=embeddings.sparse_vector.indices,
+                        values=embeddings.sparse_vector.values,
+                    ),
+                    limit=50,
+                    using="sparse",
+                    filter=query_filter,
                 )
             )
 
@@ -205,7 +205,7 @@ class QdrantRepository:
                 collection_name=self.collection_name,
                 prefetch=prefetch,
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
-                query_filter=filter,
+                query_filter=query_filter,
                 limit=30,
                 with_payload=True,
             )

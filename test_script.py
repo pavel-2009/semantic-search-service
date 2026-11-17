@@ -3,6 +3,8 @@
 from src.services.indexer.embedder import MovieEmbedder
 from src.services.search_service.parsing.text_parser import TextParser
 from src.repositories.qdrant_repository import QdrantRepository
+from src.repositories.schemas import RetrievalResponse
+from src.services.search_service.embedder.schemas import EmbedderResponse
 
 
 movie_request = """
@@ -33,4 +35,8 @@ print("\nFilters:", parsed_text.filter)
 repo = QdrantRepository()
 embedder = MovieEmbedder()
 
-embeddings = embedder.embed_request(parsed_text)
+request = embedder.embed_request(parsed_text)
+
+search_result = repo.get_points(embeddings=request)
+
+print("\nSearch Result:", search_result)
