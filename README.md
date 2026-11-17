@@ -191,7 +191,7 @@ The bot uses the shared search service and retrieves movie details by ID.
 
 ## 📦 Data & indexing
 
-The scraper writes one movie per line as JSON Lines (`movies.jsonl`). The indexer reads and validates records line by line, builds a searchable text representation from the title, description, genres, countries and year, generates embeddings and upserts the resulting points into Qdrant. Invalid lines are logged and skipped.
+The scraper writes raw movie records to `movies.jsonl`. Indexing uses the prepared `movies_enriched.jsonl` dataset, whose records follow the `EnrichedMovie` contract and include prebuilt plot, vibe and entity text. The indexer validates those records line by line, generates vectors and upserts the canonical movie payloads into Qdrant. Invalid lines are logged and skipped.
 
 Each point contains:
 

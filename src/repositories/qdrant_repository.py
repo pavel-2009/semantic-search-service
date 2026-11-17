@@ -182,7 +182,7 @@ class QdrantRepository:
                     )
                 )
 
-        if embeddings.sparse_vector:
+        if embeddings.sparse_vector and embeddings.sparse_vector.indices:
             prefetch.append(
                 models.Prefetch(
                     query=models.SparseVector(

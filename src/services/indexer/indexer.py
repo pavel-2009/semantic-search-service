@@ -7,7 +7,7 @@ from time import perf_counter
 
 from pydantic import ValidationError
 
-from src.core.contracts import IndexerStats, Movie
+from src.core.contracts import EnrichedMovie, IndexerStats
 from src.core.logger import get_logger
 from src.repositories.qdrant_repository import QdrantRepository
 from src.services.indexer.config import config
@@ -52,8 +52,8 @@ class Indexer:
         """Recreate the Qdrant collection."""
         self.repo.recreate_collection()
 
-    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[Movie]:
-        """Read and validate one JSON Lines movie record at a time."""
+    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[EnrichedMovie]:
+        """Read and validate one enriched JSON Lines movie record at a time."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
@@ -65,7 +65,7 @@ class Indexer:
                 if not line.strip():
                     continue
                 try:
-                    yield Movie.model_validate_json(line)
+                    yield EnrichedMovie.model_validate_json(line)
                 except ValidationError:
                     logger.exception(
                         "Skipping invalid movie record: path=%s line=%d",
@@ -100,7 +100,7 @@ class Indexer:
 
         self.create_collection(force_recreate=force_recreate)
 
-        batch: list[Movie] = []
+        batch: list[EnrichedMovie] = []
         total_processed = 0
         total_indexed = 0
         total_failed = 0
@@ -118,7 +118,7 @@ class Indexer:
             batch = []
 
         if batch:
-            points = self.embedder.embed_batch(batch)
+            points = self.embedder.embed_cards(batch)
             indexed, failed = self.repo.upsert_points(points)
             total_indexed += indexed
             total_failed += failed
