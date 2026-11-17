@@ -39,4 +39,9 @@ request = embedder.embed_request(parsed_text)
 
 search_result = repo.get_points(embeddings=request)
 
-print("\nSearch Result:", search_result)
+points = search_result.response[0:5]
+
+for point in points:
+    print("\nPoint ID:", point.id)
+    print("Score:", point.score)
+    print("Payload:", point.payload)
