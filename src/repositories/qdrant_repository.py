@@ -137,7 +137,7 @@ class QdrantRepository:
 
         return indexed, failed
 
-    def get_points(self, )
+    def get_points(self, embedings: EmbedderResponse) -> 
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
