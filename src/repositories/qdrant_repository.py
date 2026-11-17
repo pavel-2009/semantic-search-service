@@ -10,6 +10,7 @@ from src.core.qdrant_client import QdrantClientSingleton
 from src.services.indexer.config import config
 from src.services.indexer.schemas import IndexedMoviePoint
 from src.services.search_service.embedder.schemas import EmbedderResponse
+from src.repositories.schemas import RetrievalResponse
 
 logger = get_logger(__name__)
 
@@ -137,7 +138,28 @@ class QdrantRepository:
 
         return indexed, failed
 
-    def get_points(self, embedings: EmbedderResponse) -> 
+    def get_points(self, embedings: EmbedderResponse) -> RetrievalResponse:
+        """Retrieve points from Qdrant based on embeddings."""
+        logger.debug("Retrieving points from Qdrant: collection=%s", self.collection_name)
+
+        filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="year",
+                    range=models.Range(
+                        gte=embedings.year_range[0],
+                        lte=embedings.year_range[1],
+                    ),
+                ),
+                models.FieldCondition(
+                    key="rating",
+                    range=models.Range(
+                        gte=embedings.rating_range[0],
+                        lte=embedings.rating_range[1],
+                    )
+                )
+            ]
+        )
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
