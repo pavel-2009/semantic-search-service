@@ -9,7 +9,7 @@ from src.core.config import settings
 class RerankingService:
     """Reranking service."""
 
-    def __init__(self, model_name: str = "DiTy/cross-encoder-russian-msmarco") -> None:
+    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3") -> None:
         """Initialize the reranking service."""
         self.model = CrossEncoder(model_name)
 
