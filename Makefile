@@ -6,6 +6,9 @@ test:
 recall:
 	uv run python -m test_recall
 
+precision:
+	uv run python -m test_precision
+
 indexer:
 	uv run python -m scripts.run_indexer
 

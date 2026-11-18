@@ -17,8 +17,8 @@
 - `expected_titles` — названия релевантных фильмов из датасета для удобного чтения
 - `expected_filters` — (опционально) ожидаемые фильтры `year_gte` / `year_lte` / `rating_gte` для категории `filter_semantic`
 
-## Запуск проверки
+`test_recall.py` отдельно измеряет retrieval Recall@K для K = 5, 10, 20 и 30.
 
-```bash
-uv run python -m test_recall
-```
+`test_precision.py` отдельно выполняет retrieval и reranking, затем измеряет Precision@K для K = 5 и 10.
+
+`Precision@K = число релевантных фильмов в первых K reranked-результатах / K`.
