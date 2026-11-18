@@ -1,25 +1,49 @@
 """Reranking logic."""
 
-from sentence_transformers import CrossEncoder
+import numpy as np
 
+from src.core.model_loader import ModelLoader
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
 
 
 class RerankingService:
     """Reranking service."""
 
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
-        """Initialize the reranking service."""
-        self.model = CrossEncoder(model_name)
+    def __init__(self) -> None:
+        """Initialize the reranking service with the shared downloaded model."""
+        self.model = ModelLoader.get_model()
 
     def rerank(self, request: RerankingRequest) -> RerankingResponse:
         """Rerank documents based on the query."""
         query = request.query
         documents = request.documents
 
-        inputs = [(query, doc["text"]) for doc in documents]
+        if not documents:
+            return RerankingResponse(reranked_documents=[])
 
-        scores = self.model.predict(inputs)
+        query_embedding = np.asarray(
+            self.model.encode(query, convert_to_numpy=True),
+            dtype=np.float32,
+        ).reshape(1, -1)
+        document_embeddings = np.asarray(
+            self.model.encode(
+                [doc["text"] for doc in documents],
+                convert_to_numpy=True,
+            ),
+            dtype=np.float32,
+        )
+
+        if document_embeddings.ndim == 1:
+            document_embeddings = document_embeddings.reshape(1, -1)
+
+        query_norm = np.linalg.norm(query_embedding, axis=1, keepdims=True)
+        document_norms = np.linalg.norm(document_embeddings, axis=1, keepdims=True)
+        scores = (
+            document_embeddings @ query_embedding.T
+        ).reshape(-1) / np.maximum(
+            document_norms.reshape(-1) * query_norm.reshape(-1)[0],
+            np.finfo(np.float32).eps,
+        )
 
         scored_documents = [
             {"document": doc, "score": score} for doc, score in zip(documents, scores)
