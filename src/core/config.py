@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     POISKKINO_API_KEY: str = ""
     BOT_TOKEN: str = ""
 
+    MAX_RERANKED_DOCUMENTS: int = 10
+
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env" if (PROJECT_ROOT / ".env").exists() else None,
         env_file_encoding="utf-8",

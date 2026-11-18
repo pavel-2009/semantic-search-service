@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.core.config import PROJECT_ROOT, Settings
-from src.core.contracts import IndexerStats, Movie
+from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
 from src.core.text_normalizer import clean_text
 
 
@@ -68,6 +68,32 @@ def test_movie_defaults_and_accepts_complete_data() -> None:
 def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         Movie.model_validate(data)
+
+
+def test_enriched_movie_requires_indexing_structure_and_builds_payload() -> None:
+    with pytest.raises(ValidationError):
+        EnrichedMovie.model_validate({"id": 1, "title": "Фильм"})
+
+    enriched = EnrichedMovie(
+        id=42,
+        title="Интерстеллар",
+        year=2014,
+        countries=["США"],
+        description="Путешествие через червоточину.",
+        genres=["фантастика", "драма"],
+        moods=["эпичный", "философский"],
+        rating=8.7,
+        indexing=MovieIndexData(
+            plot="Интерстеллар. Путешествие через червоточину.",
+            vibe="Эпичный, философский.",
+            entities="Интерстеллар. фантастика. драма. США. американский. космос",
+        ),
+    )
+
+    payload = enriched.to_movie_payload()
+    assert isinstance(payload, Movie)
+    assert payload.moods == ["эпичный", "философский"]
+    assert "indexing" not in payload.model_dump()
 
 
 def test_indexer_stats_supports_contract_and_mapping_access() -> None:

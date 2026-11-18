@@ -9,7 +9,7 @@ import pytest
 from qdrant_client.http import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
-from src.core.contracts import IndexerStats, Movie
+from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
 from src.core.qdrant_client import QdrantClientSingleton
 import src.services.indexer.embedder as embedder_module
 from src.services.indexer.config import config
@@ -19,9 +19,21 @@ from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.services.search_service.parsing import ParsedText
 
 
-def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:
-    """Create a valid Movie instance for tests."""
-    return Movie(
+def make_movie_card(
+    movie_id: int = 1,
+    title: str = "Movie",
+    *,
+    moods: list[str] | None = None,
+    plot: str | None = None,
+    vibe: str | None = None,
+    entities: str | None = None,
+) -> EnrichedMovie:
+    """Create a valid EnrichedMovie instance for tests."""
+    resolved_moods = moods if moods is not None else ["атмосферный"]
+    resolved_plot = plot if plot is not None else f"{title}. Description for {title} that is long enough"
+    resolved_vibe = vibe if vibe is not None else "Атмосферный."
+    resolved_entities = entities if entities is not None else f"{title}. драма. Россия. российский"
+    return EnrichedMovie(
         id=movie_id,
         title=title,
         description=f"Description for {title} that is long enough",
@@ -29,6 +41,12 @@ def make_movie_card(movie_id: int = 1, title: str = "Movie") -> Movie:
         rating=8.0,
         genres=["драма"],
         countries=["Россия"],
+        moods=resolved_moods,
+        indexing=MovieIndexData(
+            plot=resolved_plot,
+            vibe=resolved_vibe,
+            entities=resolved_entities,
+        ),
     )
 
 
@@ -54,6 +72,7 @@ class MockQdrantClient:
         self.fail_upsert = False
         self.fail_point_id: int | None = None
         self.last_query: dict[str, object] | None = None
+        self.query_points_result: list[models.ScoredPoint] = []
 
     def collection_exists(self, collection_name: str) -> bool:
         return collection_name in self.collections
@@ -116,7 +135,7 @@ class MockQdrantClient:
 
     def query_points(self, **kwargs: object) -> SimpleNamespace:
         self.last_query = kwargs
-        return SimpleNamespace(points=[])
+        return SimpleNamespace(points=self.query_points_result)
 
     def delete_collection(self, collection_name: str) -> bool:
         self.collections.pop(collection_name, None)
@@ -280,6 +299,52 @@ def test_get_points_applies_only_year_and_rating_bounds(
     ] == [("year", 1990, None), ("rating", None, 8.5)]
 
 
+def test_get_points_sorts_results_by_rating_descending(
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    qdrant_client.query_points_result = [
+        models.ScoredPoint(
+            id=1,
+            version=1,
+            score=0.9,
+            payload={"rating": 7.2},
+        ),
+        models.ScoredPoint(
+            id=2,
+            version=1,
+            score=0.8,
+            payload={"rating": 9.1},
+        ),
+        models.ScoredPoint(
+            id=3,
+            version=1,
+            score=0.7,
+            payload={"rating": None},
+        ),
+        models.ScoredPoint(
+            id=4,
+            version=1,
+            score=0.6,
+            payload={"rating": 8.0},
+        ),
+    ]
+    response = EmbedderResponse(
+        embeddings=[],
+        model="test",
+        sparse_vector=SparseVectorData(indices=[1], values=[0.5]),
+    )
+
+    retrieval = indexer.repo.get_points(response)
+
+    assert [point.payload.get("rating") for point in retrieval.response] == [
+        9.1,
+        8.0,
+        7.2,
+        None,
+    ]
+
+
 def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
     response = indexer.embedder.embed_request(
         ParsedText(plot=None, vibe=None, entities=None)
@@ -376,3 +441,43 @@ def test_batch_indexing_with_large_file(
     indexer.index_movies(filepath)
     stats: IndexerStats = indexer.get_stats()
     assert stats.points_count == 200
+
+
+def test_indexer_config_points_to_enriched_dataset() -> None:
+    assert config.dataset_path.name == "movies_enriched.jsonl"
+
+
+def test_load_movies_rejects_raw_movie_without_indexing_structure(
+    tmp_path: Path,
+    indexer: Indexer,
+) -> None:
+    raw_movie = Movie(id=1, title="Raw Movie", description="Long enough description")
+    filepath = tmp_path / "raw_movies.jsonl"
+    filepath.write_text(raw_movie.model_dump_json() + "\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="No movies available for indexing"):
+        indexer.index_movies(filepath)
+
+
+def test_embed_cards_uses_indexing_fields_and_stores_clean_movie_payload(
+    indexer: Indexer,
+) -> None:
+    card = make_movie_card(
+        movie_id=7,
+        title="Интерстеллар",
+        moods=["эпичный", "философский"],
+        plot="Интерстеллар. Космическое путешествие.",
+        vibe="Эпичный, философский.",
+        entities="Интерстеллар. фантастика. космос",
+    )
+
+    points = indexer.embedder.embed_cards([card])
+
+    assert len(points) == 1
+    point = points[0]
+    assert point.point_id == 7
+    assert point.plot_vector == [float(len("Интерстеллар. Космическое путешествие."))] * config.dense_dim
+    assert point.vibe_vector == [float(len("Эпичный, философский."))] * config.dense_dim
+    assert isinstance(point.payload, Movie)
+    assert point.payload.moods == ["эпичный", "философский"]
+    assert "indexing" not in point.payload.model_dump()

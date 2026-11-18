@@ -12,7 +12,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
-from src.core.contracts import Movie
+from src.core.contracts import EnrichedMovie
 from src.core.logger import get_logger  # noqa: E402
 from src.core.vibe import format_vibe  # noqa: E402
 from src.services.indexer.config import config  # noqa: E402
@@ -59,8 +59,8 @@ class MovieEmbedder:
             (perf_counter() - started_at) * 1000,
         )
 
-    def embed_cards(self, cards: list[Movie]) -> list[IndexedMoviePoint]:
-        """Embed movies into plot, vibe and sparse vectors."""
+    def embed_cards(self, cards: list[EnrichedMovie]) -> list[IndexedMoviePoint]:
+        """Embed enriched movies into plot, vibe and sparse vectors."""
         if not cards:
             logger.warning("No movies to embed")
             return []
@@ -74,7 +74,7 @@ class MovieEmbedder:
             if plot_str := self._format_plot(card):
                 plot_map[idx] = len(dense_texts)
                 dense_texts.append(plot_str)
-            if vibe_str := format_vibe(card.moods):
+            if vibe_str := self._format_vibe(card):
                 vibe_map[idx] = len(dense_texts)
                 dense_texts.append(vibe_str)
         sparse_texts = [self._format_sparse(card) for card in cards]
@@ -108,7 +108,7 @@ class MovieEmbedder:
                     plot_vector=plot_vec,
                     vibe_vector=vibe_vec,
                     sparse_vector=sparse_vec,
-                    payload=card,
+                    payload=card.to_movie_payload(),
                 )
             )
 
@@ -182,14 +182,22 @@ class MovieEmbedder:
             ),
         )
 
-    def _format_plot(self, card: Movie) -> str | None:
-        if not card.description:
+    def _format_plot(self, card: EnrichedMovie) -> str | None:
+        raw = card.indexing.plot if card.indexing.plot is not None else card.description
+        if not raw:
             return None
-        clean = card.description.strip()
+        clean = raw.strip()
         return clean if len(clean) >= self.min_plot_len else None
 
-    def _format_sparse(self, card: Movie) -> str:
-        return ". ".join([card.title, *card.genres])
+    def _format_vibe(self, card: EnrichedMovie) -> str | None:
+        if card.indexing.vibe and card.indexing.vibe.strip():
+            return card.indexing.vibe.strip()
+        return format_vibe(card.moods)
+
+    def _format_sparse(self, card: EnrichedMovie) -> str:
+        if card.indexing.entities and card.indexing.entities.strip():
+            return card.indexing.entities.strip()
+        return ". ".join(part for part in (card.title, *card.genres) if part)
 
     def _filter_sparse(self, weights: dict) -> SparseVectorData:
         filtered = {
