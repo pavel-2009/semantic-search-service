@@ -1,6 +1,26 @@
 from ranx import Qrels, Run, evaluate
 
-from test_precision import build_reranked_run, document_text, print_rank_changes
+import test_precision
+from test_precision import (
+    build_reranked_run,
+    document_text,
+    load_queries,
+    print_rank_changes,
+)
+
+
+def test_load_queries_returns_only_plot_category(tmp_path, monkeypatch) -> None:
+    dataset_path = tmp_path / "queries.json"
+    dataset_path.write_text(
+        '{"queries": ['
+        '{"id": "plot", "category": "plot"}, '
+        '{"id": "vibe", "category": "vibe"}'
+        ']}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(test_precision, "DATASET_PATH", dataset_path)
+
+    assert [query["id"] for query in load_queries()] == ["plot"]
 
 
 def test_document_text_labels_movie_attributes() -> None:

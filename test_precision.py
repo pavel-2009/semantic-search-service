@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import json
 import os
-from collections import defaultdict
 from pathlib import Path
 
 from ranx import Qrels, Run, evaluate
 
 DATASET_PATH = Path(__file__).resolve().parent / "eval_dataset" / "recall_dataset.json"
+TEST_CATEGORY = "plot"
 METRICS = ["precision@5", "precision@10"]
 
 
 def load_queries() -> list[dict]:
     data = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
-    return data["queries"]
+    return [
+        item for item in data["queries"]
+        if item["category"] == TEST_CATEGORY
+    ]
 
 
 def document_text(payload: dict) -> str:
@@ -77,6 +80,8 @@ def main() -> None:
     from src.services.search_service.ranking.schemas import RerankingRequest
 
     queries = load_queries()
+    if not queries:
+        raise ValueError(f"No queries found for category {TEST_CATEGORY!r}")
 
     parser = TextParser()
     embedder = MovieEmbedder()
@@ -85,12 +90,10 @@ def main() -> None:
 
     qrels_dict: dict[str, dict[str, int]] = {}
     reranked_run: dict[str, dict[str, float]] = {}
-    by_category: dict[str, list[str]] = defaultdict(list)
 
     for item in queries:
         qid = item["id"]
         qrels_dict[qid] = {str(mid): int(rel) for mid, rel in item["qrels"].items()}
-        by_category[item["category"]].append(qid)
 
         parsed = parser.parse(item["query"])
         embeddings = embedder.embed_request(parsed)
@@ -125,20 +128,9 @@ def main() -> None:
     reranking = Run(reranked_run)
 
     overall = evaluate(qrels, reranking, metrics=METRICS)
-    print("=== Reranking Precision@K ===")
+    print(f"=== Reranking Precision@K: {TEST_CATEGORY} (n={len(queries)}) ===")
     for metric, score in overall.items():
         print(f"  {metric:<10}: {score:.4f}")
-
-    print("\n=== Precision by Category ===")
-    for category, qids in by_category.items():
-        cat_qrels = Qrels({qid: qrels_dict[qid] for qid in qids})
-        cat_run = Run({qid: reranked_run[qid] for qid in qids})
-        scores = evaluate(cat_qrels, cat_run, metrics=METRICS)
-        print(
-            f"  {category:<16} (n={len(qids):2d}): "
-            f"precision@5={scores['precision@5']:.4f}  "
-            f"precision@10={scores['precision@10']:.4f}"
-        )
 
 
 if __name__ == "__main__":
