@@ -3,6 +3,7 @@
 from sentence_transformers import CrossEncoder
 
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
+from src.core.config import settings
 
 
 class RerankingService:
@@ -26,6 +27,6 @@ class RerankingService:
         ]
         scored_documents.sort(key=lambda x: x["score"], reverse=True)
 
-        reranked_documents = [doc["document"] for doc in scored_documents]
+        reranked_documents = [doc["document"] for doc in scored_documents][: settings.MAX_RERANKED_DOCUMENTS]
 
         return RerankingResponse(reranked_documents=reranked_documents)
