@@ -9,7 +9,6 @@ from pathlib import Path
 from ranx import Qrels, Run, evaluate
 
 DATASET_PATH = Path(__file__).resolve().parent / "eval_dataset" / "recall_dataset.json"
-TEST_CATEGORY = "plot"
 METRICS = ["precision@5", "precision@10"]
 
 
@@ -17,7 +16,6 @@ def load_queries() -> list[dict]:
     data = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     return [
         item for item in data["queries"]
-        if item["category"] == TEST_CATEGORY
     ]
 
 
@@ -81,7 +79,7 @@ def main() -> None:
 
     queries = load_queries()
     if not queries:
-        raise ValueError(f"No queries found for category {TEST_CATEGORY!r}")
+        raise ValueError("No queries found in the dataset. Please check the dataset file.")
 
     parser = TextParser()
     embedder = MovieEmbedder()
@@ -128,7 +126,18 @@ def main() -> None:
     reranking = Run(reranked_run)
 
     overall = evaluate(qrels, reranking, metrics=METRICS)
-    print(f"=== Reranking Precision@K: {TEST_CATEGORY} (n={len(queries)}) ===")
+    print(f"=== Reranking Precision@K: (n={len(queries)}) ===")
+    for category in set(item.get("category") for item in queries):
+        category_qids = [item["id"] for item in queries if item.get("category") == category]
+        category_qrels = Qrels({qid: qrels_dict[qid] for qid in category_qids})
+        category_reranking = Run({qid: reranked_run[qid] for qid in category_qids})
+        category_overall = evaluate(category_qrels, category_reranking, metrics=METRICS)
+        print(f"=== Category: {category} (n={len(category_qids)}) ===")
+        for metric, score in category_overall.items():
+            print(f"  {metric:<10}: {score:.4f}\n")
+
+    # Print overall metrics
+    print("\n\n=== Overall Metrics ===\n\n")
     for metric, score in overall.items():
         print(f"  {metric:<10}: {score:.4f}")
 
