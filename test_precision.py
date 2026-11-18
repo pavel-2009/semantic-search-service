@@ -19,14 +19,20 @@ def load_queries() -> list[dict]:
 
 
 def document_text(payload: dict) -> str:
-    parts = [
-        str(payload.get("title") or ""),
-        str(payload.get("year") or ""),
-        " ".join(payload.get("genres") or []),
-        " ".join(payload.get("moods") or []),
-        str(payload.get("description") or ""),
+    fields = [
+        ("Название", payload.get("title")),
+        ("Год", payload.get("year")),
+        ("Страны", ", ".join(payload.get("countries") or [])),
+        ("Жанры", ", ".join(payload.get("genres") or [])),
+        ("Настроение", ", ".join(payload.get("moods") or [])),
+        ("Рейтинг", payload.get("rating")),
+        ("Сюжет", payload.get("description")),
     ]
-    return ". ".join(part for part in parts if part)
+    return ". ".join(
+        f"{label}: {str(value).strip()}"
+        for label, value in fields
+        if value is not None and str(value).strip()
+    )
 
 
 def build_reranked_run(documents_by_query: dict[str, list[dict]]) -> dict[str, dict[str, float]]:

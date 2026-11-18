@@ -1,6 +1,32 @@
 from ranx import Qrels, Run, evaluate
 
-from test_precision import build_reranked_run
+from test_precision import build_reranked_run, document_text
+
+
+def test_document_text_labels_movie_attributes() -> None:
+    text = document_text(
+        {
+            "title": "Интерстеллар",
+            "year": 2014,
+            "countries": ["США", "Великобритания"],
+            "genres": ["фантастика", "драма"],
+            "moods": ["эпичный"],
+            "rating": 8.6,
+            "description": "Экспедиция в космос ради спасения человечества.",
+        }
+    )
+
+    assert text == (
+        "Название: Интерстеллар. Год: 2014. Страны: США, Великобритания. "
+        "Жанры: фантастика, драма. Настроение: эпичный. Рейтинг: 8.6. "
+        "Сюжет: Экспедиция в космос ради спасения человечества."
+    )
+
+
+def test_document_text_omits_empty_attributes() -> None:
+    assert document_text({"title": "Фильм", "year": None, "genres": [], "rating": 0}) == (
+        "Название: Фильм. Рейтинг: 0"
+    )
 
 
 def test_precision_at_5_is_relevant_results_in_top_5() -> None:
