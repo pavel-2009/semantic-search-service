@@ -2,6 +2,7 @@
 
 from sentence_transformers import CrossEncoder
 
+from src.core.device import get_compute_device
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
 from src.core.config import settings
 
@@ -9,9 +10,16 @@ from src.core.config import settings
 class RerankingService:
     """Reranking service."""
 
-    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3") -> None:
+    def __init__(
+        self,
+        model_name: str = "BAAI/bge-reranker-v2-m3",
+        device: str | None = None,
+    ) -> None:
         """Initialize the reranking service."""
-        self.model = CrossEncoder(model_name)
+        self.model = CrossEncoder(
+            model_name,
+            device=device if device is not None else get_compute_device(),
+        )
 
     def rerank(self, request: RerankingRequest) -> RerankingResponse:
         """Rerank documents based on the query."""

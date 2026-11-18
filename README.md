@@ -213,6 +213,8 @@ For the Docker setup:
 
 For local development, the project targets **Python 3.14+** and uses `uv` for dependency management.
 
+On Apple Silicon, embedding and reranking models use PyTorch MPS automatically when available. Verify it with `uv run python -c "import torch; print(torch.backends.mps.is_available())"`. The indexer uses a smaller batch on MPS and disables FP16 by default; CUDA keeps its existing FP16 behavior.
+
 ### 1. Clone
 
 ```bash
