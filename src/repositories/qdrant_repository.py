@@ -214,7 +214,23 @@ class QdrantRepository:
             logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
             raise e
 
-        return RetrievalResponse(request=embeddings, response=response.points)
+        sorted_points = sorted(response.points, key=self._rating_sort_key, reverse=True)
+        return RetrievalResponse(request=embeddings, response=sorted_points)
+
+    @staticmethod
+    def _rating_sort_key(point: models.ScoredPoint) -> tuple[bool, float]:
+        """Sort rated points by descending rating and place unrated points last."""
+        if not point.payload:
+            return False, 0.0
+
+        rating = point.payload.get("rating")
+        if rating is None:
+            return False, 0.0
+
+        try:
+            return True, float(rating)
+        except (TypeError, ValueError):
+            return False, 0.0
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""

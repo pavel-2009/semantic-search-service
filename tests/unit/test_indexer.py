@@ -72,6 +72,7 @@ class MockQdrantClient:
         self.fail_upsert = False
         self.fail_point_id: int | None = None
         self.last_query: dict[str, object] | None = None
+        self.query_points_result: list[models.ScoredPoint] = []
 
     def collection_exists(self, collection_name: str) -> bool:
         return collection_name in self.collections
@@ -134,7 +135,7 @@ class MockQdrantClient:
 
     def query_points(self, **kwargs: object) -> SimpleNamespace:
         self.last_query = kwargs
-        return SimpleNamespace(points=[])
+        return SimpleNamespace(points=self.query_points_result)
 
     def delete_collection(self, collection_name: str) -> bool:
         self.collections.pop(collection_name, None)
@@ -296,6 +297,52 @@ def test_get_points_applies_only_year_and_rating_bounds(
         (condition.key, condition.range.gte, condition.range.lte)
         for condition in query_filter.must
     ] == [("year", 1990, None), ("rating", None, 8.5)]
+
+
+def test_get_points_sorts_results_by_rating_descending(
+    indexer: Indexer,
+    qdrant_client: MockQdrantClient,
+) -> None:
+    qdrant_client.query_points_result = [
+        models.ScoredPoint(
+            id=1,
+            version=1,
+            score=0.9,
+            payload={"rating": 7.2},
+        ),
+        models.ScoredPoint(
+            id=2,
+            version=1,
+            score=0.8,
+            payload={"rating": 9.1},
+        ),
+        models.ScoredPoint(
+            id=3,
+            version=1,
+            score=0.7,
+            payload={"rating": None},
+        ),
+        models.ScoredPoint(
+            id=4,
+            version=1,
+            score=0.6,
+            payload={"rating": 8.0},
+        ),
+    ]
+    response = EmbedderResponse(
+        embeddings=[],
+        model="test",
+        sparse_vector=SparseVectorData(indices=[1], values=[0.5]),
+    )
+
+    retrieval = indexer.repo.get_points(response)
+
+    assert [point.payload.get("rating") for point in retrieval.response] == [
+        9.1,
+        8.0,
+        7.2,
+        None,
+    ]
 
 
 def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
