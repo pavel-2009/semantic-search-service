@@ -1,6 +1,6 @@
 from ranx import Qrels, Run, evaluate
 
-from test_precision import build_reranked_run, document_text
+from test_precision import build_reranked_run, document_text, print_rank_changes
 
 
 def test_document_text_labels_movie_attributes() -> None:
@@ -27,6 +27,24 @@ def test_document_text_omits_empty_attributes() -> None:
     assert document_text({"title": "Фильм", "year": None, "genres": [], "rating": 0}) == (
         "Название: Фильм. Рейтинг: 0"
     )
+
+
+def test_print_rank_changes_shows_movie_titles_and_positions(capsys) -> None:
+    print_rank_changes(
+        "космическое путешествие",
+        [
+            {"id": "1", "title": "Фильм до", "year": 2000},
+            {"id": "2", "title": "Фильм после", "year": 2020},
+        ],
+        [
+            {"id": "2", "title": "Фильм после", "year": 2020},
+            {"id": "1", "title": "Фильм до", "year": 2000},
+        ],
+    )
+
+    output = capsys.readouterr().out
+    assert "1 ->  2  Фильм до (2000) [id=1]" in output
+    assert "2 ->  1  Фильм после (2020) [id=2]" in output
 
 
 def test_precision_at_5_is_relevant_results_in_top_5() -> None:

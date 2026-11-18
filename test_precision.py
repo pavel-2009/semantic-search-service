@@ -35,6 +35,27 @@ def document_text(payload: dict) -> str:
     )
 
 
+def print_rank_changes(
+    query: str,
+    documents: list[dict],
+    reranked_documents: list[dict],
+) -> None:
+    initial_positions = {
+        str(document["id"]): rank
+        for rank, document in enumerate(documents, start=1)
+    }
+
+    print(f"\nЗапрос: {query}")
+    print("Поиск -> CrossEncoder:")
+    for new_rank, document in enumerate(reranked_documents, start=1):
+        movie = str(document.get("title") or "Без названия")
+        if year := document.get("year"):
+            movie += f" ({year})"
+        movie_id = str(document["id"])
+        old_rank = initial_positions.get(movie_id, "—")
+        print(f"  {old_rank:>2} -> {new_rank:>2}  {movie} [id={movie_id}]")
+
+
 def build_reranked_run(documents_by_query: dict[str, list[dict]]) -> dict[str, dict[str, float]]:
     return {
         qid: {
@@ -75,15 +96,24 @@ def main() -> None:
         embeddings = embedder.embed_request(parsed)
         retrieval = repo.get_points(embeddings=embeddings)
 
-        documents = [
-            {
-                "id": str(point.id),
-                "text": document_text(point.payload or {}),
-            }
-            for point in retrieval.response
-        ]
+        documents = []
+        for point in retrieval.response:
+            payload = point.payload or {}
+            documents.append(
+                {
+                    "id": str(point.id),
+                    "title": payload.get("title"),
+                    "year": payload.get("year"),
+                    "text": document_text(payload),
+                }
+            )
         reranked = reranker.rerank(
             RerankingRequest(query=item["query"], documents=documents)
+        )
+        print_rank_changes(
+            item["query"],
+            documents,
+            reranked.reranked_documents,
         )
 
         reranked_run[qid] = {
