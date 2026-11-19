@@ -11,7 +11,7 @@ from src.backend.main import app
 from src.backend.schemas import MovieResult, SearchRequest
 from src.core.dependencies import get_qdrant_repository, get_search_service
 from src.core.contracts import IndexerStats
-from src.services.indexer.config import config
+from src.core.config import settings
 
 
 @pytest.fixture
@@ -181,8 +181,8 @@ def test_stats_returns_collection_statistics(
         "collection": "movies",
         "total_points": 25,
         "status": "green",
-        "model": config.model_name,
-        "embedding_dim": config.dense_dim,
+        "model": settings.EMBEDDING_MODEL,
+        "embedding_dim": settings.EMBEDDING_DIM,
     }
 
 
