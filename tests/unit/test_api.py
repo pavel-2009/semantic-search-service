@@ -97,7 +97,7 @@ class MockSearchService:
         self._fail_if_configured("get_by_id")
         if movie_id != 42:
             return None
-        return self.search(SearchRequest(query="интерстеллар"))[0]
+        return self.search(SearchQuery(text="интерстеллар"))[0]
 
 
 def test_root_returns_service_metadata(api_client: TestClient) -> None:
