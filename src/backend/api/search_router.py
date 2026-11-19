@@ -27,10 +27,6 @@ def _flatten_filters(filters: SearchFilters | None) -> dict[str, object]:
     for group in ("year", "rating"):
         for bound, value in values.get(group, {}).items():
             flattened[f"{group}_{bound}"] = value
-    if values.get("genre"):
-        flattened["genres"] = values["genre"]
-    if values.get("countries"):
-        flattened["countries"] = values["countries"]
     return flattened
 
 
