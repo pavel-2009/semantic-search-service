@@ -9,7 +9,7 @@ from test_precision import (
 )
 
 
-def test_load_queries_returns_only_plot_category(tmp_path, monkeypatch) -> None:
+def test_load_queries_returns_all_categories(tmp_path, monkeypatch) -> None:
     dataset_path = tmp_path / "queries.json"
     dataset_path.write_text(
         '{"queries": ['
@@ -20,7 +20,7 @@ def test_load_queries_returns_only_plot_category(tmp_path, monkeypatch) -> None:
     )
     monkeypatch.setattr(test_precision, "DATASET_PATH", dataset_path)
 
-    assert [query["id"] for query in load_queries()] == ["plot"]
+    assert [query["id"] for query in load_queries()] == ["plot", "vibe"]
 
 
 def test_document_text_labels_movie_attributes() -> None:
