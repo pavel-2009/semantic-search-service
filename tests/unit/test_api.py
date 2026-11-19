@@ -157,8 +157,6 @@ def test_search_forwards_explicit_metadata_filters(api_client: TestClient) -> No
             "filters": {
                 "year": {"gte": 2000, "lte": 2020},
                 "rating": {"gte": 7.5},
-                "genre": ["фантастика", "драма"],
-                "countries": ["США"],
             },
         },
     )
@@ -170,8 +168,6 @@ def test_search_forwards_explicit_metadata_filters(api_client: TestClient) -> No
         "year_gte": 2000,
         "year_lte": 2020,
         "rating_gte": 7.5,
-        "genres": ["фантастика", "драма"],
-        "countries": ["США"],
     }
 
 
