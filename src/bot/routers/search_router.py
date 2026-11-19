@@ -9,6 +9,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src.backend.schemas import MovieResult, SearchRequest
+from src.services.search_service.schemas import SearchQuery
 from src.core.dependencies import get_search_service
 from src.core.logger import get_logger
 
@@ -66,10 +67,21 @@ async def _handle_search(message: Message, query: str) -> None:
 
     try:
         search_service = get_search_service()
-        results = await asyncio.to_thread(
+        search_response = await asyncio.to_thread(
             search_service.search,
-            SearchRequest(query=query, top_k=10, filters=None),
+            SearchQuery(text=query, top_k=10),
         )
+        documents = (
+            search_response.documents
+            if hasattr(search_response, "documents")
+            else search_response
+        )
+        results = [
+            MovieResult.model_validate(document)
+            if isinstance(document, dict)
+            else document
+            for document in documents
+        ]
     except Exception:
         logger.exception("Telegram search failed: query=%r", query)
         await message.answer(

@@ -8,7 +8,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery
 
 from src.backend.schemas import MovieResult
-from src.backend.services.search_service import SearchService
+from src.services.search_service.search_service import SearchService
 from src.core.dependencies import get_search_service
 from src.core.logger import get_logger
 
@@ -55,7 +55,21 @@ async def show_movie_details(callback: CallbackQuery) -> None:
 
     try:
         service = get_service()
-        movie = await asyncio.to_thread(service.get_by_id, movie_id)
+        if hasattr(service, "get_by_id"):
+            movie = await asyncio.to_thread(service.get_by_id, movie_id)
+        else:
+            points = await asyncio.to_thread(
+                service.qdrant_repo.client.retrieve,
+                collection_name=service.qdrant_repo.collection_name,
+                ids=[movie_id],
+                with_payload=True,
+                with_vectors=False,
+            )
+            movie = None
+            if points and points[0].payload:
+                movie = MovieResult.model_validate(
+                    {**points[0].payload, "score": 0.0}
+                )
     except Exception:
         logger.exception("Movie lookup failed: movie_id=%d", movie_id)
         await callback.answer(

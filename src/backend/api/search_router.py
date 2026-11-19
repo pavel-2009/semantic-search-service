@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from src.backend.schemas import SearchRequest, SearchResponse
-from src.backend.services.search_service import SearchService
+from src.services.search_service.search_service import SearchService
+from src.services.search_service.schemas import SearchQuery
 from src.core.dependencies import get_search_service
 from src.core.logger import get_logger
 
@@ -31,7 +32,12 @@ async def search(
         request.filters is not None,
     )
     try:
-        results = await run_in_threadpool(service.search, request)
+        results = await run_in_threadpool(
+            service.search,
+            SearchQuery(text=request.query, top_k=request.top_k),
+        )
+        if hasattr(results, "documents"):
+            results = results.documents
         response = SearchResponse(
             success=True,
             query=request.query,

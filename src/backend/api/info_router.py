@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from src.backend.schemas import HealthResponse, MovieResult, StatsResponse
-from src.backend.services.search_service import SearchService
+from src.services.search_service.search_service import SearchService
+from src.services.indexer.indexer import Indexer
+from src.services.indexer.config import config
 from src.core.dependencies import get_search_service
 from src.core.logger import get_logger
 
@@ -27,8 +29,12 @@ async def health_check(service: SearchServiceDependency) -> HealthResponse:
     started_at = perf_counter()
     logger.info("Health check started")
     try:
-        stats = await run_in_threadpool(service.get_stats)
-        if stats.total_points == 0:
+        if hasattr(service, "get_stats"):
+            stats = await run_in_threadpool(service.get_stats)
+        else:
+            stats = await run_in_threadpool(Indexer().get_stats)
+        points_count = getattr(stats, "points_count", getattr(stats, "total_points", 0))
+        if points_count == 0:
             logger.warning("Qdrant collection exists but is empty")
             return HealthResponse(
                 status="degraded",
@@ -39,7 +45,7 @@ async def health_check(service: SearchServiceDependency) -> HealthResponse:
         response = HealthResponse(
             status="healthy",
             collection=stats.collection,
-            indexed_items=stats.total_points,
+            indexed_items=points_count,
         )
         logger.info(
             "Health check completed: status=%s indexed_items=%d duration_ms=%.1f",
@@ -60,7 +66,19 @@ async def get_movie(movie_id: int, service: SearchServiceDependency) -> MovieRes
     started_at = perf_counter()
     logger.info("Movie info request received: movie_id=%d", movie_id)
     try:
-        movie = await run_in_threadpool(service.get_by_id, movie_id)
+        if hasattr(service, "get_by_id"):
+            movie = await run_in_threadpool(service.get_by_id, movie_id)
+        else:
+            points = await run_in_threadpool(
+                service.qdrant_repo.client.retrieve,
+                collection_name=service.qdrant_repo.collection_name,
+                ids=[movie_id],
+                with_payload=True,
+                with_vectors=False,
+            )
+            movie = None if not points or not points[0].payload else MovieResult.model_validate(
+                {**points[0].payload, "score": 0.0}
+            )
     except Exception as exc:
         logger.exception("Movie info endpoint failed: movie_id=%d", movie_id)
         raise HTTPException(status_code=500, detail="Failed to load movie information") from exc
@@ -83,7 +101,17 @@ async def get_stats(service: SearchServiceDependency) -> StatsResponse:
     started_at = perf_counter()
     logger.info("Stats request started")
     try:
-        response = await run_in_threadpool(service.get_stats)
+        if hasattr(service, "get_stats"):
+            response = await run_in_threadpool(service.get_stats)
+        else:
+            stats = await run_in_threadpool(Indexer().get_stats)
+            response = StatsResponse(
+                collection=stats.collection,
+                total_points=stats.points_count,
+                status=stats.status,
+                model=config.model_name,
+                embedding_dim=config.dense_dim,
+            )
     except Exception as exc:
         logger.exception("Stats request failed while accessing Qdrant")
         raise HTTPException(status_code=503, detail="Vector database is unavailable") from exc

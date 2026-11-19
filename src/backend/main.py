@@ -12,6 +12,7 @@ from src.backend.api.info_router import get_info_service, router as info_router
 from src.backend.api.search_router import router as search_router
 from src.core.config import settings
 from src.core.logger import get_logger, setup_logging
+from src.services.indexer.indexer import Indexer
 
 setup_logging()
 logger = get_logger(__name__)
@@ -32,8 +33,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     try:
         service = get_info_service()
         logger.info("Checking Qdrant collection during startup: %s", settings.QDRANT_COLLECTION)
-        stats = service.get_stats()
-        if stats.total_points == 0:
+        stats = (
+            service.get_stats()
+            if hasattr(service, "get_stats")
+            else Indexer().get_stats()
+        )
+        points_count = getattr(stats, "points_count", getattr(stats, "total_points", 0))
+        if points_count == 0:
             logger.warning("Collection is empty! Indexer may have failed.")
     except Exception:
         logger.critical(
@@ -44,7 +50,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info(
         "API startup complete: collection=%s points=%s duration_ms=%.1f",
         stats.collection,
-        stats.total_points,
+        points_count,
         (perf_counter() - started_at) * 1000,
     )
     try:
