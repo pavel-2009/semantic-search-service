@@ -72,18 +72,17 @@ User query
     ↓
 Text normalization
     ↓
-Sentence Transformer
+Dense + sparse BGE-M3 encoding
     ↓
-Query embedding (384 dimensions)
+Hybrid Qdrant retrieval
     ↓
-Qdrant similarity search
-    ↓
-Metadata filters
+Metadata filters and BGE reranking
     ↓
 Top-K movies
 ```
 
-The default embedding model is `paraphrase-multilingual-MiniLM-L12-v2` with 384-dimensional vectors.
+The search/indexing pipeline uses the local BGE-M3 model for 1024-dimensional
+dense vectors and sparse lexical vectors, followed by the BGE reranker.
 
 ## 🧩 Project structure
 
@@ -196,7 +195,7 @@ The scraper writes raw movie records to `movies.jsonl`. Indexing uses the prepar
 Each point contains:
 
 - numeric movie ID;
-- 384-dimensional embedding;
+- 1024-dimensional dense plot and vibe embeddings plus a sparse lexical vector;
 - payload with title, year, rating, genres, countries, description and poster URL.
 
 The default Qdrant collection is `movies` and the default indexing batch size is `32`.
@@ -211,9 +210,13 @@ For the Docker setup:
 - Telegram bot token if you want to run the bot
 - PoiskKino API key if you want to run the scraper
 
-For local development, the project targets **Python 3.14+** and uses `uv` for dependency management.
+The project targets **Python 3.14+** and uses `uv` for dependency management. On
+Apple Silicon, run the API, bot and indexer directly on macOS to use the MPS GPU;
+Docker Desktop's Linux containers cannot access Apple's MPS device.
 
-On Apple Silicon, embedding and reranking models use PyTorch MPS automatically when available. Verify it with `uv run python -c "import torch; print(torch.backends.mps.is_available())"`. The indexer uses a smaller batch on MPS and disables FP16 by default; CUDA keeps its existing FP16 behavior.
+Embedding and reranking automatically select PyTorch MPS when it is available.
+Verify the backend with `make mps-check`. The indexer uses a smaller batch on
+MPS and disables FP16 by default.
 
 ### 1. Clone
 
@@ -231,22 +234,59 @@ cp .env.example .env
 Set the required values in `.env`:
 
 ```dotenv
-QDRANT_HOST=qdrant
+QDRANT_HOST=localhost
 QDRANT_PORT=6333
 QDRANT_COLLECTION=movies
 BOT_TOKEN=your_telegram_bot_token
 POISKKINO_API_KEY=your_api_key
+API_BASE_URL=http://127.0.0.1:8000
 ```
 
 The `.env` file is read at runtime and is not copied into Docker images.
 
-### 3. Start the full pipeline
+Install the project dependencies:
 
 ```bash
-docker compose up --build
+uv sync
 ```
 
-Compose waits for Qdrant to become healthy before starting dependent services, waits for the scraper and indexer to complete successfully before starting the API, and waits for the API health check before starting the bot.
+### Download the reranker model once
+
+The first search uses the `BAAI/bge-reranker-v2-m3` model. Download it before
+starting the API so offline model loading can find it:
+
+```bash
+make download-reranker
+```
+
+### 3. Start Qdrant
+
+```bash
+make up
+```
+
+This starts only Qdrant in Docker. The API, bot, scraper and indexer run on
+macOS, so model inference can use MPS. Indexing is an explicit step rather than
+being repeated every time the database starts.
+
+On the first setup, run the scraper if needed, then create the collection and
+index the prepared dataset:
+
+```bash
+make scraper
+make indexer
+```
+
+Start the API and bot in separate terminals:
+
+```bash
+make api
+make bot
+```
+
+The bot sends searches to the API instead of loading another copy of both
+neural models. The API loads the models on the first search; health and
+statistics endpoints use Qdrant directly and do not load them.
 
 Services exposed locally:
 
@@ -256,6 +296,15 @@ Services exposed locally:
 | Swagger UI | `http://localhost:8000/docs` |
 | ReDoc | `http://localhost:8000/redoc` |
 | Qdrant | `http://localhost:6333` |
+
+To run the complete application in Docker instead, use the optional
+`container-app` profile. This is a CPU path on macOS; it does not use MPS:
+
+```bash
+docker compose build reranker-downloader
+docker compose --profile model-download run --rm --no-deps reranker-downloader
+docker compose --profile container-app up --build
+```
 
 ### 4. Check the API
 
@@ -274,13 +323,13 @@ uv sync --dev
 Run the API:
 
 ```bash
-uv run uvicorn backend.main:app --reload
+make api
 ```
 
 Run the bot:
 
 ```bash
-uv run python -m bot.main
+make bot
 ```
 
 Run the scraper:
@@ -347,11 +396,12 @@ Integration tests are intentionally not run with pytest-xdist because they share
 
 | Variable | Default | Description |
 |---|---|---|
+| `API_BASE_URL` | `http://127.0.0.1:8000` | API URL used by the Telegram bot |
 | `QDRANT_HOST` | `localhost` | Qdrant hostname |
 | `QDRANT_PORT` | `6333` | Qdrant HTTP port |
 | `QDRANT_COLLECTION` | `movies` | Vector collection name |
-| `EMBEDDING_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | Sentence Transformer model |
-| `EMBEDDING_DIM` | `384` | Embedding dimensionality |
+| `EMBEDDING_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | Legacy Sentence Transformer loader setting |
+| `EMBEDDING_DIM` | `384` | Legacy Sentence Transformer loader setting |
 | `MAX_TEXT_LENGTH` | `2000` | Maximum indexed text length |
 | `BATCH_SIZE` | `32` | Indexing batch size |
 | `LOG_LEVEL` | `INFO` | Application log level |
@@ -360,7 +410,9 @@ Integration tests are intentionally not run with pytest-xdist because they share
 
 ## 🐳 Docker architecture
 
-The Docker Compose environment contains five services:
+The default Docker Compose environment contains only Qdrant. This keeps model
+inference on the macOS host, where PyTorch can use MPS. The optional
+`container-app` profile contains the full CPU-based Docker pipeline:
 
 1. **qdrant** — vector database;
 2. **scraper** — collects source data;
@@ -368,7 +420,8 @@ The Docker Compose environment contains five services:
 4. **api** — serves the REST API;
 5. **bot** — runs the Telegram interface.
 
-Qdrant data is persisted in the `qdrant_storage` Docker volume.
+Qdrant data is persisted in the `qdrant_storage` Docker volume. The host-native
+bot shares the API process's model instances instead of allocating duplicates.
 
 ## 🗺️ Roadmap
 

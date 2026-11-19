@@ -8,7 +8,8 @@ from aiogram import Bot
 from aiogram.filters import CommandObject
 from aiogram.types import CallbackQuery, Message
 
-from src.backend.schemas import MovieResult, SearchRequest
+from src.backend.schemas import MovieResult
+from src.bot.api_client import SearchApiClient
 from src.bot.main import start
 
 info_router = import_module("src.bot.routers.info_router")
@@ -43,6 +44,38 @@ def movie() -> MovieResult:
 
 
 @pytest.mark.asyncio
+async def test_bot_api_client_search_parses_api_results(movie: MovieResult) -> None:
+    response = Mock()
+    response.json.return_value = {"results": [movie.model_dump()]}
+    response.raise_for_status = Mock()
+    http_client = Mock()
+    http_client.post = AsyncMock(return_value=response)
+
+    client = SearchApiClient(http_client=http_client)
+
+    results = await client.search("фильмы про космос", top_k=10)
+
+    assert results == [movie]
+    http_client.post.assert_awaited_once_with(
+        "/api/v1/search",
+        json={"query": "фильмы про космос", "top_k": 10},
+    )
+    response.raise_for_status.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_bot_api_client_returns_none_for_missing_movie() -> None:
+    response = Mock(status_code=404)
+    http_client = Mock()
+    http_client.get = AsyncMock(return_value=response)
+
+    client = SearchApiClient(http_client=http_client)
+
+    assert await client.get_movie(999) is None
+    http_client.get.assert_awaited_once_with("/api/v1/movies/999")
+
+
+@pytest.mark.asyncio
 async def test_start_sends_welcome_message(
     mock_bot: AsyncMock, mock_message: AsyncMock
 ) -> None:
@@ -60,15 +93,16 @@ async def test_search_command_sends_results_and_detail_buttons(
     movie: MovieResult,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = Mock()
-    service.search.return_value = [movie]
-    monkeypatch.setattr(search_router, "get_search_service", lambda: service)
+    client = Mock()
+    client.search = AsyncMock(return_value=[movie])
+    monkeypatch.setattr(search_router, "api_client", client)
 
     command = CommandObject(args="  фильмы про космос  ")
     await search_router.search_movies(mock_message, command)
 
-    service.search.assert_called_once_with(
-        SearchRequest(query="фильмы про космос", top_k=10, filters=None)
+    client.search.assert_awaited_once_with(
+        query="фильмы про космос",
+        top_k=10,
     )
     mock_bot.send_message.assert_awaited_once()
     sent = mock_bot.send_message.await_args.kwargs
@@ -114,12 +148,12 @@ async def test_search_handles_empty_results_and_service_errors(
     mock_message: AsyncMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = Mock()
+    client = Mock()
     if raises:
-        service.search.side_effect = RuntimeError("search failed")
+        client.search = AsyncMock(side_effect=RuntimeError("search failed"))
     else:
-        service.search.return_value = results
-    monkeypatch.setattr(search_router, "get_search_service", lambda: service)
+        client.search = AsyncMock(return_value=results)
+    monkeypatch.setattr(search_router, "api_client", client)
     mock_message.text = "космос"
 
     await search_router.search_by_text(mock_message)
@@ -135,9 +169,9 @@ async def test_movie_details_callback_sends_movie_information(
     movie: MovieResult,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = Mock()
-    service.get_by_id.return_value = movie
-    monkeypatch.setattr(info_router, "get_service", lambda: service)
+    client = Mock()
+    client.get_movie = AsyncMock(return_value=movie)
+    monkeypatch.setattr(info_router, "api_client", client)
     callback = Mock(spec=CallbackQuery)
     callback.data = "movie:42"
     callback.message = mock_message
@@ -145,7 +179,7 @@ async def test_movie_details_callback_sends_movie_information(
 
     await info_router.show_movie_details(callback)
 
-    service.get_by_id.assert_called_once_with(42)
+    client.get_movie.assert_awaited_once_with(42)
     callback.answer.assert_awaited_once_with()
     mock_bot.send_message.assert_awaited_once()
     assert "Интерстеллар" in mock_bot.send_message.await_args.args[0]
@@ -167,9 +201,9 @@ async def test_movie_details_callback_reports_invalid_or_missing_movie(
     mock_message: AsyncMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    service = Mock()
-    service.get_by_id.return_value = result
-    monkeypatch.setattr(info_router, "get_service", lambda: service)
+    client = Mock()
+    client.get_movie = AsyncMock(return_value=result)
+    monkeypatch.setattr(info_router, "api_client", client)
     callback = Mock(spec=CallbackQuery)
     callback.data = callback_data
     callback.message = mock_message

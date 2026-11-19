@@ -1,12 +1,64 @@
 """Tests for the FastAPI routes using a lightweight mock search service."""
 
 from collections.abc import Iterator
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.backend.main import app
-from src.backend.schemas import MovieResult, SearchRequest, StatsResponse
+from src.backend.schemas import MovieResult, SearchRequest
+from src.core.dependencies import get_qdrant_repository, get_search_service
+from src.core.contracts import IndexerStats
+from src.services.indexer.config import config
+
+
+@pytest.fixture
+def api_client() -> Iterator[TestClient]:
+    service = MockSearchService()
+    repository = MockQdrantRepository()
+    app.dependency_overrides[get_search_service] = lambda: service
+    app.dependency_overrides[get_qdrant_repository] = lambda: repository
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.clear()
+
+
+class MockQdrantRepository:
+    """Provide Qdrant statistics and movie data without creating a model."""
+
+    collection_name = "movies"
+
+    def __init__(self) -> None:
+        self.client = Mock()
+        self.client.retrieve.side_effect = self._retrieve
+
+    def get_stats(self) -> IndexerStats:
+        return IndexerStats(
+            collection=self.collection_name,
+            points_count=25,
+            status="green",
+        )
+
+    @staticmethod
+    def _retrieve(*, ids: list[int], **_: object) -> list[SimpleNamespace]:
+        if ids != [42]:
+            return []
+        return [
+            SimpleNamespace(
+                payload={
+                    "id": 42,
+                    "title": "Интерстеллар",
+                    "year": 2014,
+                    "rating": 8.7,
+                    "genres": ["фантастика", "драма"],
+                    "countries": ["США", "Великобритания"],
+                    "description": "Путешествие через космос и время.",
+                    "poster_url": "https://example.test/interstellar.jpg",
+                }
+            )
+        ]
 
 
 class MockSearchService:
@@ -42,16 +94,6 @@ class MockSearchService:
         if movie_id != 42:
             return None
         return self.search(SearchRequest(query="интерстеллар"))[0]
-
-    def get_stats(self) -> StatsResponse:
-        self._fail_if_configured("get_stats")
-        return StatsResponse(
-            collection=self.collection_name,
-            total_points=25,
-            status="green",
-            model="test-embedding-model",
-            embedding_dim=384,
-        )
 
 
 def test_root_returns_service_metadata(api_client: TestClient) -> None:
@@ -102,7 +144,16 @@ def test_search_rejects_invalid_request(api_client: TestClient) -> None:
     assert response.json()["detail"]
 
 
-def test_health_returns_healthy_status(api_client: TestClient) -> None:
+def test_health_returns_healthy_status(
+    api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_search_service,
+        lambda: pytest.fail("health checks must not initialize search models"),
+    )
+
     response = api_client.get("/api/v1/health")
 
     assert response.status_code == 200
@@ -113,7 +164,16 @@ def test_health_returns_healthy_status(api_client: TestClient) -> None:
     }
 
 
-def test_stats_returns_collection_statistics(api_client: TestClient) -> None:
+def test_stats_returns_collection_statistics(
+    api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_search_service,
+        lambda: pytest.fail("stats requests must not initialize search models"),
+    )
+
     response = api_client.get("/api/v1/stats")
 
     assert response.status_code == 200
@@ -121,8 +181,8 @@ def test_stats_returns_collection_statistics(api_client: TestClient) -> None:
         "collection": "movies",
         "total_points": 25,
         "status": "green",
-        "model": "test-embedding-model",
-        "embedding_dim": 384,
+        "model": config.model_name,
+        "embedding_dim": config.dense_dim,
     }
 
 
