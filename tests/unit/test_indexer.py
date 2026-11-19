@@ -443,11 +443,11 @@ def test_batch_indexing_with_large_file(
     assert stats.points_count == 200
 
 
-def test_indexer_config_points_to_enriched_dataset() -> None:
-    assert settings.INDEX_DATA_PATH.name == "movies_enriched.jsonl"
+def test_indexer_uses_scraper_output_dataset() -> None:
+    assert settings.INDEX_DATA_PATH.name == "movies.jsonl"
 
 
-def test_load_movies_rejects_raw_movie_without_indexing_structure(
+def test_load_movies_accepts_raw_movie_without_precomputed_indexing(
     tmp_path: Path,
     indexer: Indexer,
 ) -> None:
@@ -455,8 +455,9 @@ def test_load_movies_rejects_raw_movie_without_indexing_structure(
     filepath = tmp_path / "raw_movies.jsonl"
     filepath.write_text(raw_movie.model_dump_json() + "\n", encoding="utf-8")
 
-    with pytest.raises(RuntimeError, match="No movies available for indexing"):
-        indexer.index_movies(filepath)
+    loaded = list(indexer.load_movies(filepath))
+    assert len(loaded) == 1
+    assert loaded[0].indexing.plot is None
 
 
 def test_embed_cards_uses_indexing_fields_and_stores_clean_movie_payload(
