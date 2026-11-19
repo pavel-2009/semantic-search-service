@@ -18,12 +18,12 @@ services:
   scraper:
     build:
       context: .
-      dockerfile: Dockerfile.scraper
+      dockerfile: Dockerfile
+      target: scraper
     environment:
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
     volumes:
       - ./src:/app/src
-      - ./src/scraper/data:/app/src/scraper/data
     depends_on:
       qdrant:
         condition: service_healthy
@@ -34,14 +34,14 @@ services:
   indexer:
     build:
       context: .
-      dockerfile: Dockerfile.indexer
+      dockerfile: Dockerfile
+      target: indexer
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - HF_HOME=/cache/huggingface
     volumes:
       - ./src:/app/src
-      - ./src/scraper/data:/app/src/scraper/data
       - huggingface_cache:/cache/huggingface
     depends_on:
       scraper:
@@ -55,8 +55,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile.api
-    command: uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+      dockerfile: Dockerfile
+      target: api
     ports:
       - "8000:8000"
     environment:
@@ -87,8 +87,8 @@ services:
   bot:
     build:
       context: .
-      dockerfile: Dockerfile.bot
-    command: uv run python -m bot.main
+      dockerfile: Dockerfile
+      target: bot
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
