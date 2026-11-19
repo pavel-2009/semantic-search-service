@@ -43,22 +43,17 @@ def test_search_filters_accept_nested_and_optional_values() -> None:
     filters = SearchFilters(
         year={"gte": 2000},
         rating={"gte": 7.5},
-        genre=["драма", "фантастика"],
-        countries=["Россия", "Франция"],
     )
 
     assert filters.year is not None and filters.year.gte == 2000
     assert filters.rating is not None and filters.rating.gte == 7.5
-    assert filters.genre == ["драма", "фантастика"]
-    assert filters.countries == ["Россия", "Франция"]
-    assert SearchFilters().countries is None
+    assert SearchFilters().year is None
+    assert SearchFilters().rating is None
 
 
 @pytest.mark.parametrize(
     "data",
     [
-        {"genre": "драма"},
-        {"countries": "Россия"},
         {"year": {"gte": "unknown"}},
     ],
 )
@@ -75,11 +70,14 @@ def test_search_request_accepts_valid_request_and_defaults() -> None:
     request = SearchRequest(
         query="космическая фантастика",
         top_k=25,
-        filters={"genre": ["фантастика"]},
+        filters={"year": {"gte": 2000}, "rating": {"gte": 7.5}},
     )
     assert request.top_k == 25
     assert request.filters is not None
-    assert request.filters.genre == ["фантастика"]
+    assert request.filters.year is not None
+    assert request.filters.year.gte == 2000
+    assert request.filters.rating is not None
+    assert request.filters.rating.gte == 7.5
 
 
 @pytest.mark.parametrize(
@@ -90,7 +88,6 @@ def test_search_request_accepts_valid_request_and_defaults() -> None:
         {"query": "q" * 501},
         {"query": "фильм", "top_k": 0},
         {"query": "фильм", "top_k": 101},
-        {"query": "фильм", "filters": {"genre": "драма"}},
     ],
 )
 def test_search_request_rejects_invalid_values(data: dict[str, object]) -> None:
