@@ -12,6 +12,12 @@ class SearchQuery(BaseModel):
     top_k: int = Field(default=10, ge=1, le=100)
 
 
+class SearchResponse(BaseModel):
+    """Search response with document IDs and scores."""
+
+    documents: list[dict] = Field(default_factory=list)
+
+
 class ParsedQuery(BaseModel):
     """Query split into semantic text and structured filters (Movie fields)."""
 
