@@ -1,8 +1,8 @@
 """Script for running the Qdrant indexer."""
 
-from src.core.logger import get_logger, setup_logging  # noqa: E402
-from src.core.config import settings  # noqa: E402
-from src.services.indexer.indexer import Indexer  # noqa: E402
+from src.core.logger import get_logger, setup_logging
+from src.core.config import settings
+from src.services.indexer.indexer import Indexer
 
 logger = get_logger(__name__)
 
