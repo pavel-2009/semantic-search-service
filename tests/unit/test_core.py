@@ -70,9 +70,9 @@ def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
         Movie.model_validate(data)
 
 
-def test_enriched_movie_requires_indexing_structure_and_builds_payload() -> None:
-    with pytest.raises(ValidationError):
-        EnrichedMovie.model_validate({"id": 1, "title": "Фильм"})
+def test_enriched_movie_defaults_indexing_and_builds_payload() -> None:
+    raw = EnrichedMovie.model_validate({"id": 1, "title": "Фильм"})
+    assert raw.indexing == MovieIndexData()
 
     enriched = EnrichedMovie(
         id=42,
@@ -129,8 +129,9 @@ def test_settings_defaults_and_types_are_valid() -> None:
     assert settings.QDRANT_HOST == "localhost"
     assert settings.QDRANT_PORT == 6333
     assert settings.QDRANT_COLLECTION == "movies"
-    assert settings.EMBEDDING_DIM == 384
+    assert settings.EMBEDDING_DIM == 1024
     assert settings.DATA_PATH == PROJECT_ROOT / "src/scraper/data/movies.jsonl"
+    assert settings.INDEX_DATA_PATH == settings.DATA_PATH
     assert PROJECT_ROOT == Path(__file__).resolve().parents[2]
 
 
