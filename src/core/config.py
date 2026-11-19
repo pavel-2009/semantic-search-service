@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     INDEX_BATCH_SIZE: int = 8 if DEFAULT_DEVICE == "mps" else 64
     SPARSE_MIN_WEIGHT: float = 0.08
     MIN_PLOT_LENGTH: int = 15
-    INDEX_DATA_PATH: Path = (
-        PROJECT_ROOT / "src" / "scraper" / "data" / "movies_enriched.jsonl"
-    )
+    INDEX_DATA_PATH: Path = PROJECT_ROOT / "src" / "scraper" / "data" / "movies.jsonl"
 
     MAX_TEXT_LENGTH: int = 2000
     DATA_PATH: Path = PROJECT_ROOT / "src" / "scraper" / "data" / "movies.jsonl"
