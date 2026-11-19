@@ -10,6 +10,7 @@ class SearchQuery(BaseModel):
 
     text: str = Field(min_length=1, max_length=500)
     top_k: int = Field(default=10, ge=1, le=100)
+    filters: dict[str, int | float] = Field(default_factory=dict)
 
 
 class SearchResponse(BaseModel):

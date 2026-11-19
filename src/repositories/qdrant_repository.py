@@ -5,10 +5,9 @@ from time import perf_counter
 from qdrant_client import models
 
 from src.core.contracts import IndexerStats
-from src.core.logger import get_logger
 from src.core.config import settings
+from src.core.logger import get_logger
 from src.core.qdrant_client import QdrantClientSingleton
-from src.services.indexer.config import config
 from src.services.indexer.schemas import IndexedMoviePoint
 from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.repositories.schemas import RetrievalResponse
@@ -21,8 +20,8 @@ class QdrantRepository:
 
     def __init__(
         self,
-        collection_name: str = config.collection_name,
-        dense_dim: int = config.dense_dim,
+        collection_name: str = settings.QDRANT_COLLECTION,
+        dense_dim: int = settings.EMBEDDING_DIM,
     ) -> None:
         self.client = QdrantClientSingleton.get_client()
         self.collection_name = collection_name
@@ -35,18 +34,17 @@ class QdrantRepository:
 
         if self.client.collection_exists(collection_name):
             logger.info("Collection already exists: collection=%s", collection_name)
-            return
-
-        logger.info(
-            "Creating Qdrant collection: collection=%s dense_dim=%d",
-            collection_name,
-            self.dense_dim,
-        )
-        self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=self._get_vectors_config(),
-            sparse_vectors_config=self._get_sparse_vectors_config(),
-        )
+        else:
+            logger.info(
+                "Creating Qdrant collection: collection=%s dense_dim=%d",
+                collection_name,
+                self.dense_dim,
+            )
+            self.client.create_collection(
+                collection_name=collection_name,
+                vectors_config=self._get_vectors_config(),
+                sparse_vectors_config=self._get_sparse_vectors_config(),
+            )
 
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
@@ -215,23 +213,7 @@ class QdrantRepository:
             logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
             raise e
 
-        sorted_points = sorted(response.points, key=self._rating_sort_key, reverse=True)
-        return RetrievalResponse(request=embeddings, response=sorted_points)
-
-    @staticmethod
-    def _rating_sort_key(point: models.ScoredPoint) -> tuple[bool, float]:
-        """Sort rated points by descending rating and place unrated points last."""
-        if not point.payload:
-            return False, 0.0
-
-        rating = point.payload.get("rating")
-        if rating is None:
-            return False, 0.0
-
-        try:
-            return True, float(rating)
-        except (TypeError, ValueError):
-            return False, 0.0
+        return RetrievalResponse(request=embeddings, response=response.points)
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""

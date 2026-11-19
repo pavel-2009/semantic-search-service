@@ -9,12 +9,12 @@ from pydantic import ValidationError
 
 from src.core.contracts import EnrichedMovie, IndexerStats
 from src.core.logger import get_logger
+from src.core.config import settings
 from src.repositories.qdrant_repository import QdrantRepository
-from src.services.indexer.config import config
 from src.services.indexer.embedder import MovieEmbedder
 
 logger = get_logger(__name__)
-MAX_BATCH_SIZE = config.batch_size
+MAX_BATCH_SIZE = settings.INDEX_BATCH_SIZE
 
 
 class Indexer:
@@ -23,21 +23,21 @@ class Indexer:
     def __init__(self) -> None:
         logger.info(
             "Initializing indexer: collection=%s model=%s",
-            config.collection_name,
-            config.model_name,
+            settings.QDRANT_COLLECTION,
+            settings.EMBEDDING_MODEL,
         )
-        self.collection_name = config.collection_name
+        self.collection_name = settings.QDRANT_COLLECTION
         self.repo = QdrantRepository(
-            collection_name=config.collection_name,
-            dense_dim=config.dense_dim,
+            collection_name=settings.QDRANT_COLLECTION,
+            dense_dim=settings.EMBEDDING_DIM,
         )
         self.embedder = MovieEmbedder(
-            model_name=config.model_name,
-            device=config.device,
-            use_fp16=config.use_fp16,
-            batch_size=config.batch_size,
-            sparse_min_weight=config.sparse_min_weight,
-            min_plot_len=config.min_plot_length,
+            model_name=settings.EMBEDDING_MODEL,
+            device=settings.COMPUTE_DEVICE,
+            use_fp16=settings.EMBEDDING_USE_FP16,
+            batch_size=settings.INDEX_BATCH_SIZE,
+            sparse_min_weight=settings.SPARSE_MIN_WEIGHT,
+            min_plot_len=settings.MIN_PLOT_LENGTH,
         )
         logger.info("Indexer initialized")
 
@@ -52,8 +52,8 @@ class Indexer:
         """Recreate the Qdrant collection."""
         self.repo.recreate_collection()
 
-    def load_movies(self, filepath: Path = config.dataset_path) -> Iterator[EnrichedMovie]:
-        """Read and validate one enriched JSON Lines movie record at a time."""
+    def load_movies(self, filepath: Path = settings.DATA_PATH) -> Iterator[EnrichedMovie]:
+        """Read and validate canonical movie records from a JSON Lines file."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
@@ -75,8 +75,8 @@ class Indexer:
 
     def index_movies(
         self,
-        filepath: Path = config.dataset_path,
-        batch_size: int = config.batch_size,
+        filepath: Path = settings.DATA_PATH,
+        batch_size: int = settings.INDEX_BATCH_SIZE,
         force_recreate: bool = False,
     ) -> None:
         """Create embeddings and upsert movies into Qdrant in batches."""

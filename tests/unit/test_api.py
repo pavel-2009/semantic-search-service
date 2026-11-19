@@ -8,10 +8,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.backend.main import app
-from src.backend.schemas import MovieResult, SearchRequest
+from src.backend.schemas import MovieResult
+from src.services.search_service.schemas import SearchQuery
 from src.core.dependencies import get_qdrant_repository, get_search_service
 from src.core.contracts import IndexerStats
-from src.services.indexer.config import config
+from src.core.config import settings
 
 
 @pytest.fixture
@@ -21,6 +22,7 @@ def api_client() -> Iterator[TestClient]:
     app.dependency_overrides[get_search_service] = lambda: service
     app.dependency_overrides[get_qdrant_repository] = lambda: repository
     client = TestClient(app)
+    client.app.state.mock_search_service = service
     yield client
     app.dependency_overrides.clear()
 
@@ -68,12 +70,14 @@ class MockSearchService:
 
     def __init__(self, failing_operations: set[str] | None = None) -> None:
         self.failing_operations = failing_operations or set()
+        self.last_request: SearchQuery | None = None
 
     def _fail_if_configured(self, operation: str) -> None:
         if operation in self.failing_operations:
             raise RuntimeError(f"{operation} failed")
 
-    def search(self, request: SearchRequest) -> list[MovieResult]:
+    def search(self, request: SearchQuery) -> list[MovieResult]:
+        self.last_request = request
         self._fail_if_configured("search")
         return [
             MovieResult(
@@ -93,7 +97,7 @@ class MockSearchService:
         self._fail_if_configured("get_by_id")
         if movie_id != 42:
             return None
-        return self.search(SearchRequest(query="интерстеллар"))[0]
+        return self.search(SearchQuery(text="интерстеллар"))[0]
 
 
 def test_root_returns_service_metadata(api_client: TestClient) -> None:
@@ -144,6 +148,29 @@ def test_search_rejects_invalid_request(api_client: TestClient) -> None:
     assert response.json()["detail"]
 
 
+def test_search_forwards_explicit_metadata_filters(api_client: TestClient) -> None:
+    response = api_client.post(
+        "/api/v1/search",
+        json={
+            "query": "космос",
+            "top_k": 5,
+            "filters": {
+                "year": {"gte": 2000, "lte": 2020},
+                "rating": {"gte": 7.5},
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    request = api_client.app.state.mock_search_service.last_request
+    assert request is not None
+    assert request.filters == {
+        "year_gte": 2000,
+        "year_lte": 2020,
+        "rating_gte": 7.5,
+    }
+
+
 def test_health_returns_healthy_status(
     api_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -181,8 +208,8 @@ def test_stats_returns_collection_statistics(
         "collection": "movies",
         "total_points": 25,
         "status": "green",
-        "model": config.model_name,
-        "embedding_dim": config.dense_dim,
+        "model": settings.EMBEDDING_MODEL,
+        "embedding_dim": settings.EMBEDDING_DIM,
     }
 
 

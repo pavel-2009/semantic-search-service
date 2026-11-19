@@ -14,8 +14,8 @@ from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
 from src.core.contracts import EnrichedMovie
 from src.core.logger import get_logger  # noqa: E402
+from src.core.config import settings  # noqa: E402
 from src.core.vibe import format_vibe  # noqa: E402
-from src.services.indexer.config import config  # noqa: E402
 from src.services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
 from src.services.search_service.parsing import ParsedText  # noqa: E402
 from src.services.search_service.embedder.schemas import EmbedderResponse  # noqa: E402
@@ -30,11 +30,11 @@ class MovieEmbedder:
     def __init__(
         self,
         model_name: str | Path = LOCAL_BGE_MODEL_PATH,
-        device: str = config.device,
-        use_fp16: bool = config.use_fp16,
-        batch_size: int = config.batch_size,
-        sparse_min_weight: float = config.sparse_min_weight,
-        min_plot_len: int = config.min_plot_length,
+        device: str = settings.COMPUTE_DEVICE,
+        use_fp16: bool = settings.EMBEDDING_USE_FP16,
+        batch_size: int = settings.INDEX_BATCH_SIZE,
+        sparse_min_weight: float = settings.SPARSE_MIN_WEIGHT,
+        min_plot_len: int = settings.MIN_PLOT_LENGTH,
     ) -> None:
         model_path = str(model_name)
         logger.info(

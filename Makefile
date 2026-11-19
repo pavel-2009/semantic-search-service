@@ -1,7 +1,6 @@
 .PHONY: up down up-containers api bot scraper indexer download-reranker mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
-test: 
-	uv run python -m test_script
+test: test-unit
 
 recall:
 	uv run python -m test_recall
@@ -10,16 +9,16 @@ precision:
 	uv run python -m test_precision
 
 indexer:
-	QDRANT_HOST=localhost PYTHONPATH=src uv run python -m scripts.run_indexer
+	QDRANT_HOST=localhost uv run python -m scripts.run_indexer
 
 scraper:
-	PYTHONPATH=src uv run python scripts/run_scraper.py
+	uv run python -m scripts.run_scraper
 
 api:
-	QDRANT_HOST=localhost PYTHONPATH=src uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+	QDRANT_HOST=localhost uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
 
 bot:
-	QDRANT_HOST=localhost PYTHONPATH=src uv run python -m bot.main
+	QDRANT_HOST=localhost uv run python -m src.bot.main
 
 download-reranker:
 	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"

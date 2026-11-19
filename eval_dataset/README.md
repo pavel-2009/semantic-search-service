@@ -1,6 +1,6 @@
 # Recall Evaluation Dataset
 
-Тестовый датасет из **65 запросов** на русском языке для оценки качества поиска (Recall@K) по корпусу из 500 фильмов (`src/scraper/data/movies_enriched.jsonl`).
+Тестовый датасет из **65 запросов** на русском языке для оценки качества поиска (Recall@K) по корпусу из 500 фильмов (`src/scraper/data/movies.jsonl`).
 
 ## Структура `recall_dataset.json`
 

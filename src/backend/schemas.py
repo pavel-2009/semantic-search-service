@@ -22,8 +22,6 @@ class SearchFilters(BaseModel):
 
     year: YearFilter | None = Field(None, description="Фильтр по году")
     rating: RatingFilter | None = Field(None, description="Фильтр по рейтингу")
-    genre: list[str] | None = Field(None, description="Фильтр по жанрам")
-    countries: list[str] | None = Field(None, description="Фильтр по странам")
 
 
 class SearchRequest(BaseModel):

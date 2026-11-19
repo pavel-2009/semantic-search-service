@@ -28,7 +28,7 @@ class Movie(BaseModel):
 class EnrichedMovie(Movie):
     """Enriched movie record loaded by the indexer for multi-vector indexing."""
 
-    indexing: MovieIndexData
+    indexing: MovieIndexData = Field(default_factory=MovieIndexData)
 
     def to_movie_payload(self) -> Movie:
         """Return the canonical Movie payload stored in Qdrant."""

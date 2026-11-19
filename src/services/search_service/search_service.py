@@ -1,11 +1,9 @@
 """Search service entrypoint."""
 
-from typing import Any
-
 from src.services.search_service.ranking.ranking import RerankingService
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
-from src.services.search_service.schemas import SearchQuery, SearchResponse, ParsedQuery, EncodedQuery
-from src.services.search_service.parsing.text_parser import TextParser, ParsedText
+from src.services.search_service.schemas import SearchQuery, SearchResponse
+from src.services.search_service.parsing.text_parser import ParsedText, TextParser
 from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.repositories.qdrant_repository import QdrantRepository
 from src.repositories.schemas import RetrievalResponse
@@ -30,9 +28,13 @@ class SearchService:
     def search(self, query: SearchQuery) -> SearchResponse:
         """Search for movies based on the query."""
         parsed_query: ParsedText = self.parser.parse(query.text)
+        if query.filters:
+            parsed_query.filter = {**(parsed_query.filter or {}), **query.filters}
         encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
 
-        retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(encoded_query, query.top_k)
+        retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
+            encoded_query, query.top_k
+        )
 
         reranking_request: RerankingRequest = RerankingRequest(
             query=query.text,

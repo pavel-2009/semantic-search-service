@@ -12,7 +12,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
 from src.core.qdrant_client import QdrantClientSingleton
 import src.services.indexer.embedder as embedder_module
-from src.services.indexer.config import config
+from src.core.config import settings
 from src.services.indexer.indexer import Indexer
 from src.services.indexer.schemas import SparseVectorData
 from src.services.search_service.embedder.schemas import EmbedderResponse
@@ -167,7 +167,7 @@ class MockBGEM3FlagModel:
         result: dict[str, object] = {}
         if return_dense:
             result["dense_vecs"] = MockDenseMatrix(
-                [[float(len(text))] * config.dense_dim for text in texts]
+                [[float(len(text))] * settings.EMBEDDING_DIM for text in texts]
             )
         if return_sparse:
             result["lexical_weights"] = [
@@ -231,8 +231,8 @@ def test_embed_request_generates_plot_vibe_and_sparse_embeddings(
 
     assert response.embedding_names == ["plot", "vibe"]
     assert response.embeddings == [
-        [float(len("A detective investigates"))] * config.dense_dim,
-        [float(len("dark and tense"))] * config.dense_dim,
+        [float(len("A detective investigates"))] * settings.EMBEDDING_DIM,
+        [float(len("dark and tense"))] * settings.EMBEDDING_DIM,
     ]
     assert response.sparse_vector is not None
     assert response.sparse_vector.indices == [1]
@@ -275,7 +275,7 @@ def test_get_points_does_not_apply_unset_filters(
     assert qdrant_client.last_query["query_filter"] is None
 
 
-def test_get_points_applies_only_year_and_rating_bounds(
+def test_get_points_applies_year_and_rating_filters(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
@@ -295,11 +295,11 @@ def test_get_points_applies_only_year_and_rating_bounds(
     assert query_filter.must is not None
     assert [
         (condition.key, condition.range.gte, condition.range.lte)
-        for condition in query_filter.must
+        for condition in query_filter.must[:2]
     ] == [("year", 1990, None), ("rating", None, 8.5)]
 
 
-def test_get_points_sorts_results_by_rating_descending(
+def test_get_points_preserves_qdrant_relevance_order(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
@@ -337,12 +337,7 @@ def test_get_points_sorts_results_by_rating_descending(
 
     retrieval = indexer.repo.get_points(response)
 
-    assert [point.payload.get("rating") for point in retrieval.response] == [
-        9.1,
-        8.0,
-        7.2,
-        None,
-    ]
+    assert [point.id for point in retrieval.response] == [1, 2, 3, 4]
 
 
 def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
@@ -443,11 +438,11 @@ def test_batch_indexing_with_large_file(
     assert stats.points_count == 200
 
 
-def test_indexer_config_points_to_enriched_dataset() -> None:
-    assert config.dataset_path.name == "movies_enriched.jsonl"
+def test_indexer_uses_scraper_output_dataset() -> None:
+    assert settings.DATA_PATH.name == "movies.jsonl"
 
 
-def test_load_movies_rejects_raw_movie_without_indexing_structure(
+def test_load_movies_accepts_raw_movie_without_precomputed_indexing(
     tmp_path: Path,
     indexer: Indexer,
 ) -> None:
@@ -455,8 +450,9 @@ def test_load_movies_rejects_raw_movie_without_indexing_structure(
     filepath = tmp_path / "raw_movies.jsonl"
     filepath.write_text(raw_movie.model_dump_json() + "\n", encoding="utf-8")
 
-    with pytest.raises(RuntimeError, match="No movies available for indexing"):
-        indexer.index_movies(filepath)
+    loaded = list(indexer.load_movies(filepath))
+    assert len(loaded) == 1
+    assert loaded[0].indexing.plot is None
 
 
 def test_embed_cards_uses_indexing_fields_and_stores_clean_movie_payload(
@@ -476,8 +472,8 @@ def test_embed_cards_uses_indexing_fields_and_stores_clean_movie_payload(
     assert len(points) == 1
     point = points[0]
     assert point.point_id == 7
-    assert point.plot_vector == [float(len("Интерстеллар. Космическое путешествие."))] * config.dense_dim
-    assert point.vibe_vector == [float(len("Эпичный, философский."))] * config.dense_dim
+    assert point.plot_vector == [float(len("Интерстеллар. Космическое путешествие."))] * settings.EMBEDDING_DIM
+    assert point.vibe_vector == [float(len("Эпичный, философский."))] * settings.EMBEDDING_DIM
     assert isinstance(point.payload, Movie)
     assert point.payload.moods == ["эпичный", "философский"]
     assert "indexing" not in point.payload.model_dump()

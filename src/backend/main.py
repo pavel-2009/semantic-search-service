@@ -13,7 +13,7 @@ from src.backend.api.search_router import router as search_router
 from src.core.config import settings
 from src.core.dependencies import get_qdrant_repository
 from src.core.logger import get_logger, setup_logging
-from src.services.indexer.config import config
+
 
 setup_logging()
 logger = get_logger(__name__)
@@ -27,8 +27,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.QDRANT_COLLECTION,
         settings.QDRANT_HOST,
         settings.QDRANT_PORT,
-        config.model_name,
-        config.device,
+        settings.EMBEDDING_MODEL,
+        settings.COMPUTE_DEVICE,
         settings.LOG_LEVEL.upper(),
     )
     started_at = perf_counter()
