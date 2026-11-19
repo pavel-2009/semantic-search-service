@@ -1,6 +1,6 @@
 """API schemas for the semantic search service."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class YearFilter(BaseModel):
@@ -19,6 +19,8 @@ class RatingFilter(BaseModel):
 
 class SearchFilters(BaseModel):
     """Optional metadata filters for movie search."""
+
+    model_config = ConfigDict(extra="forbid")
 
     year: YearFilter | None = Field(None, description="Фильтр по году")
     rating: RatingFilter | None = Field(None, description="Фильтр по рейтингу")
