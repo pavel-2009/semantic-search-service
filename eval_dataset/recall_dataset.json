@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "source_corpus": "src/scraper/data/movies_enriched.jsonl",
+  "source_corpus": "src/scraper/data/movies.jsonl",
   "total_movies_in_corpus": 500,
   "total_queries": 65,
   "categories": {
