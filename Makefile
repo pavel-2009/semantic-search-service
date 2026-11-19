@@ -1,7 +1,6 @@
 .PHONY: up down up-containers api bot scraper indexer download-reranker mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
-test: 
-	uv run python -m test_script
+test: test-unit
 
 recall:
 	uv run python -m test_recall
