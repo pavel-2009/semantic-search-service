@@ -1,33 +1,31 @@
-FROM python:3.14-slim
+FROM python:3.14-slim AS base
 
 WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY README.md ./
 COPY src ./src
 COPY scripts ./scripts
 
-RUN uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
 ENV PYTHONPATH=/app/src
 
-# API
-FROM ./Dockerfile.api AS api
 
-CMD ["uv", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
-# Bot
-FROM ./Dockerfile.bot AS bot
+FROM base AS api
+CMD ["uv", "run", "--no-sync", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
-CMD ["uv", "run", "python", "-m", "bot.main"]
+FROM base AS bot
+CMD ["uv", "run", "--no-sync", "python", "-m", "bot.main"]
 
-# Indexer
-FROM ./Dockerfile.indexer AS indexer
+FROM base AS indexer
+CMD ["uv", "run", "--no-sync", "python", "scripts/run_indexer.py"]
 
-CMD ["uv", "run", "python", "scripts/run_indexer.py"]
-
-# Scraper
-FROM ./Dockerfile.scraper AS scraper
-
-CMD ["uv", "run", "python", "scripts/run_scraper.py"]
+FROM base AS scraper
+CMD ["uv", "run", "--no-sync", "python", "scripts/run_scraper.py"]
