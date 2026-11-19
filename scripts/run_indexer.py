@@ -12,7 +12,7 @@ def main() -> None:
     setup_logging()
     logger.info(
         "Starting indexer run: dataset=%s qdrant=%s collection=%s model=%s batch_size=%d",
-        settings.INDEX_DATA_PATH,
+        settings.DATA_PATH,
         settings.QDRANT_URL,
         settings.QDRANT_COLLECTION,
         settings.EMBEDDING_MODEL,
@@ -21,7 +21,7 @@ def main() -> None:
 
     indexer = Indexer()
     indexer.index_movies(
-        filepath=settings.INDEX_DATA_PATH,
+        filepath=settings.DATA_PATH,
         batch_size=settings.INDEX_BATCH_SIZE,
         force_recreate=True,
     )
