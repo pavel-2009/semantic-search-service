@@ -170,9 +170,11 @@ The default Compose setup starts Qdrant only:
 make up
 ```
 
-To run the full scraper → indexer → API → bot pipeline in containers:
+To run the full scraper → indexer → API → bot pipeline in containers, download the reranker model into the shared cache once, then start the profile:
 
 ```bash
+docker compose build reranker-downloader
+docker compose --profile model-download run --rm --no-deps reranker-downloader
 docker compose --profile container-app up --build
 ```
 
