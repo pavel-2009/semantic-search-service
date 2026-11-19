@@ -6,6 +6,7 @@ from qdrant_client import models
 
 from src.core.contracts import IndexerStats
 from src.core.logger import get_logger
+from src.core.config import settings
 from src.core.qdrant_client import QdrantClientSingleton
 from src.services.indexer.config import config
 from src.services.indexer.schemas import IndexedMoviePoint
@@ -136,7 +137,7 @@ class QdrantRepository:
 
         return indexed, failed
 
-    def get_points(self, embeddings: EmbedderResponse) -> RetrievalResponse:
+    def get_points(self, embeddings: EmbedderResponse, top_k: int = settings.MAX_RETRIEVED_DOCUMENTS) -> RetrievalResponse:
         """Retrieve points from Qdrant based on embeddings."""
         logger.debug("Retrieving points from Qdrant: collection=%s", self.collection_name)
 
@@ -206,7 +207,7 @@ class QdrantRepository:
                 prefetch=prefetch,
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
                 query_filter=query_filter,
-                limit=30,
+                limit=top_k * 5,  # Retrieve more points for reranking
                 with_payload=True,
             )
 

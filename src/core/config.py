@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str = ""
 
     MAX_RERANKED_DOCUMENTS: int = 10
+    MAX_RETRIEVED_DOCUMENTS: int = 100
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env" if (PROJECT_ROOT / ".env").exists() else None,

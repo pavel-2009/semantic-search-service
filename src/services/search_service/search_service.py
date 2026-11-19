@@ -35,6 +35,6 @@ class SearchService:
             "query": query.text,
             "documents": retrieval_response.documents,
         }
-        reranking_response = self.reranker.rerank(reranking_request)
+        reranking_response = self.reranker.rerank(reranking_request, query.top_k)
 
         return SearchResponse(documents=reranking_response.reranked_documents)

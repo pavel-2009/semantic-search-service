@@ -21,7 +21,7 @@ class RerankingService:
             device=device if device is not None else get_compute_device(),
         )
 
-    def rerank(self, request: RerankingRequest) -> RerankingResponse:
+    def rerank(self, request: RerankingRequest, top_k: int = settings.MAX_RERANKED_DOCUMENTS) -> RerankingResponse:
         """Rerank documents based on the query."""
         query = request.query
         documents = request.documents
@@ -35,6 +35,6 @@ class RerankingService:
         ]
         scored_documents.sort(key=lambda x: x["score"], reverse=True)
 
-        reranked_documents = [doc["document"] for doc in scored_documents][: settings.MAX_RERANKED_DOCUMENTS]
+        reranked_documents = [doc["document"] for doc in scored_documents][: top_k]
 
         return RerankingResponse(reranked_documents=reranked_documents)
