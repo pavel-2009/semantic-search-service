@@ -8,7 +8,7 @@ from src.core.contracts import IndexerStats
 from src.core.logger import get_logger
 from src.core.config import settings
 from src.core.qdrant_client import QdrantClientSingleton
-from src.services.indexer.config import config
+from src.core.config import settings
 from src.services.indexer.schemas import IndexedMoviePoint
 from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.repositories.schemas import RetrievalResponse
@@ -21,8 +21,8 @@ class QdrantRepository:
 
     def __init__(
         self,
-        collection_name: str = config.collection_name,
-        dense_dim: int = config.dense_dim,
+        collection_name: str = settings.QDRANT_COLLECTION,
+        dense_dim: int = settings.EMBEDDING_DIM,
     ) -> None:
         self.client = QdrantClientSingleton.get_client()
         self.collection_name = collection_name
