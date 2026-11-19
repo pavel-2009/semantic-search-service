@@ -240,6 +240,16 @@ POISKKINO_API_KEY=your_api_key
 
 The `.env` file is read at runtime and is not copied into Docker images.
 
+### Download the reranker model before startup
+
+The reranker is downloaded once into a persistent Docker volume. To download it
+in a separate container before starting the application:
+
+```bash
+docker compose build reranker-downloader
+docker compose --profile model-download run --rm --no-deps reranker-downloader
+```
+
 ### 3. Start the full pipeline
 
 ```bash

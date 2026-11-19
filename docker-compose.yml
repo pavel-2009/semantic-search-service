@@ -42,6 +42,7 @@ services:
       - HF_HOME=/cache/huggingface
     volumes:
       - ./src:/app/src
+      - ./bge-m3:/app/bge-m3:ro
       - huggingface_cache:/cache/huggingface
     depends_on:
       scraper:
@@ -49,6 +50,25 @@ services:
       qdrant:
         condition: service_healthy
     restart: "no"
+    networks:
+      - semantic-network
+
+  reranker-downloader:
+    profiles:
+      - model-download
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    environment:
+      - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
+    volumes:
+      - huggingface_cache:/cache/huggingface
+    entrypoint: ["uv", "run", "--no-sync", "python", "-c"]
+    command:
+      - "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
     networks:
       - semantic-network
 
@@ -66,8 +86,11 @@ services:
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
       - BOT_TOKEN=${BOT_TOKEN:-}
       - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
     volumes:
       - ./src:/app/src
+      - ./bge-m3:/app/bge-m3:ro
       - huggingface_cache:/cache/huggingface
     depends_on:
       indexer:
@@ -79,7 +102,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 15s
+      start_period: 10m
     restart: unless-stopped
     networks:
       - semantic-network
@@ -95,8 +118,13 @@ services:
       - LOG_LEVEL=INFO
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
       - BOT_TOKEN=${BOT_TOKEN:-}
+      - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
     volumes:
       - ./src:/app/src
+      - ./bge-m3:/app/bge-m3:ro
+      - huggingface_cache:/cache/huggingface
     depends_on:
       api:
         condition: service_healthy
