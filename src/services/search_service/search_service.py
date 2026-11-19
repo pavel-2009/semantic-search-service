@@ -30,6 +30,8 @@ class SearchService:
     def search(self, query: SearchQuery) -> SearchResponse:
         """Search for movies based on the query."""
         parsed_query: ParsedText = self.parser.parse(query.text)
+        if query.filters:
+            parsed_query.filter = {**(parsed_query.filter or {}), **query.filters}
         encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
 
         retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(encoded_query, query.top_k)
