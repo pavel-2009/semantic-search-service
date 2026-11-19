@@ -17,7 +17,7 @@ The service collects movie data, indexes dense and sparse representations, retri
 - Multilingual semantic and lexical retrieval with BGE-M3.
 - Hybrid dense + sparse search in Qdrant.
 - Cross-encoder reranking with BGE Reranker v2 M3.
-- Metadata filters by year, rating, genres and countries.
+- Metadata filters by year and rating.
 - FastAPI REST API and Aiogram Telegram bot.
 - Scrapy data collection with JSONL export.
 - Shared configuration for API, bot, scraper and indexer.
@@ -83,7 +83,7 @@ The scraper writes canonical movie records to `src/scraper/data/movies.jsonl`. T
 
 Precomputed indexing text is optional. When it is absent, the indexer builds its representations from the movie description, moods, title and genres. Invalid JSONL records are logged and skipped. The stored Qdrant payload follows the shared `Movie` contract.
 
-The default collection is `movies`. It contains 1024-dimensional plot and vibe vectors, a sparse lexical vector, and metadata fields including year, rating, genres and countries.
+The default collection is `movies`. It contains 1024-dimensional plot and vibe vectors, a sparse lexical vector, and movie metadata fields including year, rating, genres and countries.
 
 ## Quick start
 
@@ -192,14 +192,12 @@ All application endpoints use the `/api/v1` prefix.
   "top_k": 5,
   "filters": {
     "year": {"gte": 2015},
-    "rating": {"gte": 7.0},
-    "genre": ["триллер"],
-    "countries": ["США"]
+    "rating": {"gte": 7.0}
   }
 }
 ```
 
-Supported filters are combined with AND across fields. Values inside `genre` and `countries` are matched as alternatives (OR within each list).
+Year and rating bounds are combined with AND when both are supplied.
 
 ### Other endpoints
 
