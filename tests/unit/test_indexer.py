@@ -275,7 +275,7 @@ def test_get_points_does_not_apply_unset_filters(
     assert qdrant_client.last_query["query_filter"] is None
 
 
-def test_get_points_applies_only_year_and_rating_bounds(
+def test_get_points_applies_year_rating_genre_and_country_filters(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
@@ -285,6 +285,8 @@ def test_get_points_applies_only_year_and_rating_bounds(
         sparse_vector=SparseVectorData(indices=[1], values=[0.5]),
         year_range=(1990, 0),
         rating_range=(0.0, 8.5),
+        genres=["драма", "триллер"],
+        countries=["Франция"],
     )
 
     indexer.repo.get_points(response)
@@ -297,9 +299,13 @@ def test_get_points_applies_only_year_and_rating_bounds(
         (condition.key, condition.range.gte, condition.range.lte)
         for condition in query_filter.must
     ] == [("year", 1990, None), ("rating", None, 8.5)]
+    assert query_filter.must[2].key == "genres"
+    assert query_filter.must[2].match.any == ["драма", "триллер"]
+    assert query_filter.must[3].key == "countries"
+    assert query_filter.must[3].match.any == ["Франция"]
 
 
-def test_get_points_sorts_results_by_rating_descending(
+def test_get_points_preserves_qdrant_relevance_order(
     indexer: Indexer,
     qdrant_client: MockQdrantClient,
 ) -> None:
@@ -337,12 +343,7 @@ def test_get_points_sorts_results_by_rating_descending(
 
     retrieval = indexer.repo.get_points(response)
 
-    assert [point.payload.get("rating") for point in retrieval.response] == [
-        9.1,
-        8.0,
-        7.2,
-        None,
-    ]
+    assert [point.id for point in retrieval.response] == [1, 2, 3, 4]
 
 
 def test_embed_request_without_text_returns_empty_vectors(indexer: Indexer) -> None:
@@ -364,7 +365,7 @@ def test_create_collection_with_existing_collection_does_not_fail(
     # Create collection first time
     indexer.create_collection()
     assert indexer.get_stats().points_count == 0
-    assert set(qdrant_client.payload_indexes["movies"]) == {"year", "rating"}
+    assert set(qdrant_client.payload_indexes["movies"]) == {"year", "rating", "genres", "countries"}
 
     # Create collection again, should not fail
     indexer.create_collection()
