@@ -51,6 +51,8 @@ class QdrantRepository:
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
+            "genres": models.PayloadSchemaType.KEYWORD,
+            "countries": models.PayloadSchemaType.KEYWORD,
         }
 
         for field, schema in indexes.items():
@@ -165,6 +167,14 @@ class QdrantRepository:
                     ),
                 ),
             )
+        if embeddings.genres:
+            conditions.append(
+                models.FieldCondition(key="genres", match=models.MatchAny(any=embeddings.genres))
+            )
+        if embeddings.countries:
+            conditions.append(
+                models.FieldCondition(key="countries", match=models.MatchAny(any=embeddings.countries))
+            )
         query_filter = models.Filter(must=conditions) if conditions else None
 
         prefetch: list[models.Prefetch] = []
@@ -215,23 +225,7 @@ class QdrantRepository:
             logger.exception("Failed to retrieve points from Qdrant: collection=%s", self.collection_name)
             raise e
 
-        sorted_points = sorted(response.points, key=self._rating_sort_key, reverse=True)
-        return RetrievalResponse(request=embeddings, response=sorted_points)
-
-    @staticmethod
-    def _rating_sort_key(point: models.ScoredPoint) -> tuple[bool, float]:
-        """Sort rated points by descending rating and place unrated points last."""
-        if not point.payload:
-            return False, 0.0
-
-        rating = point.payload.get("rating")
-        if rating is None:
-            return False, 0.0
-
-        try:
-            return True, float(rating)
-        except (TypeError, ValueError):
-            return False, 0.0
+        return RetrievalResponse(request=embeddings, response=response.points)
 
     def get_stats(self, collection_name: str | None = None) -> IndexerStats:
         """Return collection statistics."""
