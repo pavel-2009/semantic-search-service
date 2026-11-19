@@ -148,6 +148,22 @@ def test_search_rejects_invalid_request(api_client: TestClient) -> None:
     assert response.json()["detail"]
 
 
+@pytest.mark.parametrize("unsupported_filter", ["genre", "countries"])
+def test_search_rejects_unsupported_metadata_filters(
+    api_client: TestClient,
+    unsupported_filter: str,
+) -> None:
+    response = api_client.post(
+        "/api/v1/search",
+        json={
+            "query": "космос",
+            "filters": {unsupported_filter: ["фантастика"]},
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_search_forwards_explicit_metadata_filters(api_client: TestClient) -> None:
     response = api_client.post(
         "/api/v1/search",
