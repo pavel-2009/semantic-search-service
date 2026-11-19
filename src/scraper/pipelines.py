@@ -6,10 +6,11 @@ from typing import TextIO
 from scrapy import signals
 from scrapy.spiders import Spider
 
+from src.core.config import settings
 from src.core.logger import get_logger
 from src.core.contracts import Movie
 
-DATA_FILE = Path(__file__).resolve().parent / "data" / "movies.jsonl"
+DATA_FILE = settings.DATA_PATH
 logger = get_logger(__name__)
 
 
