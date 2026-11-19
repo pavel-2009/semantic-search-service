@@ -43,8 +43,8 @@ def main() -> None:
 
         retrieved_points = retrieval.response
         retrieval_run[qid] = {
-            str(point.id): float(len(retrieved_points) - rank)
-            for rank, point in enumerate(retrieved_points)
+            str(point.id): float(point.score)
+            for point in retrieved_points
         }
 
     qrels = Qrels(qrels_dict)
@@ -74,7 +74,12 @@ def main() -> None:
     for item in queries:
         qid = item["id"]
         expected = set(qrels_dict[qid])
-        retrieved = set(retrieval_run[qid])
+        top_30 = sorted(
+            retrieval_run[qid].items(),
+            key=lambda result: result[1],
+            reverse=True,
+        )[:30]
+        retrieved = {point_id for point_id, _ in top_30}
         hit_ratio = len(expected & retrieved) / len(expected)
         if hit_ratio < 1.0:
             misses.append((qid, hit_ratio, item["query"]))
