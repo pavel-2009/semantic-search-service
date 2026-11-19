@@ -52,7 +52,7 @@ class Indexer:
         """Recreate the Qdrant collection."""
         self.repo.recreate_collection()
 
-    def load_movies(self, filepath: Path = settings.INDEX_DATA_PATH) -> Iterator[EnrichedMovie]:
+    def load_movies(self, filepath: Path = settings.DATA_PATH) -> Iterator[EnrichedMovie]:
         """Read and validate canonical movie records from a JSON Lines file."""
         logger.info("Loading movies: path=%s", filepath)
 
@@ -75,7 +75,7 @@ class Indexer:
 
     def index_movies(
         self,
-        filepath: Path = settings.INDEX_DATA_PATH,
+        filepath: Path = settings.DATA_PATH,
         batch_size: int = settings.INDEX_BATCH_SIZE,
         force_recreate: bool = False,
     ) -> None:
