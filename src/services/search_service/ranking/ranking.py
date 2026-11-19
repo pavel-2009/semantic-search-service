@@ -1,6 +1,9 @@
 """Reranking logic."""
 
+from typing import Any
+
 from sentence_transformers import CrossEncoder
+from qdrant_client.models import ScoredPoint
 
 from src.core.device import get_compute_device
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
@@ -24,15 +27,16 @@ class RerankingService:
     def rerank(self, request: RerankingRequest, top_k: int = settings.MAX_RERANKED_DOCUMENTS) -> RerankingResponse:
         """Rerank documents based on the query."""
         query = request.query
-        documents = request.documents
+        documents: list[ScoredPoint] = request.documents
 
-        inputs = [(query, doc.) for doc in documents]
+        formatted_documents = [self._document_from_point(point) for point in documents]
+        inputs = [(query, text) for _, text in formatted_documents]
 
         scores = self.model.predict(inputs)
 
         scored_documents = [
-            {"document": doc, "score": float(score)}
-            for doc, score in zip(documents, scores, strict=True)
+            {"document": document, "score": float(score)}
+            for (document, _), score in zip(formatted_documents, scores, strict=True)
         ]
         scored_documents.sort(key=lambda x: x["score"], reverse=True)
 
@@ -43,3 +47,24 @@ class RerankingService:
             reranked_documents.append(document)
 
         return RerankingResponse(reranked_documents=reranked_documents)
+
+    @staticmethod
+    def _document_from_point(point: ScoredPoint) -> tuple[dict[str, Any], str]:
+        """Build the structured result and labeled text used by the reranker."""
+        document = dict(point.payload or {})
+        document.setdefault("id", point.id)
+        fields = [
+            ("Название", document.get("title")),
+            ("Год", document.get("year")),
+            ("Страны", ", ".join(document.get("countries") or [])),
+            ("Жанры", ", ".join(document.get("genres") or [])),
+            ("Настроение", ", ".join(document.get("moods") or [])),
+            ("Рейтинг", document.get("rating")),
+            ("Сюжет", document.get("description")),
+        ]
+        text = ". ".join(
+            f"{label}: {str(value).strip()}"
+            for label, value in fields
+            if value is not None and str(value).strip()
+        )
+        return document, text

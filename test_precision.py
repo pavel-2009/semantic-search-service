@@ -97,19 +97,12 @@ def main() -> None:
         embeddings = embedder.embed_request(parsed)
         retrieval = repo.get_points(embeddings=embeddings)
 
-        documents = []
-        for point in retrieval.response:
-            payload = point.payload or {}
-            documents.append(
-                {
-                    "id": str(point.id),
-                    "title": payload.get("title"),
-                    "year": payload.get("year"),
-                    "text": document_text(payload),
-                }
-            )
+        documents = [
+            {"id": str(point.id), **(point.payload or {})}
+            for point in retrieval.response
+        ]
         reranked = reranker.rerank(
-            RerankingRequest(query=item["query"], documents=documents)
+            RerankingRequest(query=item["query"], documents=retrieval.response)
         )
         print_rank_changes(
             item["query"],

@@ -2,13 +2,15 @@
 
 from dataclasses import dataclass
 
+from qdrant_client.models import ScoredPoint
+
 
 @dataclass
 class RerankingRequest:
     """Reranking request schema."""
 
     query: str
-    documents: list[dict]
+    documents: list[ScoredPoint]
 
 
 @dataclass
