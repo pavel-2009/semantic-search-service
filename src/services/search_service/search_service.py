@@ -1,6 +1,7 @@
 """Search service entrypoint."""
 
 from src.services.search_service.ranking.ranking import RerankingService
+from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
 from src.services.search_service.schemas import SearchQuery, SearchResponse, ParsedQuery, EncodedQuery
 from src.services.search_service.parsing.text_parser import TextParser, ParsedText
 from src.services.search_service.embedder.schemas import EmbedderResponse
@@ -31,10 +32,11 @@ class SearchService:
 
         retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(encoded_query, query.top_k)
 
-        reranking_request = {
-            "query": query.text,
-            "documents": retrieval_response.documents,
-        }
-        reranking_response = self.reranker.rerank(reranking_request, query.top_k)
+        reranking_request: RerankingRequest = RerankingRequest(
+            query=query.text,
+            documents=retrieval_response.documents,
+        )
+
+        reranking_response: RerankingResponse = self.reranker.rerank(reranking_request, query.top_k)
 
         return SearchResponse(documents=reranking_response.reranked_documents)
