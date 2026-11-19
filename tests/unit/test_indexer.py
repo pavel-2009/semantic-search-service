@@ -297,7 +297,7 @@ def test_get_points_applies_year_rating_genre_and_country_filters(
     assert query_filter.must is not None
     assert [
         (condition.key, condition.range.gte, condition.range.lte)
-        for condition in query_filter.must
+        for condition in query_filter.must[:2]
     ] == [("year", 1990, None), ("rating", None, 8.5)]
     assert query_filter.must[2].key == "genres"
     assert query_filter.must[2].match.any == ["драма", "триллер"]
