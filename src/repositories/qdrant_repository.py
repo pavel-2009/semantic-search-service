@@ -35,18 +35,17 @@ class QdrantRepository:
 
         if self.client.collection_exists(collection_name):
             logger.info("Collection already exists: collection=%s", collection_name)
-            return
-
-        logger.info(
-            "Creating Qdrant collection: collection=%s dense_dim=%d",
-            collection_name,
-            self.dense_dim,
-        )
-        self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=self._get_vectors_config(),
-            sparse_vectors_config=self._get_sparse_vectors_config(),
-        )
+        else:
+            logger.info(
+                "Creating Qdrant collection: collection=%s dense_dim=%d",
+                collection_name,
+                self.dense_dim,
+            )
+            self.client.create_collection(
+                collection_name=collection_name,
+                vectors_config=self._get_vectors_config(),
+                sparse_vectors_config=self._get_sparse_vectors_config(),
+            )
 
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
