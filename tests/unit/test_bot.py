@@ -8,7 +8,8 @@ from aiogram import Bot
 from aiogram.filters import CommandObject
 from aiogram.types import CallbackQuery, Message
 
-from src.backend.schemas import MovieResult, SearchRequest
+from src.backend.schemas import MovieResult
+from src.services.search_service.schemas import SearchQuery
 from src.bot.main import start
 
 info_router = import_module("src.bot.routers.info_router")
@@ -68,7 +69,7 @@ async def test_search_command_sends_results_and_detail_buttons(
     await search_router.search_movies(mock_message, command)
 
     service.search.assert_called_once_with(
-        SearchRequest(query="фильмы про космос", top_k=10, filters=None)
+        SearchQuery(text="фильмы про космос", top_k=10)
     )
     mock_bot.send_message.assert_awaited_once()
     sent = mock_bot.send_message.await_args.kwargs

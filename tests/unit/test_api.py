@@ -7,6 +7,16 @@ from fastapi.testclient import TestClient
 
 from src.backend.main import app
 from src.backend.schemas import MovieResult, SearchRequest, StatsResponse
+from src.core.dependencies import get_search_service
+
+
+@pytest.fixture
+def api_client() -> Iterator[TestClient]:
+    service = MockSearchService()
+    app.dependency_overrides[get_search_service] = lambda: service
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.clear()
 
 
 class MockSearchService:
