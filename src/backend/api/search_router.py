@@ -50,7 +50,11 @@ async def search(
     try:
         results = await run_in_threadpool(
             service.search,
-            SearchQuery(text=request.query, top_k=request.top_k, filters=_flatten_filters(request.filters)),
+            SearchQuery(
+                text=request.query,
+                top_k=request.top_k,
+                filters=_flatten_filters(request.filters),
+            ),
         )
         if hasattr(results, "documents"):
             results = results.documents
