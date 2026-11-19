@@ -9,8 +9,8 @@ from pydantic import ValidationError
 
 from src.core.contracts import EnrichedMovie, IndexerStats
 from src.core.logger import get_logger
-from src.repositories.qdrant_repository import QdrantRepository
 from src.core.config import settings
+from src.repositories.qdrant_repository import QdrantRepository
 from src.services.indexer.embedder import MovieEmbedder
 
 logger = get_logger(__name__)
@@ -53,7 +53,7 @@ class Indexer:
         self.repo.recreate_collection()
 
     def load_movies(self, filepath: Path = settings.INDEX_DATA_PATH) -> Iterator[EnrichedMovie]:
-        """Read and validate one enriched JSON Lines movie record at a time."""
+        """Read and validate canonical movie records from a JSON Lines file."""
         logger.info("Loading movies: path=%s", filepath)
 
         if not filepath.exists():
