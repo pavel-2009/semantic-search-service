@@ -7,8 +7,8 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from src.bot.routers import info_router, search_router
 from src.bot.api_client import api_client
+from src.bot.routers import info_router, search_router
 from src.core.config import settings
 from src.core.logger import get_logger, setup_logging
 
@@ -23,7 +23,7 @@ dp.include_routers(search_router, info_router)
 async def start(message: Message) -> None:
     """Handle /start."""
     await message.answer(
-        "🎬 <b>Семантический поиск фильмов</b>\\n\\n"
+        "🎬 <b>Семантический поиск фильмов</b>\n\n"
         "Опиши фильм или настроение — я найду подходящие варианты.",
         parse_mode=ParseMode.HTML,
     )
