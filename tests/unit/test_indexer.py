@@ -445,7 +445,7 @@ def test_batch_indexing_with_large_file(
 
 
 def test_indexer_uses_scraper_output_dataset() -> None:
-    assert settings.INDEX_DATA_PATH.name == "movies.jsonl"
+    assert settings.DATA_PATH.name == "movies.jsonl"
 
 
 def test_load_movies_accepts_raw_movie_without_precomputed_indexing(
