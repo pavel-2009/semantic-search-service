@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from src.backend.schemas import HealthResponse, MovieResult, StatsResponse
-from src.services.indexer.config import config
+from src.core.config import settings
 from src.core.dependencies import get_qdrant_repository
 from src.core.logger import get_logger
 from src.repositories.qdrant_repository import QdrantRepository
@@ -102,8 +102,8 @@ async def get_stats(repository: QdrantRepositoryDependency) -> StatsResponse:
             collection=stats.collection,
             total_points=stats.points_count,
             status=stats.status,
-            model=config.model_name,
-            embedding_dim=config.dense_dim,
+            model=settings.EMBEDDING_MODEL,
+            embedding_dim=settings.EMBEDDING_DIM,
         )
     except Exception as exc:
         logger.exception("Stats request failed while accessing Qdrant")
