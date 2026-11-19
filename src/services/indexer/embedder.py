@@ -180,8 +180,6 @@ class MovieEmbedder:
                 float(filters.get("rating_gte", 0)),
                 float(filters.get("rating_lte", 0)),
             ),
-            genres=list(filters.get("genres", [])),
-            countries=list(filters.get("countries", [])),
         )
 
     def _format_plot(self, card: EnrichedMovie) -> str | None:
