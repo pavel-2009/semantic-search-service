@@ -16,6 +16,8 @@ services:
       - semantic-network
 
   scraper:
+    profiles:
+      - container-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -32,6 +34,8 @@ services:
       - semantic-network
 
   indexer:
+    profiles:
+      - container-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -73,6 +77,8 @@ services:
       - semantic-network
 
   api:
+    profiles:
+      - container-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -102,12 +108,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 10m
+      start_period: 1m
     restart: unless-stopped
     networks:
       - semantic-network
 
   bot:
+    profiles:
+      - container-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -121,6 +129,7 @@ services:
       - HF_HOME=/cache/huggingface
       - HF_HUB_DOWNLOAD_TIMEOUT=600
       - HF_HUB_ETAG_TIMEOUT=60
+      - API_BASE_URL=http://api:8000
     volumes:
       - ./src:/app/src
       - ./bge-m3:/app/bge-m3:ro

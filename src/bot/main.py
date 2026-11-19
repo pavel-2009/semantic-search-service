@@ -8,6 +8,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from src.bot.routers import info_router, search_router
+from src.bot.api_client import api_client
 from src.core.config import settings
 from src.core.logger import get_logger, setup_logging
 
@@ -38,6 +39,7 @@ async def main() -> None:
         logger.info("Telegram bot stopped by user")
     finally:
         await bot.session.close()
+        await api_client.close()
 
 
 if __name__ == "__main__":

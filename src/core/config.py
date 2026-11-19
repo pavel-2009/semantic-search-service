@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     POISKKINO_API_KEY: str = ""
     BOT_TOKEN: str = ""
+    API_BASE_URL: str = "http://127.0.0.1:8000"
 
     MAX_RERANKED_DOCUMENTS: int = 10
     MAX_RETRIEVED_DOCUMENTS: int = 100

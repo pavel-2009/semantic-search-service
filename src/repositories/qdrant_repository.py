@@ -198,7 +198,7 @@ class QdrantRepository:
 
         if not prefetch:
             logger.warning("No embeddings provided for retrieval; returning empty response.")
-            return RetrievalResponse(request=embeddings, response=models.PointsList(points=[]))
+            return RetrievalResponse(request=embeddings, response=[])
 
         try:
 

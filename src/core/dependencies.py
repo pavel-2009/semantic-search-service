@@ -11,6 +11,15 @@ from src.services.search_service.search_service import SearchService
 
 
 @lru_cache(maxsize=1)
+def get_qdrant_repository() -> QdrantRepository:
+    """Return the shared lightweight Qdrant repository."""
+    return QdrantRepository(
+        collection_name=config.collection_name,
+        dense_dim=config.dense_dim,
+    )
+
+
+@lru_cache(maxsize=1)
 def get_search_service() -> SearchService:
     """Return the shared SearchService instance."""
     return SearchService(

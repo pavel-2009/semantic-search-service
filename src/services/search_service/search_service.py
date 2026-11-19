@@ -1,5 +1,7 @@
 """Search service entrypoint."""
 
+from typing import Any
+
 from src.services.search_service.ranking.ranking import RerankingService
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
 from src.services.search_service.schemas import SearchQuery, SearchResponse, ParsedQuery, EncodedQuery
@@ -34,7 +36,7 @@ class SearchService:
 
         reranking_request: RerankingRequest = RerankingRequest(
             query=query.text,
-            documents=retrieval_response.documents,
+            documents=retrieval_response.response,
         )
 
         reranking_response: RerankingResponse = self.reranker.rerank(reranking_request, query.top_k)

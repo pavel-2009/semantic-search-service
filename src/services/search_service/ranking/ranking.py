@@ -26,15 +26,20 @@ class RerankingService:
         query = request.query
         documents = request.documents
 
-        inputs = [(query, doc["text"]) for doc in documents]
+        inputs = [(query, doc.) for doc in documents]
 
         scores = self.model.predict(inputs)
 
         scored_documents = [
-            {"document": doc, "score": score} for doc, score in zip(documents, scores)
+            {"document": doc, "score": float(score)}
+            for doc, score in zip(documents, scores, strict=True)
         ]
         scored_documents.sort(key=lambda x: x["score"], reverse=True)
 
-        reranked_documents = [doc["document"] for doc in scored_documents][: top_k]
+        reranked_documents = []
+        for item in scored_documents[:top_k]:
+            document = dict(item["document"])
+            document["score"] = item["score"]
+            reranked_documents.append(document)
 
         return RerankingResponse(reranked_documents=reranked_documents)
