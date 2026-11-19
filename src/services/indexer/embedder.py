@@ -14,8 +14,8 @@ from FlagEmbedding import BGEM3FlagModel  # noqa: E402
 
 from src.core.contracts import EnrichedMovie
 from src.core.logger import get_logger  # noqa: E402
-from src.core.vibe import format_vibe  # noqa: E402
 from src.core.config import settings  # noqa: E402
+from src.core.vibe import format_vibe  # noqa: E402
 from src.services.indexer.schemas import IndexedMoviePoint, SparseVectorData  # noqa: E402
 from src.services.search_service.parsing import ParsedText  # noqa: E402
 from src.services.search_service.embedder.schemas import EmbedderResponse  # noqa: E402
