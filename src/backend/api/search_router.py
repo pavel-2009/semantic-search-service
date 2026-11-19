@@ -18,6 +18,22 @@ router = APIRouter(prefix="/api/v1/search", tags=["search"])
 SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 
 
+def _flatten_filters(filters: object) -> dict[str, object]:
+    """Convert the public nested filter contract into search-pipeline fields."""
+    if filters is None:
+        return {}
+    values = filters.model_dump(exclude_none=True)
+    flattened: dict[str, object] = {}
+    for group in ("year", "rating"):
+        for bound, value in values.get(group, {}).items():
+            flattened[f"{group}_{bound}"] = value
+    if values.get("genre"):
+        flattened["genres"] = values["genre"]
+    if values.get("countries"):
+        flattened["countries"] = values["countries"]
+    return flattened
+
+
 @router.post("", response_model=SearchResponse)
 async def search(
     request: SearchRequest,
@@ -34,7 +50,7 @@ async def search(
     try:
         results = await run_in_threadpool(
             service.search,
-            SearchQuery(text=request.query, top_k=request.top_k),
+            SearchQuery(text=request.query, top_k=request.top_k, filters=_flatten_filters(request.filters)),
         )
         if hasattr(results, "documents"):
             results = results.documents
