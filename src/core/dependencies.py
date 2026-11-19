@@ -2,8 +2,8 @@
 
 from functools import lru_cache
 
-from src.repositories.qdrant_repository import QdrantRepository
 from src.core.config import settings
+from src.repositories.qdrant_repository import QdrantRepository
 from src.services.indexer.embedder import MovieEmbedder
 from src.services.search_service.parsing.text_parser import TextParser
 from src.services.search_service.ranking.ranking import RerankingService
