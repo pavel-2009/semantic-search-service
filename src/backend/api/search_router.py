@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
-from src.backend.schemas import SearchRequest, SearchResponse
+from src.backend.schemas import SearchFilters, SearchRequest, SearchResponse
 from src.services.search_service.search_service import SearchService
 from src.services.search_service.schemas import SearchQuery
 from src.core.dependencies import get_search_service
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/search", tags=["search"])
 SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
 
 
-def _flatten_filters(filters: object) -> dict[str, object]:
+def _flatten_filters(filters: SearchFilters | None) -> dict[str, object]:
     """Convert the public nested filter contract into search-pipeline fields."""
     if filters is None:
         return {}
