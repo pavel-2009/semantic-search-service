@@ -5,10 +5,9 @@ from time import perf_counter
 from qdrant_client import models
 
 from src.core.contracts import IndexerStats
+from src.core.config import settings
 from src.core.logger import get_logger
-from src.core.config import settings
 from src.core.qdrant_client import QdrantClientSingleton
-from src.core.config import settings
 from src.services.indexer.schemas import IndexedMoviePoint
 from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.repositories.schemas import RetrievalResponse
