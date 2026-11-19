@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.core.device import get_compute_device
@@ -21,7 +20,7 @@ class Settings(BaseSettings):
 
     EMBEDDING_MODEL: str = str(PROJECT_ROOT / "bge-m3")
     EMBEDDING_DIM: int = 1024
-    COMPUTE_DEVICE: str = Field(default_factory=get_compute_device)
+    COMPUTE_DEVICE: str = DEFAULT_DEVICE
     EMBEDDING_USE_FP16: bool = DEFAULT_DEVICE == "cuda"
     INDEX_BATCH_SIZE: int = 8 if DEFAULT_DEVICE == "mps" else 64
     SPARSE_MIN_WEIGHT: float = 0.08
