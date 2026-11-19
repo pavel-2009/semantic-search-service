@@ -12,7 +12,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
 from src.core.qdrant_client import QdrantClientSingleton
 import src.services.indexer.embedder as embedder_module
-from src.services.indexer.config import config
+from src.core.config import settings
 from src.services.indexer.indexer import Indexer
 from src.services.indexer.schemas import SparseVectorData
 from src.services.search_service.embedder.schemas import EmbedderResponse
@@ -167,7 +167,7 @@ class MockBGEM3FlagModel:
         result: dict[str, object] = {}
         if return_dense:
             result["dense_vecs"] = MockDenseMatrix(
-                [[float(len(text))] * config.dense_dim for text in texts]
+                [[float(len(text))] * settings.EMBEDDING_DIM for text in texts]
             )
         if return_sparse:
             result["lexical_weights"] = [
@@ -231,8 +231,8 @@ def test_embed_request_generates_plot_vibe_and_sparse_embeddings(
 
     assert response.embedding_names == ["plot", "vibe"]
     assert response.embeddings == [
-        [float(len("A detective investigates"))] * config.dense_dim,
-        [float(len("dark and tense"))] * config.dense_dim,
+        [float(len("A detective investigates"))] * settings.EMBEDDING_DIM,
+        [float(len("dark and tense"))] * settings.EMBEDDING_DIM,
     ]
     assert response.sparse_vector is not None
     assert response.sparse_vector.indices == [1]
@@ -444,7 +444,7 @@ def test_batch_indexing_with_large_file(
 
 
 def test_indexer_config_points_to_enriched_dataset() -> None:
-    assert config.dataset_path.name == "movies_enriched.jsonl"
+    assert settings.INDEX_DATA_PATH.name == "movies_enriched.jsonl"
 
 
 def test_load_movies_rejects_raw_movie_without_indexing_structure(
@@ -476,8 +476,8 @@ def test_embed_cards_uses_indexing_fields_and_stores_clean_movie_payload(
     assert len(points) == 1
     point = points[0]
     assert point.point_id == 7
-    assert point.plot_vector == [float(len("Интерстеллар. Космическое путешествие."))] * config.dense_dim
-    assert point.vibe_vector == [float(len("Эпичный, философский."))] * config.dense_dim
+    assert point.plot_vector == [float(len("Интерстеллар. Космическое путешествие."))] * settings.EMBEDDING_DIM
+    assert point.vibe_vector == [float(len("Эпичный, философский."))] * settings.EMBEDDING_DIM
     assert isinstance(point.payload, Movie)
     assert point.payload.moods == ["эпичный", "философский"]
     assert "indexing" not in point.payload.model_dump()
