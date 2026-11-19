@@ -228,7 +228,7 @@ All application components read the same settings object from `src.core.config`.
 | `INDEX_BATCH_SIZE` | device-dependent | Indexing batch size |
 | `SPARSE_MIN_WEIGHT` | `0.08` | Minimum sparse token weight |
 | `MIN_PLOT_LENGTH` | `15` | Minimum plot text length |
-| `INDEX_DATA_PATH` | `src/scraper/data/movies.jsonl` | JSONL input for indexer |
+| `DATA_PATH` | `src/scraper/data/movies.jsonl` | Shared scraper output and indexer input |
 | `POISKKINO_API_KEY` | empty | Scraper API key |
 | `BOT_TOKEN` | empty | Telegram bot token |
 | `API_BASE_URL` | `http://127.0.0.1:8000` | API URL used by bot |
