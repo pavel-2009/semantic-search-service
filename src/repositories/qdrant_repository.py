@@ -49,8 +49,6 @@ class QdrantRepository:
         indexes = {
             "year": models.PayloadSchemaType.INTEGER,
             "rating": models.PayloadSchemaType.FLOAT,
-            "genres": models.PayloadSchemaType.KEYWORD,
-            "countries": models.PayloadSchemaType.KEYWORD,
         }
 
         for field, schema in indexes.items():
@@ -164,14 +162,6 @@ class QdrantRepository:
                         lte=rating_lte or None,
                     ),
                 ),
-            )
-        if embeddings.genres:
-            conditions.append(
-                models.FieldCondition(key="genres", match=models.MatchAny(any=embeddings.genres))
-            )
-        if embeddings.countries:
-            conditions.append(
-                models.FieldCondition(key="countries", match=models.MatchAny(any=embeddings.countries))
             )
         query_filter = models.Filter(must=conditions) if conditions else None
 
