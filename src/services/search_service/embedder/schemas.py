@@ -25,10 +25,6 @@ class EmbedderResponse:
     """Year bounds; zero means that the bound is not set."""
     rating_range: tuple[float, float] = (0.0, 0.0)
     """Rating bounds; zero means that the bound is not set."""
-    genres: List[str] = field(default_factory=list)
-    """Canonical genre names to match in movie payloads."""
-    countries: List[str] = field(default_factory=list)
-    """Country names to match in movie payloads."""
     usage: Optional[dict] = None
     """Optional usage information, such as token counts."""
 
