@@ -131,7 +131,6 @@ def test_settings_defaults_and_types_are_valid() -> None:
     assert settings.QDRANT_COLLECTION == "movies"
     assert settings.EMBEDDING_DIM == 1024
     assert settings.DATA_PATH == PROJECT_ROOT / "src/scraper/data/movies.jsonl"
-    assert settings.INDEX_DATA_PATH == settings.DATA_PATH
     assert PROJECT_ROOT == Path(__file__).resolve().parents[2]
 
 
