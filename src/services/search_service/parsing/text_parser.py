@@ -21,7 +21,7 @@ class ParsedText:
     plot: str | None
     vibe: str | None
     entities: str | None
-    filter: dict[str, int | float | list[str]] | None = None
+    filter: dict[str, int | float] | None = None
 
 
 class TextParser:
