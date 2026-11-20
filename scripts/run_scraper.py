@@ -1,25 +1,22 @@
 """Run the movie scraper."""
 
-import sys
-from pathlib import Path
-
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root / "src"))
-
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
-from scraper.spiders.movie_spider import MovieSpider
+from src.scraper.spiders.movie_spider import MovieSpider
 
 
 def main() -> None:
     """Run the configured movie spider and JSON pipeline."""
     settings = get_project_settings()
-    settings.setmodule("scraper.settings")
+    settings.setmodule("src.scraper.settings")
 
     process = CrawlerProcess(settings)
-    process.crawl(MovieSpider)
+    crawler = process.create_crawler(MovieSpider)
+    process.crawl(crawler)
     process.start()
+    if not crawler.stats.get_value("scraper/export_committed", False):
+        raise SystemExit("Scraper did not complete successfully; previous data was preserved.")
 
 
 if __name__ == "__main__":

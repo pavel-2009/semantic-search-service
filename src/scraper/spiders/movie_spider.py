@@ -1,17 +1,27 @@
+"""Scrapy spider for collecting movies from the PoiskKino API."""
+
 from collections.abc import Generator
-from typing import Any
 from urllib.parse import urlencode
 
 import scrapy
+from scrapy.addons import logger
 from scrapy.http import Request, Response
+from pydantic import ValidationError
 
-from scraper.schemas import Movie
-from core.config import settings
-
-JsonDict = dict[str, Any]
+from src.core.config import settings
+from src.core.contracts import Movie
+from src.scraper.schemas import (
+    PoiskKinoCountry,
+    PoiskKinoGenre,
+    PoiskKinoMovie,
+    PoiskKinoPoster,
+    PoiskKinoResponse,
+)
 
 
 class MovieSpider(scrapy.Spider):
+    """Collect normalized movie records from PoiskKino."""
+
     name = "movies"
 
     API_BASE = "https://api.poiskkino.dev/v1.4/movie"
@@ -28,64 +38,109 @@ class MovieSpider(scrapy.Spider):
     ]
 
     def parse(self, response: Response) -> Generator[Request | Movie, None, None]:
-        data: JsonDict = response.json()
+        """Parse one paginated PoiskKino response."""
         page = int(response.meta.get("page", 1))
-        movies = self._as_dict_list(data.get("docs"))
+        try:
+            data = PoiskKinoResponse.model_validate_json(response.body)
+        except ValidationError as exc:
+            reason = str(exc)
+            self.logger.error(
+                "Failed to validate API response: page=%d reason=%s",
+                page,
+                reason,
+            )
+            self.crawler.stats.set_value("scraper/failed", True)
+            self.crawler.stats.inc_value("scraper/response_validation_errors")
+            raise
 
-        self.logger.info("Found %d movies on page %d", len(movies), page)
+        if data.page != page:
+            self.logger.error(
+                "API response page does not match request: requested=%d received=%d",
+                page,
+                data.page,
+            )
+            self.crawler.stats.set_value("scraper/failed", True)
+            self.crawler.stats.inc_value("scraper/pagination_errors")
+            raise ValueError(
+                f"Requested page {page}, but API returned page {data.page}"
+            )
 
-        for movie_data in movies:
+        self.crawler.stats.inc_value("scraper/pages_succeeded")
+        self.logger.info("Found %d movies on page %d", len(data.docs), page)
+
+        for movie_data in data.docs:
             movie = self._parse_movie(movie_data)
             if movie is not None:
                 yield movie
 
-        current_page = data.get("page", 1)
-        total_pages = data.get("pages", 1)
-
-        self.logger.info("Page %d of %d", current_page, total_pages)
+        self.logger.info("Page %d of %d", page, data.pages)
 
         if page >= self.MAX_PAGES:
             self.logger.info("Reached max pages limit (%d)", self.MAX_PAGES)
             return
 
-        if current_page >= total_pages:
-            self.logger.info("Reached last page (%d of %d)", current_page, total_pages)
+        if page >= data.pages:
+            self.logger.info("Reached last page (%d of %d)", page, data.pages)
             return
 
-        next_page = current_page + 1
+        next_page = page + 1
         yield Request(
             url=self._movie_list_url(next_page),
             callback=self.parse,
             meta={"page": next_page},
         )
 
-    def _parse_movie(self, data: JsonDict) -> Movie | None:
-        movie_id = data.get("id")
-        if movie_id is None:
-            return None
-
-        persons = self._as_dict_list(data.get("persons"))
-        rating = data.get("rating")
-        rating_data = rating if isinstance(rating, dict) else {}
-
+    def _parse_movie(self, data: PoiskKinoMovie) -> Movie | None:
+        """Convert one PoiskKino movie into the normalized movie contract."""
         try:
             return Movie(
-                id=int(movie_id),
-                title=str(data.get("name") or data.get("alternativeName") or "Без названия"),
-                year=self._as_int(data.get("year")),
-                country=self._extract_countries(self._as_dict_list(data.get("countries"))),
-                director=self._extract_director(persons),
-                description=str(data.get("description") or data.get("shortDescription") or ""),
-                actors=self._extract_actors(persons),
-                genres=self._extract_genres(self._as_dict_list(data.get("genres"))),
-                rating=self._as_float(rating_data.get("kp")),
-                poster_url=self._extract_poster_url(data.get("poster")),
+                id=data.id,
+                title=data.name or data.alternativeName or "Без названия",
+                year=data.year,
+                countries=self._extract_countries(data.countries),
+                description=data.description or data.shortDescription or "",
+                genres=self._extract_genres(data.genres),
+                rating=data.rating.kp,
+                poster_url=self._extract_poster_url(data.poster),
             )
         except (TypeError, ValueError) as exc:
-            self.logger.error("Failed to parse movie %s: %s", movie_id, exc)
+            self.logger.error("Failed to parse movie %s: %s", data.id, exc)
+            self.crawler.stats.inc_value("scraper/rejected_records")
             return None
 
+    def closed(self, reason: str) -> None:
+        """Log a final summary using Scrapy's standard request and item stats."""
+        stats = self.crawler.stats.get_stats()
+        response_status_prefix = "downloader/response_status_count/"
+        rate_limited_responses = stats.get("downloader/response_status_count/403", 0)
+        failed_http_responses = sum(
+            value
+            for key, value in stats.items()
+            if key.startswith(response_status_prefix)
+            and key.removeprefix(response_status_prefix).isdecimal()
+            and int(key.removeprefix(response_status_prefix)) >= 400
+            and key != "downloader/response_status_count/403"
+        )
+        failed_requests = stats.get("downloader/exception_count", 0) + failed_http_responses
+        rejected_records = (
+            stats.get("scraper/rejected_records", 0)
+            + stats.get("item_dropped_count", 0)
+        )
+
+        self.logger.info(
+            "Scraper summary: successful_pages=%d failed_requests=%d "
+            "rate_limited_responses=%d "
+            "extracted_movies=%d rejected_records=%d finish_reason=%s",
+            stats.get("scraper/pages_succeeded", 0),
+            failed_requests,
+            rate_limited_responses,
+            stats.get("item_scraped_count", 0),
+            rejected_records,
+            reason,
+        )
+
     def _movie_list_url(self, page: int) -> str:
+        """Build a URL for a specific API page."""
         params = {
             "page": page,
             "limit": self.PAGE_SIZE,
@@ -95,61 +150,25 @@ class MovieSpider(scrapy.Spider):
         return f"{self.API_BASE}?{urlencode(params)}"
 
     @staticmethod
-    def _as_dict_list(value: object) -> list[dict[str, Any]]:
-        if not isinstance(value, list):
-            return []
-        return [item for item in value if isinstance(item, dict)]
-
-    @staticmethod
-    def _as_int(value: object) -> int | None:
-        if value is None:
-            return None
+    def _extract_poster_url(poster: PoiskKinoPoster) -> str | None:
+        """Extract a usable poster URL."""
         try:
-            return int(value)
-        except (TypeError, ValueError):
-            return None
+            url = poster.url or poster.previewUrl
+            return str(url) if url else None
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract poster URL: %s", exc)
+            raise
 
     @staticmethod
-    def _as_float(value: object) -> float | None:
-        if value is None:
-            return None
+    def _extract_countries(countries: list[PoiskKinoCountry]) -> list[str]:
+        """Extract country names from API objects."""
+        return [str(country.name) for country in countries if country.name]
+
+    @staticmethod
+    def _extract_genres(genres: list[PoiskKinoGenre]) -> list[str]:
+        """Extract genre names."""
         try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
-
-    @staticmethod
-    def _extract_poster_url(poster: object) -> str | None:
-        if not isinstance(poster, dict):
-            return None
-        url = poster.get("url") or poster.get("previewUrl")
-        return str(url) if url else None
-
-    @staticmethod
-    def _extract_countries(countries: list[dict[str, Any]]) -> str | None:
-        names = [str(country["name"]) for country in countries if country.get("name")]
-        return ", ".join(names) if names else None
-
-    @staticmethod
-    def _extract_director(persons: list[dict[str, Any]]) -> str | None:
-        for person in persons:
-            if person.get("profession") != "режиссеры":
-                continue
-            name = person.get("name") or person.get("enName")
-            if name:
-                return str(name)
-        return None
-
-    @staticmethod
-    def _extract_actors(persons: list[dict[str, Any]]) -> list[str]:
-        return [
-            str(name)
-            for person in persons
-            if person.get("profession") == "актеры"
-            for name in [person.get("name") or person.get("enName")]
-            if name
-        ]
-
-    @staticmethod
-    def _extract_genres(genres: list[dict[str, Any]]) -> list[str]:
-        return [str(genre["name"]) for genre in genres if genre.get("name")]
+            return [str(genre.name) for genre in genres if genre.name]
+        except (TypeError, ValueError) as exc:
+            logger.error("Failed to extract genres: %s", exc)
+            raise

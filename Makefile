@@ -1,19 +1,76 @@
-.PHONY: up down test lint type-check format
+.PHONY: up down up-containers api bot scraper indexer download-reranker mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
+
+test: test-unit
+
+recall:
+	uv run python -m test_recall
+
+precision:
+	uv run python -m test_precision
+
+indexer:
+	QDRANT_HOST=localhost uv run python -m scripts.run_indexer
+
+scraper:
+	uv run python -m scripts.run_scraper
+
+api:
+	QDRANT_HOST=localhost uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
+
+bot:
+	QDRANT_HOST=localhost uv run python -m src.bot.main
+
+download-reranker:
+	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
+
+mps-check:
+	uv run python -c "import torch; print(f'PyTorch {torch.__version__}; MPS available={torch.backends.mps.is_available()}'); assert torch.backends.mps.is_available(), 'PyTorch MPS is unavailable'; print((torch.ones(1, device='mps') + 1).cpu().item())"
+
+m ?= auto commit
+
+commit:
+	git add .
+	git commit -m "$(m)"
+
+push:
+	git push
 
 up:
-	docker compose up --build
+	docker compose up -d qdrant
+
+up-containers:
+	docker compose --profile container-app up --build
 
 down:
 	docker compose down
 
-test:
-	uv run pytest
+# Tests (Docker-dependent suites run only when explicitly requested)
+tests: test-unit
 
-lint:
-	uv run ruff check .
+test-unit:
+	uv run pytest tests/unit -v
 
-type-check:
-	uv run pyright
+test-integration:
+	uv run pytest tests/integration -v
 
-format:
-	uv run ruff format .
+test-performance:
+	uv run pytest tests/performance -v
+
+test-all:
+	uv run pytest tests -v
+
+test-cov:
+	uv run pytest tests --cov=src --cov-report=term-missing
+
+test-parallel:
+	uv run pytest tests/performance -n 0 -v
+
+test-quick:
+	uv run pytest tests/unit -m "not slow" -v
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	rm -rf .coverage htmlcov
+
+check: test-unit

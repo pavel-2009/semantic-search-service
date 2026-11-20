@@ -1,20 +1,18 @@
 """Telegram handlers for movie search."""
 
-import asyncio
 import html
-import logging
 
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from backend.schemas import MovieResult, SearchRequest
-from core.dependencies import get_search_service
+from src.backend.schemas import MovieResult
+from src.bot.api_client import api_client
+from src.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = Router(name="search")
-search_service = get_search_service()
 
 
 def movie_card(movie: MovieResult, position: int) -> str:
@@ -25,8 +23,6 @@ def movie_card(movie: MovieResult, position: int) -> str:
         metadata.append(f"📅 {movie.year}")
     if movie.rating is not None:
         metadata.append(f"⭐ {movie.rating:.1f}")
-    if movie.score is not None:
-        metadata.append(f"🎯 {movie.score:.2f}")
     if metadata:
         lines.append("  ·  ".join(metadata))
     if movie.genres:
@@ -68,10 +64,7 @@ async def _handle_search(message: Message, query: str) -> None:
         return
 
     try:
-        results = await asyncio.to_thread(
-            search_service.search,
-            SearchRequest(query=query, top_k=10, filters=None),
-        )
+        results = await api_client.search(query=query, top_k=10)
     except Exception:
         logger.exception("Telegram search failed: query=%r", query)
         await message.answer(
@@ -88,7 +81,7 @@ async def _handle_search(message: Message, query: str) -> None:
         return
 
     await message.answer(
-        search_results_message(results),
+        text=search_results_message(results),
         reply_markup=search_results_keyboard(results),
         parse_mode=ParseMode.HTML,
     )

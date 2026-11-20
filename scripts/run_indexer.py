@@ -1,35 +1,38 @@
-"""Script for running the Qdrant indexer"""
+"""Script for running the Qdrant indexer."""
 
-import sys
-from pathlib import Path
+from src.core.logger import get_logger, setup_logging
+from src.core.config import settings
+from src.services.indexer.indexer import Indexer
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
-
-from core.config import settings
-from services.indexer import Indexer
+logger = get_logger(__name__)
 
 
-def main():
-    print("=" * 60)
-    print("🚀 ЗАПУСК ИНДЕКСАТОРА")
-    print("=" * 60)
-    print(f"📁 Данные: {settings.DATA_PATH}")
-    print(f"💾 Qdrant: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
-    print(f"📚 Коллекция: {settings.QDRANT_COLLECTION}")
-    print(f"🧠 Модель: {settings.EMBEDDING_MODEL}")
-    print(f"📦 Batch size: {settings.BATCH_SIZE}")
-    print("=" * 60)
+def main() -> None:
+    """Run the indexer and log the resulting collection statistics."""
+    setup_logging()
+    logger.info(
+        "Starting indexer run: dataset=%s qdrant=%s collection=%s model=%s batch_size=%d",
+        settings.DATA_PATH,
+        settings.QDRANT_URL,
+        settings.QDRANT_COLLECTION,
+        settings.EMBEDDING_MODEL,
+        settings.INDEX_BATCH_SIZE,
+    )
 
     indexer = Indexer()
-    indexer.create_collection(force_recreate=True)
-    indexer.index_movies(filepath=settings.DATA_PATH, batch_size=settings.BATCH_SIZE)
+    indexer.index_movies(
+        filepath=settings.DATA_PATH,
+        batch_size=settings.INDEX_BATCH_SIZE,
+        force_recreate=True,
+    )
 
     stats = indexer.get_stats()
-    print("\n📊 СТАТИСТИКА ПОСЛЕ ИНДЕКСАЦИИ:")
-    print(f"  Точки: {stats['points_count']}")
-    print(f"  Статус: {stats['status']}")
-    print("\n✅ Индексация завершена успешно!")
+    logger.info(
+        "Indexing completed successfully: collection=%s points=%d status=%s",
+        stats.collection,
+        stats.points_count,
+        stats.status,
+    )
 
 
 if __name__ == "__main__":

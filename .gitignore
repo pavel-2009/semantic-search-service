@@ -13,8 +13,10 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+.VSCodeCounter/
 
 # Runtime scraper output
 logs/
 *.log
 .env
+bge-m3

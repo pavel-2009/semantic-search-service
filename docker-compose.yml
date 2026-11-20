@@ -1,63 +1,88 @@
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: semantic-qdrant
     ports:
-      - "6333:6333"
+      - "${QDRANT_PORT:-6333}:6333"
     volumes:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "/usr/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333; printf 'GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
     networks:
       - semantic-network
 
   scraper:
+    profiles:
+      - container-app
     build:
       context: .
-      dockerfile: Dockerfile.scraper
-    container_name: semantic-scraper
+      dockerfile: Dockerfile
+      target: scraper
     environment:
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
     volumes:
       - ./src:/app/src
-      - ./src/scraper/data:/app/src/scraper/data
     depends_on:
       qdrant:
-        condition: service_started
+        condition: service_healthy
     restart: "no"
     networks:
       - semantic-network
 
   indexer:
+    profiles:
+      - container-app
     build:
       context: .
-      dockerfile: Dockerfile.indexer
-    container_name: semantic-indexer
+      dockerfile: Dockerfile
+      target: indexer
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - HF_HOME=/cache/huggingface
     volumes:
       - ./src:/app/src
-      - ./src/scraper/data:/app/src/scraper/data
+      - ./bge-m3:/app/bge-m3:ro
+      - huggingface_cache:/cache/huggingface
     depends_on:
       scraper:
         condition: service_completed_successfully
       qdrant:
-        condition: service_started
+        condition: service_healthy
     restart: "no"
     networks:
       - semantic-network
 
-  api:
+  reranker-downloader:
+    profiles:
+      - model-download
     build:
       context: .
-      dockerfile: Dockerfile.api
-    container_name: semantic-api
-    command: uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+      dockerfile: Dockerfile
+      target: api
+    environment:
+      - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
+    volumes:
+      - huggingface_cache:/cache/huggingface
+    entrypoint: ["uv", "run", "--no-sync", "python", "-c"]
+    command:
+      - "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
+    networks:
+      - semantic-network
+
+  api:
+    profiles:
+      - container-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
     ports:
       - "8000:8000"
     environment:
@@ -66,42 +91,61 @@ services:
       - LOG_LEVEL=INFO
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
       - BOT_TOKEN=${BOT_TOKEN:-}
+      - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
     volumes:
       - ./src:/app/src
+      - ./bge-m3:/app/bge-m3:ro
+      - huggingface_cache:/cache/huggingface
     depends_on:
       indexer:
         condition: service_completed_successfully
       qdrant:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 1m
     restart: unless-stopped
     networks:
       - semantic-network
 
   bot:
+    profiles:
+      - container-app
     build:
       context: .
-      dockerfile: Dockerfile.bot
-    container_name: semantic-bot
-    command: uv run python -m bot.main
+      dockerfile: Dockerfile
+      target: bot
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - LOG_LEVEL=INFO
       - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
       - BOT_TOKEN=${BOT_TOKEN:-}
+      - HF_HOME=/cache/huggingface
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_ETAG_TIMEOUT=60
+      - API_BASE_URL=http://api:8000
     volumes:
       - ./src:/app/src
+      - ./bge-m3:/app/bge-m3:ro
+      - huggingface_cache:/cache/huggingface
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
       qdrant:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - semantic-network
 
 volumes:
   qdrant_storage:
+  huggingface_cache:
 
 networks:
   semantic-network:
