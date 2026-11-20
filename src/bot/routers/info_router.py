@@ -1,6 +1,5 @@
 """Telegram handlers for movie details."""
 
-import asyncio
 import html
 
 from aiogram import F, Router
@@ -8,17 +7,11 @@ from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery
 
 from src.backend.schemas import MovieResult
-from src.backend.services.search_service import SearchService
-from src.core.dependencies import get_search_service
+from src.bot.api_client import api_client
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = Router(name="info")
-
-
-def get_service() -> SearchService:
-    """Return the shared search service instance."""
-    return get_search_service()
 
 
 def movie_details(movie: MovieResult) -> str:
@@ -54,8 +47,7 @@ async def show_movie_details(callback: CallbackQuery) -> None:
         return
 
     try:
-        service = get_service()
-        movie = await asyncio.to_thread(service.get_by_id, movie_id)
+        movie = await api_client.get_movie(movie_id)
     except Exception:
         logger.exception("Movie lookup failed: movie_id=%d", movie_id)
         await callback.answer(

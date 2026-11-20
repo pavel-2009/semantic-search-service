@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.core.config import PROJECT_ROOT, Settings
-from src.core.contracts import IndexerStats, Movie
+from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
 from src.core.text_normalizer import clean_text
 
 
@@ -70,6 +70,32 @@ def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
         Movie.model_validate(data)
 
 
+def test_enriched_movie_defaults_indexing_and_builds_payload() -> None:
+    raw = EnrichedMovie.model_validate({"id": 1, "title": "Фильм"})
+    assert raw.indexing == MovieIndexData()
+
+    enriched = EnrichedMovie(
+        id=42,
+        title="Интерстеллар",
+        year=2014,
+        countries=["США"],
+        description="Путешествие через червоточину.",
+        genres=["фантастика", "драма"],
+        moods=["эпичный", "философский"],
+        rating=8.7,
+        indexing=MovieIndexData(
+            plot="Интерстеллар. Путешествие через червоточину.",
+            vibe="Эпичный, философский.",
+            entities="Интерстеллар. фантастика. драма. США. американский. космос",
+        ),
+    )
+
+    payload = enriched.to_movie_payload()
+    assert isinstance(payload, Movie)
+    assert payload.moods == ["эпичный", "философский"]
+    assert "indexing" not in payload.model_dump()
+
+
 def test_indexer_stats_supports_contract_and_mapping_access() -> None:
     stats = IndexerStats(collection="movies", points_count=12, status="green")
 
@@ -103,7 +129,7 @@ def test_settings_defaults_and_types_are_valid() -> None:
     assert settings.QDRANT_HOST == "localhost"
     assert settings.QDRANT_PORT == 6333
     assert settings.QDRANT_COLLECTION == "movies"
-    assert settings.EMBEDDING_DIM == 384
+    assert settings.EMBEDDING_DIM == 1024
     assert settings.DATA_PATH == PROJECT_ROOT / "src/scraper/data/movies.jsonl"
     assert PROJECT_ROOT == Path(__file__).resolve().parents[2]
 

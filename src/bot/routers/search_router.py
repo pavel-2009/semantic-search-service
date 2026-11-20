@@ -1,6 +1,5 @@
 """Telegram handlers for movie search."""
 
-import asyncio
 import html
 
 from aiogram import F, Router
@@ -8,8 +7,8 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from src.backend.schemas import MovieResult, SearchRequest
-from src.core.dependencies import get_search_service
+from src.backend.schemas import MovieResult
+from src.bot.api_client import api_client
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -65,11 +64,7 @@ async def _handle_search(message: Message, query: str) -> None:
         return
 
     try:
-        search_service = get_search_service()
-        results = await asyncio.to_thread(
-            search_service.search,
-            SearchRequest(query=query, top_k=10, filters=None),
-        )
+        results = await api_client.search(query=query, top_k=10)
     except Exception:
         logger.exception("Telegram search failed: query=%r", query)
         await message.answer(

@@ -1,13 +1,30 @@
-.PHONY: up down test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
+.PHONY: up down up-containers api bot scraper indexer download-reranker mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
+
+test: test-unit
 
 recall:
 	uv run python -m test_recall
 
-test: 
-	uv run python -m test_script
+precision:
+	uv run python -m test_precision
 
 indexer:
-	uv run python -m scripts.run_indexer
+	QDRANT_HOST=localhost uv run python -m scripts.run_indexer
+
+scraper:
+	uv run python -m scripts.run_scraper
+
+api:
+	QDRANT_HOST=localhost uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
+
+bot:
+	QDRANT_HOST=localhost uv run python -m src.bot.main
+
+download-reranker:
+	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
+
+mps-check:
+	uv run python -c "import torch; print(f'PyTorch {torch.__version__}; MPS available={torch.backends.mps.is_available()}'); assert torch.backends.mps.is_available(), 'PyTorch MPS is unavailable'; print((torch.ones(1, device='mps') + 1).cpu().item())"
 
 m ?= auto commit
 
@@ -19,7 +36,10 @@ push:
 	git push
 
 up:
-	docker compose up 
+	docker compose up -d qdrant
+
+up-containers:
+	docker compose --profile container-app up --build
 
 down:
 	docker compose down

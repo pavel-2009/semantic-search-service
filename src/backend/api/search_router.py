@@ -6,8 +6,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 
-from src.backend.schemas import SearchRequest, SearchResponse
-from src.backend.services.search_service import SearchService
+from src.backend.schemas import SearchFilters, SearchRequest, SearchResponse
+from src.services.search_service.search_service import SearchService
+from src.services.search_service.schemas import SearchQuery
 from src.core.dependencies import get_search_service
 from src.core.logger import get_logger
 
@@ -15,6 +16,18 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 SearchServiceDependency = Annotated[SearchService, Depends(get_search_service)]
+
+
+def _flatten_filters(filters: SearchFilters | None) -> dict[str, object]:
+    """Convert the public nested filter contract into search-pipeline fields."""
+    if filters is None:
+        return {}
+    values = filters.model_dump(exclude_none=True)
+    flattened: dict[str, object] = {}
+    for group in ("year", "rating"):
+        for bound, value in values.get(group, {}).items():
+            flattened[f"{group}_{bound}"] = value
+    return flattened
 
 
 @router.post("", response_model=SearchResponse)
@@ -31,7 +44,16 @@ async def search(
         request.filters is not None,
     )
     try:
-        results = await run_in_threadpool(service.search, request)
+        results = await run_in_threadpool(
+            service.search,
+            SearchQuery(
+                text=request.query,
+                top_k=request.top_k,
+                filters=_flatten_filters(request.filters),
+            ),
+        )
+        if hasattr(results, "documents"):
+            results = results.documents
         response = SearchResponse(
             success=True,
             query=request.query,
