@@ -1,0 +1,47 @@
+"""Test script for on-hand testing components."""
+
+from src.services.indexer.embedder import MovieEmbedder
+from src.services.search_service.parsing.text_parser import TextParser
+from src.repositories.qdrant_repository import QdrantRepository
+from src.repositories.schemas import RetrievalResponse
+from src.services.search_service.embedder.schemas import EmbedderResponse
+
+
+movie_request = """
+    Посоветуй интересные, насыщенные приключенческие фильмы про космос, которые похожи на "Интерстеллар" и "Гравитацию". Годов 90-х и позже. Желательно, чтобы фильмы были с захватывающим сюжетом, интересными персонажами и визуально впечатляющими эффектами.
+    Атмосфера - захватывающая, напряжённая, с элементами научной фантастики.
+    Жанры: приключения, научная фантастика, драма.
+    Фильмы должны быть с высоким рейтингом и хорошими отзывами.
+    Пожалуйста, избегай фильмов с низким рейтингом и негативными отзывами.
+    Я ищу фильмы, которые оставляют сильное впечатление и заставляют задуматься о будущем человечества и космоса.
+    Важно, чтобы фильмы были визуально впечатляющими и имели качественную постановку.
+    Я предпочитаю фильмы с глубоким сюжетом и интересными персонажами, которые вызывают эмоциональный отклик.
+    Пожалуйста, предложи фильмы, которые соответствуют этим критериям и помогут мне найти новые интересные произведения в жанре космических приключений.
+    Я хочу, чтобы фильмы были не только развлекательными, но и заставляли задуматься о философских и научных аспектах космоса и человечества.
+    Пожалуйста, избегай фильмов с предсказуемым сюжетом и клишированными персонажами, я ищу что-то оригинальное и необычное.
+    Я хочу, чтобы фильмы были эмоционально насыщенными и оставляли сильное впечатление, поэтому прошу предложить только те, которые действительно заслуживают внимания.
+"""
+
+parsed_text = TextParser().parse(movie_request)
+
+print("Entered Text:", movie_request)
+
+
+print("\nPlot:", parsed_text.plot)
+print("\nVibe:", parsed_text.vibe)
+print("\nEntities:", parsed_text.entities)
+print("\nFilters:", parsed_text.filter)
+
+repo = QdrantRepository()
+embedder = MovieEmbedder()
+
+request = embedder.embed_request(parsed_text)
+
+search_result = repo.get_points(embeddings=request)
+
+points = search_result.response[0:5]
+
+for point in points:
+    print("\nPoint ID:", point.id)
+    print("Score:", point.score)
+    print("Payload:", point.payload)

@@ -1,6 +1,5 @@
 """Entry point for FastAPI application."""
 
-import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -9,34 +8,36 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.info_router import get_info_service, router as info_router
-from backend.api.search_router import router as search_router
-from core.config import settings
+from src.backend.api.info_router import router as info_router
+from src.backend.api.search_router import router as search_router
+from src.core.config import settings
+from src.core.dependencies import get_qdrant_repository
+from src.core.logger import get_logger, setup_logging
 
-logging.basicConfig(
-    level=settings.LOG_LEVEL.upper(),
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-)
-logger = logging.getLogger(__name__)
+
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Initialize dependencies early so startup errors include their full context."""
     logger.info(
-        "Starting Semantic Search API: collection=%s qdrant=%s:%s model=%s log_level=%s",
+        "Starting Semantic Search API: collection=%s qdrant=%s:%s model=%s device=%s log_level=%s",
         settings.QDRANT_COLLECTION,
         settings.QDRANT_HOST,
         settings.QDRANT_PORT,
         settings.EMBEDDING_MODEL,
+        settings.COMPUTE_DEVICE,
         settings.LOG_LEVEL.upper(),
     )
     started_at = perf_counter()
     try:
-        service = get_info_service()
+        repository = get_qdrant_repository()
         logger.info("Checking Qdrant collection during startup: %s", settings.QDRANT_COLLECTION)
-        stats = service.get_stats()
-        if stats.total_points == 0:
+        stats = repository.get_stats()
+        points_count = stats.points_count
+        if points_count == 0:
             logger.warning("Collection is empty! Indexer may have failed.")
     except Exception:
         logger.critical(
@@ -47,7 +48,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info(
         "API startup complete: collection=%s points=%s duration_ms=%.1f",
         stats.collection,
-        stats.total_points,
+        points_count,
         (perf_counter() - started_at) * 1000,
     )
     try:

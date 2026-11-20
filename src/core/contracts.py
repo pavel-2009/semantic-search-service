@@ -3,20 +3,36 @@
 from pydantic import BaseModel, Field
 
 
-class MoviePayload(BaseModel):
-    """Canonical movie payload stored in Qdrant."""
+class MovieIndexData(BaseModel):
+    """Prebuilt text representations aligned with the project's Qdrant vectors."""
 
-    id: int | None = None
+    plot: str | None = None
+    vibe: str | None = None
+    entities: str | None = None
+
+
+class Movie(BaseModel):
+    """Canonical movie contract: scraper output, JSONL dataset and Qdrant payload."""
+
+    id: int
     title: str = "Без названия"
     year: int | None = None
-    country: str | None = None
     countries: list[str] = Field(default_factory=list)
-    director: str | None = None
     description: str = ""
-    actors: list[str] = Field(default_factory=list)
     genres: list[str] = Field(default_factory=list)
+    moods: list[str] = Field(default_factory=list)
     rating: float | None = None
     poster_url: str | None = None
+
+
+class EnrichedMovie(Movie):
+    """Enriched movie record loaded by the indexer for multi-vector indexing."""
+
+    indexing: MovieIndexData = Field(default_factory=MovieIndexData)
+
+    def to_movie_payload(self) -> Movie:
+        """Return the canonical Movie payload stored in Qdrant."""
+        return Movie.model_validate(self.model_dump(exclude={"indexing"}))
 
 
 class IndexerStats(BaseModel):

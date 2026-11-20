@@ -22,8 +22,6 @@ class SearchFilters(BaseModel):
 
     year: YearFilter | None = Field(None, description="Фильтр по году")
     rating: RatingFilter | None = Field(None, description="Фильтр по рейтингу")
-    genre: list[str] | None = Field(None, description="Фильтр по жанрам")
-    country: str | None = Field(None, description="Фильтр по стране")
 
 
 class SearchRequest(BaseModel):
@@ -49,8 +47,6 @@ class MovieResult(BaseModel):
     rating: float | None = None
     genres: list[str] = Field(default_factory=list)
     countries: list[str] = Field(default_factory=list)
-    director: str | None = None
-    actors: list[str] = Field(default_factory=list)
     description: str | None = None
     poster_url: str | None = None
     score: float = Field(..., description="Релевантность от 0 до 1")

@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from core.config import PROJECT_ROOT, Settings
-from core.contracts import IndexerStats, MoviePayload
-from core.text_normalizer import clean_text
+from src.core.config import PROJECT_ROOT, Settings
+from src.core.contracts import EnrichedMovie, IndexerStats, Movie, MovieIndexData
+from src.core.text_normalizer import clean_text
 
 
 def test_clean_text_returns_empty_for_empty_or_whitespace_input() -> None:
@@ -33,24 +33,19 @@ def test_clean_text_can_preserve_supported_punctuation() -> None:
     )
 
 
-def test_movie_payload_defaults_and_accepts_complete_data() -> None:
-    payload = MoviePayload()
-    assert payload.id is None
-    assert payload.title == "Без названия"
-    assert payload.description == ""
-    assert payload.actors == []
-    assert payload.genres == []
-    assert payload.countries == []
+def test_movie_defaults_and_accepts_complete_data() -> None:
+    movie = Movie(id=1)
+    assert movie.title == "Без названия"
+    assert movie.description == ""
+    assert movie.countries == []
+    assert movie.genres == []
 
-    populated = MoviePayload(
+    populated = Movie(
         id=42,
         title="Фильм",
         year=2024,
-        country="Россия",
-        countries=["Россия"],
-        director="Режиссер",
+        countries=["Россия", "Франция"],
         description="Описание",
-        actors=["Актер"],
         genres=["драма"],
         rating=8.5,
         poster_url="https://example.test/poster.jpg",
@@ -63,15 +58,42 @@ def test_movie_payload_defaults_and_accepts_complete_data() -> None:
 @pytest.mark.parametrize(
     "data",
     [
+        {},
         {"id": "not-an-id"},
-        {"year": "not-a-year"},
-        {"genres": "драма"},
-        {"actors": [None]},
+        {"id": 1, "year": "not-a-year"},
+        {"id": 1, "genres": "драма"},
+        {"id": 1, "countries": "Россия"},
     ],
 )
-def test_movie_payload_rejects_invalid_values(data: dict[str, object]) -> None:
+def test_movie_rejects_invalid_values(data: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        MoviePayload.model_validate(data)
+        Movie.model_validate(data)
+
+
+def test_enriched_movie_defaults_indexing_and_builds_payload() -> None:
+    raw = EnrichedMovie.model_validate({"id": 1, "title": "Фильм"})
+    assert raw.indexing == MovieIndexData()
+
+    enriched = EnrichedMovie(
+        id=42,
+        title="Интерстеллар",
+        year=2014,
+        countries=["США"],
+        description="Путешествие через червоточину.",
+        genres=["фантастика", "драма"],
+        moods=["эпичный", "философский"],
+        rating=8.7,
+        indexing=MovieIndexData(
+            plot="Интерстеллар. Путешествие через червоточину.",
+            vibe="Эпичный, философский.",
+            entities="Интерстеллар. фантастика. драма. США. американский. космос",
+        ),
+    )
+
+    payload = enriched.to_movie_payload()
+    assert isinstance(payload, Movie)
+    assert payload.moods == ["эпичный", "философский"]
+    assert "indexing" not in payload.model_dump()
 
 
 def test_indexer_stats_supports_contract_and_mapping_access() -> None:
@@ -107,7 +129,7 @@ def test_settings_defaults_and_types_are_valid() -> None:
     assert settings.QDRANT_HOST == "localhost"
     assert settings.QDRANT_PORT == 6333
     assert settings.QDRANT_COLLECTION == "movies"
-    assert settings.EMBEDDING_DIM == 384
+    assert settings.EMBEDDING_DIM == 1024
     assert settings.DATA_PATH == PROJECT_ROOT / "src/scraper/data/movies.jsonl"
     assert PROJECT_ROOT == Path(__file__).resolve().parents[2]
 

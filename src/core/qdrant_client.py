@@ -1,13 +1,13 @@
 """Qdrant client shared across the application."""
 
-import logging
 from time import perf_counter
 
 from qdrant_client import QdrantClient
 
-from core.config import settings
+from src.core.config import settings
+from src.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class QdrantClientSingleton:
