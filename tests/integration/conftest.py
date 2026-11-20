@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 
 from src.backend.main import app
-from src.core.contracts import EnrichedMovie
+from src.core.contracts import EnrichedMovie, Movie
 from src.core.dependencies import get_qdrant_repository, get_search_service
 from src.repositories.qdrant_repository import QdrantRepository
 from src.services.indexer.schemas import IndexedMoviePoint, SparseVectorData
@@ -89,6 +89,48 @@ def fake_reranker() -> FakeReranker:
     return FakeReranker()
 
 
+@pytest.fixture
+def api_dependencies(
+    qdrant_repo: QdrantRepository,
+    fake_embedder: FakeEmbedder,
+    fake_reranker: FakeReranker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> SearchService:
+    """Override API dependencies with the in-memory repository and fake models."""
+    fake_service = SearchService(
+        parser=TextParser(),
+        embedder=fake_embedder,
+        qdrant_repo=qdrant_repo,
+        reranker=fake_reranker,
+    )
+    monkeypatch.setitem(app.dependency_overrides, get_qdrant_repository, lambda: qdrant_repo)
+    monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: fake_service)
+    monkeypatch.setattr("src.backend.main.get_qdrant_repository", lambda: qdrant_repo)
+    return fake_service
+
+
+@pytest.fixture
+def seeded_movie(qdrant_repo: QdrantRepository) -> Movie:
+    """Insert one representative movie for API and bot end-to-end tests."""
+    movie = Movie(
+        id=42,
+        title="Космическое путешествие",
+        year=2024,
+        rating=8.4,
+        genres=["фантастика", "приключения"],
+        countries=["Россия"],
+        description="История о путешествии к далёкой планете.",
+    )
+    point = IndexedMoviePoint(
+        point_id=movie.id,
+        plot_vector=[1.0] + [0.0] * (qdrant_repo.dense_dim - 1),
+        sparse_vector=SparseVectorData(indices=[0], values=[1.0]),
+        payload=movie,
+    )
+    assert qdrant_repo.upsert_points([point]) == (1, 0)
+    return movie
+
+
 @pytest.fixture(scope="session")
 def qdrant_client() -> Iterator[QdrantClient]:
     """Provide an in-memory Qdrant client shared by integration tests."""
@@ -114,21 +156,8 @@ def qdrant_repo(
 
 @pytest.fixture
 def api_client(
-    qdrant_repo: QdrantRepository,
-    fake_embedder: FakeEmbedder,
-    fake_reranker: FakeReranker,
-    monkeypatch: pytest.MonkeyPatch,
+    api_dependencies: SearchService,
 ) -> Iterator[TestClient]:
     """Provide a test API client with model-free search dependencies."""
-    fake_service = SearchService(
-        parser=TextParser(),
-        embedder=fake_embedder,
-        qdrant_repo=qdrant_repo,
-        reranker=fake_reranker,
-    )
-    monkeypatch.setitem(app.dependency_overrides, get_qdrant_repository, lambda: qdrant_repo)
-    monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: fake_service)
-    monkeypatch.setattr("src.backend.main.get_qdrant_repository", lambda: qdrant_repo)
-
     with TestClient(app) as client:
         yield client
