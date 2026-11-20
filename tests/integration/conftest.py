@@ -1,0 +1,106 @@
+from collections.abc import Iterator
+
+import pytest
+from fastapi.testclient import TestClient
+from qdrant_client import QdrantClient
+
+from src.backend.main import app
+from src.core.dependencies import get_qdrant_repository, get_search_service
+from src.repositories.qdrant_repository import QdrantRepository
+from src.services.indexer.schemas import SparseVectorData
+from src.services.search_service.embedder.schemas import EmbedderResponse
+from src.services.search_service.parsing.text_parser import ParsedText, TextParser
+from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
+from src.services.search_service.search_service import SearchService
+
+
+class FakeEmbedder:
+    """Return deterministic vectors without loading BGE-M3."""
+
+    def __init__(self, dense_dim: int = 1024) -> None:
+        self.dense_dim = dense_dim
+
+    def embed_request(self, parsed_query: ParsedText) -> EmbedderResponse:
+        dense_names = [
+            name
+            for name, text in (("plot", parsed_query.plot), ("vibe", parsed_query.vibe))
+            if text and text.strip()
+        ]
+        dense_vector = [1.0] + [0.0] * (self.dense_dim - 1)
+        filters = parsed_query.filter or {}
+        sparse_vector = (
+            SparseVectorData(indices=[0], values=[1.0])
+            if parsed_query.entities
+            else SparseVectorData(indices=[], values=[])
+        )
+
+        return EmbedderResponse(
+            embeddings=[dense_vector.copy() for _ in dense_names],
+            embedding_names=dense_names,
+            sparse_vector=sparse_vector,
+            model="fake-embedder",
+            year_range=(
+                int(filters.get("year_gte", 0)),
+                int(filters.get("year_lte", 0)),
+            ),
+            rating_range=(
+                float(filters.get("rating_gte", 0)),
+                float(filters.get("rating_lte", 0)),
+            ),
+        )
+
+
+class FakeReranker:
+    """Assign predictable scores without loading a CrossEncoder."""
+
+    def rerank(self, request: RerankingRequest, top_k: int) -> RerankingResponse:
+        documents = []
+        for index, point in enumerate(request.documents):
+            document = dict(point.payload or {})
+            document.setdefault("id", point.id)
+            document["score"] = float(len(request.documents) - index)
+            documents.append(document)
+        return RerankingResponse(reranked_documents=documents[:top_k])
+
+
+@pytest.fixture(scope="session")
+def qdrant_client() -> Iterator[QdrantClient]:
+    """Provide an in-memory Qdrant client shared by integration tests."""
+    client = QdrantClient(":memory:")
+    yield client
+    client.close()
+
+
+@pytest.fixture
+def qdrant_repo(
+    qdrant_client: QdrantClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> QdrantRepository:
+    """Create an isolated test collection backed by the in-memory client."""
+    monkeypatch.setattr(
+        "src.core.qdrant_client.QdrantClientSingleton.get_client",
+        lambda: qdrant_client,
+    )
+    repository = QdrantRepository(collection_name="test_movies", dense_dim=1024)
+    repository.recreate_collection()
+    return repository
+
+
+@pytest.fixture
+def api_client(
+    qdrant_repo: QdrantRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[TestClient]:
+    """Provide a test API client with model-free search dependencies."""
+    fake_service = SearchService(
+        parser=TextParser(),
+        embedder=FakeEmbedder(dense_dim=qdrant_repo.dense_dim),
+        qdrant_repo=qdrant_repo,
+        reranker=FakeReranker(),
+    )
+    monkeypatch.setitem(app.dependency_overrides, get_qdrant_repository, lambda: qdrant_repo)
+    monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: fake_service)
+    monkeypatch.setattr("src.backend.main.get_qdrant_repository", lambda: qdrant_repo)
+
+    with TestClient(app) as client:
+        yield client
