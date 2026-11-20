@@ -2,7 +2,7 @@
 
 from time import perf_counter
 
-from qdrant_client import models
+from qdrant_client import QdrantClient, models
 
 from src.core.contracts import IndexerStats
 from src.core.config import settings
@@ -20,10 +20,11 @@ class QdrantRepository:
 
     def __init__(
         self,
+        client: QdrantClient | None = None,
         collection_name: str = settings.QDRANT_COLLECTION,
         dense_dim: int = settings.EMBEDDING_DIM,
     ) -> None:
-        self.client = QdrantClientSingleton.get_client()
+        self.client = client or QdrantClientSingleton.get_client()
         self.collection_name = collection_name
         self.dense_dim = dense_dim
 
