@@ -5,9 +5,10 @@ from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 
 from src.backend.main import app
+from src.core.contracts import EnrichedMovie
 from src.core.dependencies import get_qdrant_repository, get_search_service
 from src.repositories.qdrant_repository import QdrantRepository
-from src.services.indexer.schemas import SparseVectorData
+from src.services.indexer.schemas import IndexedMoviePoint, SparseVectorData
 from src.services.search_service.embedder.schemas import EmbedderResponse
 from src.services.search_service.parsing.text_parser import ParsedText, TextParser
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
@@ -19,6 +20,19 @@ class FakeEmbedder:
 
     def __init__(self, dense_dim: int = 1024) -> None:
         self.dense_dim = dense_dim
+
+    def embed_cards(self, cards: list[EnrichedMovie]) -> list[IndexedMoviePoint]:
+        dense_vector = [1.0] + [0.0] * (self.dense_dim - 1)
+        return [
+            IndexedMoviePoint(
+                point_id=card.id,
+                plot_vector=dense_vector.copy() if card.indexing.plot else None,
+                vibe_vector=dense_vector.copy() if card.indexing.vibe else None,
+                sparse_vector=SparseVectorData(indices=[0], values=[1.0]),
+                payload=card.to_movie_payload(),
+            )
+            for card in cards
+        ]
 
     def embed_request(self, parsed_query: ParsedText) -> EmbedderResponse:
         dense_names = [
@@ -63,6 +77,18 @@ class FakeReranker:
         return RerankingResponse(reranked_documents=documents[:top_k])
 
 
+@pytest.fixture
+def fake_embedder(qdrant_repo: QdrantRepository) -> FakeEmbedder:
+    """Provide deterministic embeddings sized for the test collection."""
+    return FakeEmbedder(dense_dim=qdrant_repo.dense_dim)
+
+
+@pytest.fixture
+def fake_reranker() -> FakeReranker:
+    """Provide deterministic reranking without loading a CrossEncoder."""
+    return FakeReranker()
+
+
 @pytest.fixture(scope="session")
 def qdrant_client() -> Iterator[QdrantClient]:
     """Provide an in-memory Qdrant client shared by integration tests."""
@@ -89,14 +115,16 @@ def qdrant_repo(
 @pytest.fixture
 def api_client(
     qdrant_repo: QdrantRepository,
+    fake_embedder: FakeEmbedder,
+    fake_reranker: FakeReranker,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[TestClient]:
     """Provide a test API client with model-free search dependencies."""
     fake_service = SearchService(
         parser=TextParser(),
-        embedder=FakeEmbedder(dense_dim=qdrant_repo.dense_dim),
+        embedder=fake_embedder,
         qdrant_repo=qdrant_repo,
-        reranker=FakeReranker(),
+        reranker=fake_reranker,
     )
     monkeypatch.setitem(app.dependency_overrides, get_qdrant_repository, lambda: qdrant_repo)
     monkeypatch.setitem(app.dependency_overrides, get_search_service, lambda: fake_service)
