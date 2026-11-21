@@ -42,6 +42,35 @@ services:
     networks:
       - semantic-network
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_storage:/prometheus
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+    networks:
+      - semantic-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - semantic-network
+
   scraper:
     profiles:
       - container-app
@@ -176,6 +205,8 @@ services:
 volumes:
   qdrant_storage:
   huggingface_cache:
+  prometheus_storage:
+  grafana_storage:
 
 networks:
   semantic-network:

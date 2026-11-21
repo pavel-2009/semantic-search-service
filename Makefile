@@ -23,6 +23,9 @@ bot:
 download-reranker:
 	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
 
+otel:
+	docker compose up otel-collector
+
 mps-check:
 	uv run python -c "import torch; print(f'PyTorch {torch.__version__}; MPS available={torch.backends.mps.is_available()}'); assert torch.backends.mps.is_available(), 'PyTorch MPS is unavailable'; print((torch.ones(1, device='mps') + 1).cpu().item())"
 
