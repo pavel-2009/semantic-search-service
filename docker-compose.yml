@@ -7,11 +7,36 @@ services:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "/usr/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333; printf 'GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
+      test:
+        [
+          "CMD",
+          "/usr/bin/bash",
+          "-c",
+          "exec 3<>/dev/tcp/127.0.0.1/6333; printf 'GET /healthz HTTP/1.1\r
+
+            Host: localhost\r
+
+            Connection: close\r
+
+            \r
+
+            ' >&3; grep -q '200 OK' <&3"
+        ]
       interval: 5s
       timeout: 3s
       retries: 15
       start_period: 5s
+    networks:
+      - semantic-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/collector.yaml:ro
+    restart: unless-stopped
     networks:
       - semantic-network
 
@@ -70,7 +95,7 @@ services:
       - HF_HUB_ETAG_TIMEOUT=60
     volumes:
       - huggingface_cache:/cache/huggingface
-    entrypoint: ["uv", "run", "--no-sync", "python", "-c"]
+    entrypoint: [ "uv", "run", "--no-sync", "python", "-c" ]
     command:
       - "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
     networks:
@@ -104,7 +129,7 @@ services:
       qdrant:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" ]
       interval: 10s
       timeout: 5s
       retries: 20
