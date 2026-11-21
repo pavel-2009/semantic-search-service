@@ -1,5 +1,12 @@
 """Search service entrypoint."""
 
+from time import perf_counter
+
+from src.core.telemetry import (
+    search_requests_total,
+    search_results_count,
+    search_stage_duration_ms,
+)
 from src.services.search_service.ranking.ranking import RerankingService
 from src.services.search_service.ranking.schemas import RerankingRequest, RerankingResponse
 from src.services.search_service.schemas import SearchQuery, SearchResponse
@@ -27,20 +34,50 @@ class SearchService:
 
     def search(self, query: SearchQuery) -> SearchResponse:
         """Search for movies based on the query."""
-        parsed_query: ParsedText = self.parser.parse(query.text)
-        if query.filters:
-            parsed_query.filter = {**(parsed_query.filter or {}), **query.filters}
-        encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
+        total_start = perf_counter()
+        status = "ok"
+        try:
+            stage_start = perf_counter()
+            parsed_query: ParsedText = self.parser.parse(query.text)
+            if query.filters:
+                parsed_query.filter = {**(parsed_query.filter or {}), **query.filters}
+            search_stage_duration_ms.record(
+                (perf_counter() - stage_start) * 1000, {"stage": "parse"}
+            )
 
-        retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
-            encoded_query, query.top_k
-        )
+            stage_start = perf_counter()
+            encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
+            search_stage_duration_ms.record(
+                (perf_counter() - stage_start) * 1000, {"stage": "embed"}
+            )
 
-        reranking_request: RerankingRequest = RerankingRequest(
-            query=query.text,
-            documents=retrieval_response.response,
-        )
+            stage_start = perf_counter()
+            retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
+                encoded_query, query.top_k
+            )
+            search_stage_duration_ms.record(
+                (perf_counter() - stage_start) * 1000, {"stage": "retrieve"}
+            )
 
-        reranking_response: RerankingResponse = self.reranker.rerank(reranking_request, query.top_k)
+            stage_start = perf_counter()
+            reranking_request: RerankingRequest = RerankingRequest(
+                query=query.text,
+                documents=retrieval_response.response,
+            )
+            reranking_response: RerankingResponse = self.reranker.rerank(
+                reranking_request, query.top_k
+            )
+            search_stage_duration_ms.record(
+                (perf_counter() - stage_start) * 1000, {"stage": "rerank"}
+            )
 
-        return SearchResponse(documents=reranking_response.reranked_documents)
+            search_results_count.record(len(reranking_response.reranked_documents))
+            return SearchResponse(documents=reranking_response.reranked_documents)
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            search_requests_total.add(1, {"status": status})
+            search_stage_duration_ms.record(
+                (perf_counter() - total_start) * 1000, {"stage": "total"}
+            )

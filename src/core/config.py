@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     MAX_RERANKED_DOCUMENTS: int = 10
     MAX_RETRIEVED_DOCUMENTS: int = 100
 
+    OTEL_SERVICE_NAME: str = "semantic-search-api"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_CONSOLE_EXPORT: bool = False
+
     @property
     def QDRANT_URL(self) -> str:
         """Return the configured Qdrant HTTP endpoint."""

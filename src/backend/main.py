@@ -13,6 +13,12 @@ from src.backend.api.search_router import router as search_router
 from src.core.config import settings
 from src.core.dependencies import get_qdrant_repository
 from src.core.logger import get_logger, setup_logging
+from src.core.telemetry import (
+    http_request_duration_ms,
+    http_requests_total,
+    init_telemetry,
+    shutdown_telemetry,
+)
 
 
 setup_logging()
@@ -22,6 +28,12 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Initialize dependencies early so startup errors include their full context."""
+    init_telemetry(
+        service_name=settings.OTEL_SERVICE_NAME,
+        service_version=settings.OTEL_SERVICE_VERSION,
+        otlp_endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT or None,
+        console_export=settings.OTEL_CONSOLE_EXPORT,
+    )
     logger.info(
         "Starting Semantic Search API: collection=%s qdrant=%s:%s model=%s device=%s log_level=%s",
         settings.QDRANT_COLLECTION,
@@ -55,6 +67,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         logger.info("Shutting down Semantic Search API")
+        shutdown_telemetry()
 
 
 app = FastAPI(
@@ -79,22 +92,33 @@ async def log_http_request(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    """Log every request and preserve a traceback for unexpected API failures."""
+    """Log every request, record HTTP metrics, and preserve tracebacks on failures."""
     started_at = perf_counter()
+    status_code = 500
     try:
         response = await call_next(request)
+        status_code = response.status_code
     except Exception:
         logger.exception(
             "Unhandled request error: method=%s path=%s", request.method, request.url.path
         )
         raise
+    finally:
+        duration_ms = (perf_counter() - started_at) * 1000
+        attrs = {
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": status_code,
+        }
+        http_requests_total.add(1, attrs)
+        http_request_duration_ms.record(duration_ms, attrs)
 
     logger.info(
         "HTTP request completed: method=%s path=%s status=%d duration_ms=%.1f",
         request.method,
         request.url.path,
-        response.status_code,
-        (perf_counter() - started_at) * 1000,
+        status_code,
+        duration_ms,
     )
     return response
 
