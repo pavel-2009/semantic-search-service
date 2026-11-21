@@ -9,7 +9,7 @@ from pathlib import Path
 from ranx import Qrels, Run, evaluate
 
 DATASET_PATH = Path(__file__).resolve().parent / "eval_dataset" / "recall_dataset.json"
-METRICS = ["precision@5", "precision@10"]
+METRICS = ["precision@5", "precision@10", "mrr", "ndcg@10"]
 
 
 def load_queries() -> list[dict]:
