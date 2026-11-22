@@ -2,6 +2,8 @@
 
 from time import perf_counter
 
+from opentelemetry import trace 
+
 from src.core.telemetry import (
     search_requests_total,
     search_results_count,
@@ -36,6 +38,7 @@ class SearchService:
         """Search for movies based on the query."""
         total_start = perf_counter()
         status = "ok"
+        with trace.
         try:
             stage_start = perf_counter()
             parsed_query: ParsedText = self.parser.parse(query.text)
