@@ -24,6 +24,7 @@ dependencies = [
     "yargy>=0.16.0",
     "natasha>=1.6.0",
     "opentelemetry-exporter-otlp>=1.45.2",
+    "opentelemetry-instrumentation-fastapi>=0.66b2",
 ]
 
 [build-system]
