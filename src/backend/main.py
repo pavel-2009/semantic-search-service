@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from opentelemetry import Fast
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from src.backend.api.info_router import router as info_router
 from src.backend.api.search_router import router as search_router
@@ -80,6 +80,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+FastAPIInstrumentor.instrument_app(app)
 
 app.add_middleware(
     CORSMiddleware,
