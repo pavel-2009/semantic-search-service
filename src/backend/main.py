@@ -34,6 +34,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         service_name=settings.OTEL_SERVICE_NAME,
         service_version=settings.OTEL_SERVICE_VERSION,
         otlp_endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT or None,
+        trace_endpoint=settings.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or None,
         console_export=settings.OTEL_CONSOLE_EXPORT,
     )
     logger.info(
