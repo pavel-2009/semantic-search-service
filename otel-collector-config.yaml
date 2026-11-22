@@ -16,6 +16,8 @@ exporters:
     verbosity: detailed
   prometheus:
     endpoint: 0.0.0.0:8889
+  otlphttp/jaeger:
+    endpoint: http://jaeger:4318
 
 service:
   pipelines:
@@ -26,4 +28,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, otlphttp/jaeger]

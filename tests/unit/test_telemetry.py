@@ -18,6 +18,30 @@ def test_init_and_shutdown_telemetry() -> None:
     telemetry.shutdown_telemetry()
 
 
+def test_init_telemetry_configures_otlp_trace_export(monkeypatch) -> None:
+    trace_provider = Mock()
+    span_exporter = Mock()
+    span_processor = Mock()
+    monkeypatch.setattr(telemetry, "TracerProvider", Mock(return_value=trace_provider))
+    monkeypatch.setattr(telemetry, "OTLPSpanExporter", Mock(return_value=span_exporter))
+    monkeypatch.setattr(telemetry, "BatchSpanProcessor", Mock(return_value=span_processor))
+    monkeypatch.setattr(telemetry.trace, "set_tracer_provider", Mock())
+    monkeypatch.setattr(telemetry, "MeterProvider", Mock())
+    monkeypatch.setattr(telemetry.metrics, "set_meter_provider", Mock())
+
+    telemetry.init_telemetry(
+        service_name="test-api",
+        service_version="0.1.0",
+        trace_endpoint="http://otel-collector:4318/v1/traces",
+    )
+
+    telemetry.OTLPSpanExporter.assert_called_once_with(
+        endpoint="http://otel-collector:4318/v1/traces"
+    )
+    telemetry.BatchSpanProcessor.assert_called_once_with(span_exporter)
+    trace_provider.add_span_processor.assert_called_once_with(span_processor)
+
+
 def test_search_service_records_pipeline_metrics(monkeypatch) -> None:
     requests_counter = Mock()
     stage_histogram = Mock()

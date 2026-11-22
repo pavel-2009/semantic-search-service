@@ -179,6 +179,7 @@ docker compose --profile container-app up --build
 ```
 
 The full container profile runs model inference on CPU. Set `POISKKINO_API_KEY` and `BOT_TOKEN` in the host environment or `.env` before starting it.
+Traces from the API are available in Jaeger at [http://localhost:16686](http://localhost:16686).
 
 ## API
 
