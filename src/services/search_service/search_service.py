@@ -2,8 +2,6 @@
 
 from time import perf_counter
 
-from opentelemetry import trace
-
 from src.core.telemetry import (
     search_requests_total,
     search_results_count,
@@ -42,21 +40,23 @@ class SearchService:
         """Search for movies based on the query."""
         total_start = perf_counter()
         status = "ok"
-        with tracer.start_as_current_span("search") as span:
-            span.set_attribute("query", query.text)
-            span.set_attribute("top_k", query.top_k)
-            span.set_attribute("filters", query.filters)
-            with tracer.start_as_current_span("parse") as parse_span:
-                stage_start = perf_counter()
-                parsed_query: ParsedText = self.parser.parse(query.text)
-                if query.filters:
-                    parsed_query.filter = {**(parsed_query.filter or {}), **query.filters}
-                search_stage_duration_ms.record(
-                    (perf_counter() - stage_start) * 1000, {"stage": "parse"}
-                )
-                search_stage_duration_ms.record(
-                    (perf_counter() - stage_start) * 1000, {"stage": "parse"}
-                )
+        try:
+            with tracer.start_as_current_span("search") as span:
+                span.set_attribute("query", query.text)
+                span.set_attribute("top_k", query.top_k)
+                span.set_attribute("filters", str(query.filters))
+
+                with tracer.start_as_current_span("parse"):
+                    stage_start = perf_counter()
+                    parsed_query: ParsedText = self.parser.parse(query.text)
+                    if query.filters:
+                        parsed_query.filter = {
+                            **(parsed_query.filter or {}),
+                            **query.filters,
+                        }
+                    search_stage_duration_ms.record(
+                        (perf_counter() - stage_start) * 1000, {"stage": "parse"}
+                    )
 
                 stage_start = perf_counter()
                 encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
@@ -84,13 +84,17 @@ class SearchService:
                     (perf_counter() - stage_start) * 1000, {"stage": "rerank"}
                 )
 
-                search_results_count.record(len(reranking_response.reranked_documents))
-                return SearchResponse(documents=reranking_response.reranked_documents)
-            except Exception:
-                status = "error"
-                raise
-            finally:
-                search_requests_total.add(1, {"status": status})
-                search_stage_duration_ms.record(
-                    (perf_counter() - total_start) * 1000, {"stage": "total"}
+                search_results_count.record(
+                    len(reranking_response.reranked_documents)
                 )
+                return SearchResponse(
+                    documents=reranking_response.reranked_documents
+                )
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            search_requests_total.add(1, {"status": status})
+            search_stage_duration_ms.record(
+                (perf_counter() - total_start) * 1000, {"stage": "total"}
+            )
