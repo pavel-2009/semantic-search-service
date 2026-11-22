@@ -8,6 +8,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from opentelemetry import Fast
+
 from src.backend.api.info_router import router as info_router
 from src.backend.api.search_router import router as search_router
 from src.core.config import settings
