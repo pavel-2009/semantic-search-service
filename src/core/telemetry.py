@@ -72,3 +72,8 @@ def shutdown_telemetry() -> None:
     tracer_provider = trace.get_tracer_provider()
     if isinstance(tracer_provider, TracerProvider):
         tracer_provider.shutdown()
+
+
+def get_tracer(service_name: str = "semantic-search-service") -> trace.Tracer:
+    """Get or create a tracer."""
+    return trace.get_tracer(service_name)
