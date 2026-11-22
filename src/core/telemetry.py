@@ -2,10 +2,12 @@
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, MetricReader, PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 meter = metrics.get_meter("semantic-search-service")
 
@@ -41,6 +43,7 @@ def init_telemetry(
     service_version: str,
     otlp_endpoint: str | None = None,
     console_export: bool = False,
+    trace_endpoint: str | None = None,
 ) -> None:
     """Initialize OpenTelemetry tracing and metrics collection."""
     resource = Resource.create(
@@ -51,6 +54,10 @@ def init_telemetry(
     )
 
     trace_provider = TracerProvider(resource=resource)
+    if trace_endpoint:
+        trace_provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=trace_endpoint))
+        )
     trace.set_tracer_provider(trace_provider)
 
     readers: list[MetricReader] = []

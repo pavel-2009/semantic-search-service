@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     OTEL_SERVICE_NAME: str = "semantic-search-api"
     OTEL_SERVICE_VERSION: str = "1.0.0"
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: str = ""
     OTEL_CONSOLE_EXPORT: bool = False
 
     @property
