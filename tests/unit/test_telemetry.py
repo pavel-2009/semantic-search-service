@@ -1,6 +1,6 @@
 """Tests for OpenTelemetry initialization and service metrics."""
 
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 from opentelemetry import metrics, trace
 from opentelemetry.sdk.metrics import MeterProvider
@@ -46,10 +46,12 @@ def test_search_service_records_pipeline_metrics(monkeypatch) -> None:
     requests_counter = Mock()
     stage_histogram = Mock()
     results_histogram = Mock()
+    tracer_mock = MagicMock()
 
     monkeypatch.setattr("src.services.search_service.search_service.search_requests_total", requests_counter)
     monkeypatch.setattr("src.services.search_service.search_service.search_stage_duration_ms", stage_histogram)
     monkeypatch.setattr("src.services.search_service.search_service.search_results_count", results_histogram)
+    monkeypatch.setattr("src.services.search_service.search_service.tracer", tracer_mock)
 
     parser = Mock()
     parser.parse.return_value = Mock(filter=None)
@@ -71,3 +73,5 @@ def test_search_service_records_pipeline_metrics(monkeypatch) -> None:
     results_histogram.record.assert_called_once_with(2)
     stages = [call.args[1]["stage"] for call in stage_histogram.record.call_args_list]
     assert stages == ["parse", "embed", "retrieve", "rerank", "total"]
+    spans = [call.args[0] for call in tracer_mock.start_as_current_span.call_args_list]
+    assert spans == ["search", "parse", "embed", "retrieve"]
