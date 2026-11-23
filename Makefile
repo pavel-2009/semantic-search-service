@@ -26,8 +26,8 @@ download-reranker:
 otel:
 	docker compose up otel-collector
 
-graphana:
-	docker compose up graphana
+grafana:
+	docker compose up grafana
 
 jaeger:
 	docker compose up jaeger
