@@ -26,6 +26,9 @@ download-reranker:
 otel:
 	docker compose up otel-collector
 
+graphana:
+	docker compose up graphana
+
 mps-check:
 	uv run python -c "import torch; print(f'PyTorch {torch.__version__}; MPS available={torch.backends.mps.is_available()}'); assert torch.backends.mps.is_available(), 'PyTorch MPS is unavailable'; print((torch.ones(1, device='mps') + 1).cpu().item())"
 
