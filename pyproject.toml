@@ -37,6 +37,7 @@ package = false
 [dependency-groups]
 dev = [
     "docker>=7.2.0",
+    "locust>=2.47.0",
     "nanobind>=2.15.0",
     "opentelemetry-api>=1.45.2",
     "opentelemetry-sdk>=1.45.2",
