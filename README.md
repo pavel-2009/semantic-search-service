@@ -143,12 +143,20 @@ The indexer recreates the collection on a full indexing run.
 
 ### 4. Start the API and bot
 
-Run each command in a separate terminal:
+Start the observability stack once:
+
+```bash
+make observability
+```
+
+Then run the API and bot in separate terminals:
 
 ```bash
 make api
 make bot
 ```
+
+The API exports traces and metrics to the local OpenTelemetry Collector. View traces in [Jaeger](http://localhost:16686) and metrics in [Grafana](http://localhost:3000) (login: `admin` / `admin`).
 
 The API is available at:
 
@@ -179,7 +187,6 @@ docker compose --profile container-app up --build
 ```
 
 The full container profile runs model inference on CPU. Set `POISKKINO_API_KEY` and `BOT_TOKEN` in the host environment or `.env` before starting it.
-Traces from the API are available in Jaeger at [http://localhost:16686](http://localhost:16686).
 
 ### Search load test
 
