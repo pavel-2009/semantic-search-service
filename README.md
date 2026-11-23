@@ -181,6 +181,16 @@ docker compose --profile container-app up --build
 The full container profile runs model inference on CPU. Set `POISKKINO_API_KEY` and `BOT_TOKEN` in the host environment or `.env` before starting it.
 Traces from the API are available in Jaeger at [http://localhost:16686](http://localhost:16686).
 
+### Search load test
+
+Start the API on the host with `make api`, then start Locust:
+
+```bash
+docker compose --profile load-test up locust
+```
+
+Open [http://localhost:8089](http://localhost:8089) and set the number of users and spawn rate. The default target is `http://host.docker.internal:8000`; override it with `LOCUST_HOST` if the API runs elsewhere. The Locust scenario sends only `POST /api/v1/search` requests.
+
 ## API
 
 All application endpoints use the `/api/v1` prefix.

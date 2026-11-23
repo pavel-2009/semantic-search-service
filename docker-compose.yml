@@ -86,6 +86,26 @@ services:
       - semantic-network
 
 
+  locust:
+    image: locustio/locust:latest
+    profiles:
+      - load-test
+    ports:
+      - "8089:8089"
+    environment:
+      - LOCUST_HOST=${LOCUST_HOST:-http://host.docker.internal:8000}
+    volumes:
+      - ./locustfile.py:/mnt/locust/locustfile.py:ro
+    command:
+      - "-f"
+      - "/mnt/locust/locustfile.py"
+      - "--host"
+      - "${LOCUST_HOST:-http://host.docker.internal:8000}"
+    restart: "no"
+    networks:
+      - semantic-network
+
+
   # scraper:
   #   profiles:
   #     - container-app
