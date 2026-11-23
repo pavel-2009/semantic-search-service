@@ -1,4 +1,4 @@
-.PHONY: up down up-containers observability api bot scraper indexer download-reranker otel grafana jaeger prometheus locust mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
+.PHONY: up down up-containers observability grafana jaeger prometheus api bot scraper indexer download-reranker locust mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
 test: test-unit
 
@@ -15,10 +15,7 @@ scraper:
 	uv run python -m scripts.run_scraper
 
 api:
-	QDRANT_HOST=localhost \
-	OTEL_EXPORTER_OTLP_ENDPOINT=$${OTEL_EXPORTER_OTLP_ENDPOINT:-http://127.0.0.1:4318/v1/metrics} \
-	OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=$${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://127.0.0.1:4318/v1/traces} \
-	uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
+	QDRANT_HOST=localhost uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000
 
 bot:
 	QDRANT_HOST=localhost uv run python -m src.bot.main
@@ -27,7 +24,7 @@ download-reranker:
 	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
 
 observability:
-	docker compose up -d jaeger otel-collector prometheus grafana
+	docker compose up -d jaeger prometheus grafana
 
 grafana:
 	docker compose up grafana
