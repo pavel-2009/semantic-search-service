@@ -26,9 +26,6 @@ bot:
 download-reranker:
 	uv run python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
 
-otel:
-	docker compose up otel-collector
-
 observability:
 	docker compose up -d jaeger otel-collector prometheus grafana
 
