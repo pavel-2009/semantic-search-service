@@ -58,16 +58,18 @@ class SearchService:
                         (perf_counter() - stage_start) * 1000, {"stage": "parse"}
                     )
 
-                stage_start = perf_counter()
-                encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
+                with tracer.start_as_current_span("embed"):
+                    stage_start = perf_counter()
+                    encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
                 search_stage_duration_ms.record(
                     (perf_counter() - stage_start) * 1000, {"stage": "embed"}
                 )
 
-                stage_start = perf_counter()
-                retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
-                    encoded_query, query.top_k
-                )
+                with tracer.start_as_current_span("retrieve"):
+                    stage_start = perf_counter()
+                    retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
+                        encoded_query, query.top_k
+                    )
                 search_stage_duration_ms.record(
                     (perf_counter() - stage_start) * 1000, {"stage": "retrieve"}
                 )
