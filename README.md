@@ -119,11 +119,13 @@ API_BASE_URL=http://127.0.0.1:8000
 
 The bot token is read from the environment at runtime. It is not stored in source code or committed to Git. Unit tests do not require a real token.
 
-### 2. Start Qdrant
+### 2. Start the infrastructure
 
 ```bash
 make up
 ```
+
+This starts Qdrant, the OpenTelemetry Collector, Prometheus, Grafana, and Jaeger. Locust and the API are started separately.
 
 ### 3. Collect and index movies
 
@@ -143,13 +145,7 @@ The indexer recreates the collection on a full indexing run.
 
 ### 4. Start the API and bot
 
-Start the observability stack once:
-
-```bash
-make observability
-```
-
-Then run the API and bot in separate terminals:
+Run the API and bot in separate terminals:
 
 ```bash
 make api
@@ -172,11 +168,11 @@ make download-reranker
 
 ### Docker
 
-The default Compose setup starts Qdrant only:
-
 ```bash
 make up
 ```
+
+`make up` starts the infrastructure stack; start the API with `make api` as described above.
 
 To run the full scraper → indexer → API → bot pipeline in containers, download the reranker model into the shared cache once, then start the profile:
 
@@ -190,13 +186,13 @@ The full container profile runs model inference on CPU. Set `POISKKINO_API_KEY` 
 
 ### Search load test
 
-Start the API on the host with `make api`, then start Locust:
+After `make up` and `make api`, start Locust separately:
 
 ```bash
-docker compose --profile load-test up locust
+make locust
 ```
 
-Open [http://localhost:8089](http://localhost:8089) and set the number of users and spawn rate. The default target is `http://host.docker.internal:8000`; override it with `LOCUST_HOST` if the API runs elsewhere. The Locust scenario sends only `POST /api/v1/search` requests.
+Open [http://localhost:8089](http://localhost:8089) and set the number of users and spawn rate. The default target is `http://host.docker.internal:8000`; override it with `LOCUST_HOST` if the API runs elsewhere, for example `LOCUST_HOST=http://host.docker.internal:8000 make locust`. The Locust scenario sends only `POST /api/v1/search` requests. It is not started by `make up`.
 
 ## API
 

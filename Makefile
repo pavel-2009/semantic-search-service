@@ -1,4 +1,4 @@
-.PHONY: up down up-containers observability api bot scraper indexer download-reranker otel grafana jaeger prometheus mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
+.PHONY: up down up-containers observability api bot scraper indexer download-reranker otel grafana jaeger prometheus locust mps-check test test-unit test-integration test-performance test-all test-cov test-parallel test-quick clean check
 
 test: test-unit
 
@@ -41,6 +41,9 @@ jaeger:
 prometheus:
 	docker compose up prometheus
 
+locust:
+	docker compose --profile load-test up locust
+
 mps-check:
 	uv run python -c "import torch; print(f'PyTorch {torch.__version__}; MPS available={torch.backends.mps.is_available()}'); assert torch.backends.mps.is_available(), 'PyTorch MPS is unavailable'; print((torch.ones(1, device='mps') + 1).cpu().item())"
 
@@ -54,7 +57,7 @@ push:
 	git push
 
 up:
-	docker compose up -d qdrant
+	docker compose up -d
 
 up-containers:
 	docker compose --profile container-app up --build
