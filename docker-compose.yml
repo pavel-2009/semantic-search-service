@@ -29,6 +29,7 @@ services:
     networks:
       - semantic-network
 
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     command: ["--config=/etc/otel/collector.yaml"]
@@ -44,6 +45,7 @@ services:
     networks:
       - semantic-network
 
+
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
@@ -51,6 +53,7 @@ services:
     restart: unless-stopped
     networks:
       - semantic-network
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -64,6 +67,7 @@ services:
     restart: unless-stopped
     networks:
       - semantic-network
+
 
   grafana:
     image: grafana/grafana:latest
@@ -81,139 +85,140 @@ services:
     networks:
       - semantic-network
 
-  scraper:
-    profiles:
-      - container-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: scraper
-    environment:
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
-    volumes:
-      - ./src:/app/src
-    depends_on:
-      qdrant:
-        condition: service_healthy
-    restart: "no"
-    networks:
-      - semantic-network
 
-  indexer:
-    profiles:
-      - container-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: indexer
-    environment:
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - HF_HOME=/cache/huggingface
-    volumes:
-      - ./src:/app/src
-      - ./bge-m3:/app/bge-m3:ro
-      - huggingface_cache:/cache/huggingface
-    depends_on:
-      scraper:
-        condition: service_completed_successfully
-      qdrant:
-        condition: service_healthy
-    restart: "no"
-    networks:
-      - semantic-network
+  # scraper:
+  #   profiles:
+  #     - container-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: scraper
+  #   environment:
+  #     - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
+  #   volumes:
+  #     - ./src:/app/src
+  #   depends_on:
+  #     qdrant:
+  #       condition: service_healthy
+  #   restart: "no"
+  #   networks:
+  #     - semantic-network
 
-  reranker-downloader:
-    profiles:
-      - model-download
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: api
-    environment:
-      - HF_HOME=/cache/huggingface
-      - HF_HUB_DOWNLOAD_TIMEOUT=600
-      - HF_HUB_ETAG_TIMEOUT=60
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
-    volumes:
-      - huggingface_cache:/cache/huggingface
-    entrypoint: [ "uv", "run", "--no-sync", "python", "-c" ]
-    command:
-      - "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
-    networks:
-      - semantic-network
+  # indexer:
+  #   profiles:
+  #     - container-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: indexer
+  #   environment:
+  #     - QDRANT_HOST=qdrant
+  #     - QDRANT_PORT=6333
+  #     - HF_HOME=/cache/huggingface
+  #   volumes:
+  #     - ./src:/app/src
+  #     - ./bge-m3:/app/bge-m3:ro
+  #     - huggingface_cache:/cache/huggingface
+  #   depends_on:
+  #     scraper:
+  #       condition: service_completed_successfully
+  #     qdrant:
+  #       condition: service_healthy
+  #   restart: "no"
+  #   networks:
+  #     - semantic-network
 
-  api:
-    profiles:
-      - container-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: api
-    ports:
-      - "8000:8000"
-    environment:
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - LOG_LEVEL=INFO
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
-      - BOT_TOKEN=${BOT_TOKEN:-}
-      - HF_HOME=/cache/huggingface
-      - HF_HUB_DOWNLOAD_TIMEOUT=600
-      - HF_HUB_ETAG_TIMEOUT=60
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
-      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
-    volumes:
-      - ./src:/app/src
-      - ./bge-m3:/app/bge-m3:ro
-      - huggingface_cache:/cache/huggingface
-    depends_on:
-      indexer:
-        condition: service_completed_successfully
-      qdrant:
-        condition: service_healthy
-      otel-collector:
-        condition: service_started
-    healthcheck:
-      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" ]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 1m
-    restart: unless-stopped
-    networks:
-      - semantic-network
+  # reranker-downloader:
+  #   profiles:
+  #     - model-download
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: api
+  #   environment:
+  #     - HF_HOME=/cache/huggingface
+  #     - HF_HUB_DOWNLOAD_TIMEOUT=600
+  #     - HF_HUB_ETAG_TIMEOUT=60
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
+  #   volumes:
+  #     - huggingface_cache:/cache/huggingface
+  #   entrypoint: [ "uv", "run", "--no-sync", "python", "-c" ]
+  #   command:
+  #     - "from huggingface_hub import snapshot_download; snapshot_download(repo_id='BAAI/bge-reranker-v2-m3')"
+  #   networks:
+  #     - semantic-network
 
-  bot:
-    profiles:
-      - container-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: bot
-    environment:
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - LOG_LEVEL=INFO
-      - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
-      - BOT_TOKEN=${BOT_TOKEN:-}
-      - HF_HOME=/cache/huggingface
-      - HF_HUB_DOWNLOAD_TIMEOUT=600
-      - HF_HUB_ETAG_TIMEOUT=60
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
-      - API_BASE_URL=http://api:8000
-    volumes:
-      - ./src:/app/src
-      - ./bge-m3:/app/bge-m3:ro
-      - huggingface_cache:/cache/huggingface
-    depends_on:
-      api:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - semantic-network
+  # api:
+  #   profiles:
+  #     - container-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - QDRANT_HOST=qdrant
+  #     - QDRANT_PORT=6333
+  #     - LOG_LEVEL=INFO
+  #     - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
+  #     - BOT_TOKEN=${BOT_TOKEN:-}
+  #     - HF_HOME=/cache/huggingface
+  #     - HF_HUB_DOWNLOAD_TIMEOUT=600
+  #     - HF_HUB_ETAG_TIMEOUT=60
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
+  #     - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   volumes:
+  #     - ./src:/app/src
+  #     - ./bge-m3:/app/bge-m3:ro
+  #     - huggingface_cache:/cache/huggingface
+  #   depends_on:
+  #     indexer:
+  #       condition: service_completed_successfully
+  #     qdrant:
+  #       condition: service_healthy
+  #     otel-collector:
+  #       condition: service_started
+  #   healthcheck:
+  #     test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 20
+  #     start_period: 1m
+  #   restart: unless-stopped
+  #   networks:
+  #     - semantic-network
+
+  # bot:
+  #   profiles:
+  #     - container-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: bot
+  #   environment:
+  #     - QDRANT_HOST=qdrant
+  #     - QDRANT_PORT=6333
+  #     - LOG_LEVEL=INFO
+  #     - POISKKINO_API_KEY=${POISKKINO_API_KEY:-}
+  #     - BOT_TOKEN=${BOT_TOKEN:-}
+  #     - HF_HOME=/cache/huggingface
+  #     - HF_HUB_DOWNLOAD_TIMEOUT=600
+  #     - HF_HUB_ETAG_TIMEOUT=60
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/metrics
+  #     - API_BASE_URL=http://api:8000
+  #   volumes:
+  #     - ./src:/app/src
+  #     - ./bge-m3:/app/bge-m3:ro
+  #     - huggingface_cache:/cache/huggingface
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+  #     qdrant:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - semantic-network
 
 volumes:
   qdrant_storage:
