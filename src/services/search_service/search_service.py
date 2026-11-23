@@ -61,30 +61,31 @@ class SearchService:
                 with tracer.start_as_current_span("embed"):
                     stage_start = perf_counter()
                     encoded_query: EmbedderResponse = self.embedder.embed_request(parsed_query)
-                search_stage_duration_ms.record(
-                    (perf_counter() - stage_start) * 1000, {"stage": "embed"}
-                )
+                    search_stage_duration_ms.record(
+                        (perf_counter() - stage_start) * 1000, {"stage": "embed"}
+                    )
 
                 with tracer.start_as_current_span("retrieve"):
                     stage_start = perf_counter()
                     retrieval_response: RetrievalResponse = self.qdrant_repo.get_points(
                         encoded_query, query.top_k
                     )
-                search_stage_duration_ms.record(
-                    (perf_counter() - stage_start) * 1000, {"stage": "retrieve"}
-                )
+                    search_stage_duration_ms.record(
+                        (perf_counter() - stage_start) * 1000, {"stage": "retrieve"}
+                    )
 
-                stage_start = perf_counter()
-                reranking_request: RerankingRequest = RerankingRequest(
-                    query=query.text,
-                    documents=retrieval_response.response,
-                )
-                reranking_response: RerankingResponse = self.reranker.rerank(
-                    reranking_request, query.top_k
-                )
-                search_stage_duration_ms.record(
-                    (perf_counter() - stage_start) * 1000, {"stage": "rerank"}
-                )
+                with tracer.start_as_current_span("rerank"):
+                    stage_start = perf_counter()
+                    reranking_request: RerankingRequest = RerankingRequest(
+                        query=query.text,
+                        documents=retrieval_response.response,
+                    )
+                    reranking_response: RerankingResponse = self.reranker.rerank(
+                        reranking_request, query.top_k
+                    )
+                    search_stage_duration_ms.record(
+                        (perf_counter() - stage_start) * 1000, {"stage": "rerank"}
+                    )
 
                 search_results_count.record(
                     len(reranking_response.reranked_documents)
